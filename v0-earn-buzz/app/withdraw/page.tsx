@@ -17,6 +17,7 @@ export default function WithdrawPage() {
   const [toggleActive, setToggleActive] = useState(false)
   const [showUpgradePopup, setShowUpgradePopup] = useState(false)
   const [completedTasksCount, setCompletedTasksCount] = useState(0)
+  const [showRequirementsModal, setShowRequirementsModal] = useState(false)
   const TOTAL_DAILY_TASKS = 10
 
   useEffect(() => {
@@ -124,23 +125,8 @@ export default function WithdrawPage() {
     const needsReferralCheck = !toggleActive
 
     if (balance < 200000 || (needsReferralCheck && referralCount < 5) || completedTasksCount < TOTAL_DAILY_TASKS) {
-      let message = ""
-      const failedChecks: string[] = []
-
-      if (balance < 200000) failedChecks.push("₦200,000 minimum balance")
-      if (needsReferralCheck && referralCount < 5) failedChecks.push("5 active referrals")
-      if (completedTasksCount < TOTAL_DAILY_TASKS) failedChecks.push(`all ${TOTAL_DAILY_TASKS} daily tasks`)
-
-      message = `⚠️ You need: ${failedChecks.join(", ")}.`
-
-      setWarningMessage(message)
-      setShowWarning(true)
-      setShowCashout(false)
-
-      setTimeout(() => {
-        setShowWarning(false)
-      }, 4000)
-
+      // Show requirements modal instead of warning
+      setShowRequirementsModal(true)
       return
     }
 
@@ -360,28 +346,13 @@ export default function WithdrawPage() {
               ? (!missingBalance && !missingTasks)
               : (!missingBalance && !missingTasks && !missingReferrals)
 
-            let buttonLabel = ""
-            if (meetsRequirements) {
-              buttonLabel = "WITHDRAW NOW"
-            } else if (missingBalance) {
-              const diff = Math.max(0, 200000 - (balance || 0))
-              buttonLabel = `Need ${formatCurrency(diff)} more`
-            } else if (missingTasks) {
-              buttonLabel = `${completedTasksCount}/${TOTAL_DAILY_TASKS} tasks completed`
-            } else if (!toggleActive && missingReferrals) {
-              buttonLabel = `${referralCount}/5 referrals`
-            } else {
-              buttonLabel = "Requirements not met"
-            }
-
             return (
               <>
                 <button
                   onClick={handleCashout}
-                  disabled={!meetsRequirements}
-                  className={`hh-withdraw-btn ${meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-disabled'}`}
+                  className={`hh-withdraw-btn ${meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-blurred'}`}
                 >
-                  {buttonLabel}
+                  {meetsRequirements ? '✨ Withdraw Now' : 'Withdraw Now'}
                 </button>
 
                 {/* If referrals are the missing piece and the user hasn't toggled withdraw-without-referral, show refer CTA */}
@@ -393,18 +364,93 @@ export default function WithdrawPage() {
                     </button>
                   </Link>
                 )}
-
-                {/* Show inline warning message when other requirements fail */}
-                {showWarning && (
-                  <div className="hh-warning-message">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                    <p className="text-sm font-medium">{warningMessage}</p>
-                  </div>
-                )}
               </>
             )
           })()}
         </div>
+
+        {/* Requirements Details Modal */}
+        {showRequirementsModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="hh-popup hh-requirements-modal">
+              <div className="hh-popup-header">
+                <AlertTriangle className="h-8 w-8 text-amber-400" />
+                <h2 className="text-xl font-bold text-white">Missing Requirements</h2>
+              </div>
+              
+              <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
+                {/* Balance requirement */}
+                <div className={`hh-req-detail-item ${balance >= 200000 ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`hh-req-detail-icon ${balance >= 200000 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      <Wallet className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-white">Minimum Balance</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {balance >= 200000 
+                          ? '✓ Completed' 
+                          : `Need ₦${formatCurrency(Math.max(0, 200000 - balance)).replace('₦', '')}`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Referral requirement (hidden if toggle is on) */}
+                {!toggleActive && (
+                  <div className={`hh-req-detail-item ${referralCount >= 5 ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`hh-req-detail-icon ${referralCount >= 5 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-white">Active Referrals</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {referralCount >= 5 
+                            ? '✓ Completed' 
+                            : `${referralCount}/5 referrals`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Daily tasks requirement */}
+                <div className={`hh-req-detail-item ${completedTasksCount >= TOTAL_DAILY_TASKS ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`hh-req-detail-icon ${completedTasksCount >= TOTAL_DAILY_TASKS ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      <Gift className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-white">Daily Tasks</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {completedTasksCount >= TOTAL_DAILY_TASKS 
+                          ? '✓ Completed' 
+                          : `${completedTasksCount}/${TOTAL_DAILY_TASKS} tasks`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRequirementsModal(false)}
+                  className="hh-popup-btn hh-popup-btn-cancel flex-1"
+                >
+                  Close
+                </button>
+                {!toggleActive && referralCount < 5 && (
+                  <Link href="/refer" className="flex-1">
+                    <button className="hh-popup-btn hh-popup-btn-confirm w-full">
+                      Invite Friends
+                    </button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Upgrade Popup */}
         {showUpgradePopup && (
@@ -796,10 +842,57 @@ export default function WithdrawPage() {
           transform: scale(0.98);
         }
 
+        .hh-withdraw-blurred {
+          background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+          color: rgba(255,255,255,0.5);
+          border: 1px solid rgba(255,255,255,0.08);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .hh-withdraw-blurred:hover {
+          background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+          color: rgba(255,255,255,0.6);
+        }
+
+        .hh-withdraw-blurred:active {
+          transform: scale(0.98);
+        }
+
         .hh-withdraw-disabled {
           background: rgba(255,255,255,0.1);
           cursor: not-allowed;
           color: rgba(255,255,255,0.4);
+        }
+
+        /* ─── REQUIREMENTS MODAL ─── */
+        .hh-requirements-modal {
+          max-width: 360px;
+        }
+
+        .hh-req-detail-item {
+          padding: 14px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 12px;
+          transition: all 0.2s ease;
+        }
+
+        .hh-req-detail-met {
+          background: rgba(16,185,129,0.08);
+          border-color: rgba(16,185,129,0.2);
+        }
+
+        .hh-req-detail-missing {
+          background: rgba(245,158,11,0.08);
+          border-color: rgba(245,158,11,0.2);
+        }
+
+        .hh-req-detail-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
         }
 
         @keyframes hh-btn-glow {
