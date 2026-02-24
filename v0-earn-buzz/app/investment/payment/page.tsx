@@ -685,6 +685,3 @@ export default function InvestmentPaymentPage() {
     </div>
   );
 }
-    </div>
-  );
-}
