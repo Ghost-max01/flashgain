@@ -2,12 +2,12 @@
 
 export const dynamic = "force-dynamic"; // client page, skip prerender
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmark, Hash, User2, Bank, CreditCard } from "lucide-react";
 
-export default function InvestmentPaymentPage() {
+function InvestmentPaymentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const amountParam = searchParams.get("amount") || "";
