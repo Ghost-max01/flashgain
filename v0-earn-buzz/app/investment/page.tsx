@@ -808,7 +808,7 @@ export default function InvestmentPlatformPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 group hover:translate-x-1 transition-transform">
                     <Calendar className="w-4 h-4 text-white/40" />
-                    <span className="text-sm text-white/60\">
+                    <span className="text-sm text-white/60">
                       Duration: One Week
                     </span>
                   </div>
