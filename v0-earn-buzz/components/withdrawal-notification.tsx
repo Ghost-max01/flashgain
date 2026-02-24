@@ -337,7 +337,7 @@ export function WithdrawalNotification({
       availableStates[Math.floor(Math.random() * availableStates.length)];
 
     let availableNames = nigerianNames[selectedTribe].filter(
-      (n) => !usedNames.includes(n),
+      (n: string) => !usedNames.includes(n),
     );
     let selectedName =
       availableNames[Math.floor(Math.random() * availableNames.length)];
