@@ -52,7 +52,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
     reward: 5000,
-    link: "https://spin-to-win-hub-6676aed7-seven.vercel.app/",
+    link: "https://spin-to-win-hub-self.vercel.app/",
     icon: "🎁",
   },
   {
@@ -70,7 +70,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our ad link to earn Extra money",
     category: "Advertisement",
     reward: 5000,
-    link: "https://spin-to-win-hub-6676aed7-seven.vercel.app/",
+    link: "https://spin-to-win-hub-self.vercel.app/",
     icon: "💸💲",
   },
   {
@@ -121,7 +121,7 @@ export default function TaskPage() {
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({})
   const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({})
   const [showCoinRain, setShowCoinRain] = useState(false)
-  const [modalTask, setModalTask] = useState<Task | null>(null)
+
 
   // Load user and tasks
   useEffect(() => {
@@ -384,13 +384,11 @@ export default function TaskPage() {
       return
     }
 
-    // Show confirmation modal telling user they must interact with the ad
-    setModalTask(task)
+    // Start task immediately (no interaction-confirmation modal)
+    confirmStartTask(task)
   }
 
   const confirmStartTask = (task: Task) => {
-    setModalTask(null)
-
     toast({
       title: "Task Started ⏱️",
       description: "Make sure to spend at least 10 seconds on the site before returning. If you return too quickly, you'll need to try again!",
@@ -409,8 +407,6 @@ export default function TaskPage() {
     // Open link in a new tab
     window.open(task.link, '_blank')
   }
-
-  const cancelStart = () => setModalTask(null)
 
   const formatTime = (ms: number) => {
     if (ms <= 0) return "now"
