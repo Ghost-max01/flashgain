@@ -83,7 +83,7 @@ export default function UpgradeTiersPage() {
             Upgrade Your Tier
           </h1>
           <p className="text-sm text-white/80">
-            One-time lifetime upgrade to unlock premium Flash Gain features.
+            One-time lifetime upgrade to unlock premium FlashGain 9ja features.
           </p>
         </div>
       </div>

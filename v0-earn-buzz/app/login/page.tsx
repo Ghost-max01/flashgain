@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   const handleWhatsAppSupport = () => {
     const phoneNumber = "2349059089490";
-    const message = encodeURIComponent("hello, am from Flash Gain.");
+    const message = encodeURIComponent("hello, am from FlashGain 9ja.");
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(whatsappUrl, "_self");
   };
@@ -158,7 +158,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8 hh-entry-1">
-            <h1 className="hh-glow-title mb-2">Flash Gain</h1>
+            <h1 className="hh-glow-title mb-2">FlashGain 9ja</h1>
             <p className="hh-subtitle">Nigeria's trusted earning platform</p>
           </div>
 

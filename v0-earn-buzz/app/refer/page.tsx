@@ -28,21 +28,21 @@ export default function ReferPage() {
   const [isEarningsChanging, setIsEarningsChanging] = useState(false)
 
   const referralMessages = [
-    "Join Flash Gain now and start earning instantly! Complete simple tasks and get paid today!",
-    "Ready to earn from home? Flash Gain pays you for simple tasks! Join now and watch your wallet grow!",
-    "Don't miss out! Flash Gain gives you instant bonuses and daily earnings — sign up and start winning!",
-    "Flash Gain lets you earn money daily — invite friends and claim free rewards!",
-    "Turn your phone into an ATM! Join Flash Gain and get paid every day!",
-    "Earn ₦10,000 per referral and get instant signup bonuses — Flash Gain is the real deal!",
-    "Get rewarded for every invite! Join Flash Gain and earn without stress!",
-    "Flash Gain pays you for completing simple tasks — join today and start earning!",
-    "Make money online easily! Flash Gain gives you instant bonuses and daily claims!",
-    "Earn fast, withdraw easily! Flash Gain is your ticket to daily income!",
-    "Invite friends, earn ₦10,000 each! Start your earning journey with Flash Gain today!",
-    "Need cash fast? Flash Gain gives you loans in just 5 minutes — no BVN required!",
-    "Get instant loans without BVN! Flash Gain makes borrowing stress-free!",
-    "Need urgent money? Flash Gain offers quick loans in minutes — sign up now!",
-    "Take loans easily and start earning too! Flash Gain is your one-stop money app!",
+    "Join FlashGain 9ja now and start earning instantly! Complete simple tasks and get paid today!",
+    "Ready to earn from home? FlashGain 9ja pays you for simple tasks! Join now and watch your wallet grow!",
+    "Don't miss out! FlashGain 9ja gives you instant bonuses and daily earnings — sign up and start winning!",
+    "FlashGain 9ja lets you earn money daily — invite friends and claim free rewards!",
+    "Turn your phone into an ATM! Join FlashGain 9ja and get paid every day!",
+    "Earn ₦10,000 per referral and get instant signup bonuses — FlashGain 9ja is the real deal!",
+    "Get rewarded for every invite! Join FlashGain 9ja and earn without stress!",
+    "FlashGain 9ja pays you for completing simple tasks — join today and start earning!",
+    "Make money online easily! FlashGain 9ja gives you instant bonuses and daily claims!",
+    "Earn fast, withdraw easily! FlashGain 9ja is your ticket to daily income!",
+    "Invite friends, earn ₦10,000 each! Start your earning journey with FlashGain 9ja today!",
+    "Need cash fast? FlashGain 9ja gives you loans in just 5 minutes — no BVN required!",
+    "Get instant loans without BVN! FlashGain 9ja makes borrowing stress-free!",
+    "Need urgent money? FlashGain 9ja offers quick loans in minutes — sign up now!",
+    "Take loans easily and start earning too! FlashGain 9ja is your one-stop money app!",
   ];
 
   // Animate earnings

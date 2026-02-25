@@ -23,7 +23,7 @@ export default function Loading() {
             <div className="hh-spinner-core-inner"></div>
           </div>
         </div>
-        <h1 className="hh-loading-title">Flash Gain</h1>
+        <h1 className="hh-loading-title">FlashGain 9ja</h1>
         <p className="hh-loading-text">Loading your experience...</p>
       </div>
 

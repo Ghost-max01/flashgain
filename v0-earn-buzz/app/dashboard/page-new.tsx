@@ -315,7 +315,7 @@ export default function DashboardPage() {
       bgColor: "bg-amber-500/10",
     },
     {
-      name: "Flash Gain Channel",
+      name: "FlashGain 9ja Channel",
       emoji: "📢",
       link: "https://t.me/helpinghandsnews",
       external: true,

@@ -37,7 +37,7 @@ function PayKeyConfirmationContent() {
             <div className="hh-spinner-ring hh-spinner-ring-2"></div>
             <div className="hh-spinner-ring hh-spinner-ring-3"></div>
           </div>
-          <h1 className="hh-loading-title">Flash Gain</h1>
+          <h1 className="hh-loading-title">FlashGain 9ja</h1>
           <p className="hh-loading-text">Confirming your payment...</p>
         </div>
       </div>
@@ -693,7 +693,7 @@ export default function PayKeyConfirmationPage() {
               <div className="hh-spinner-ring hh-spinner-ring-2"></div>
               <div className="hh-spinner-ring hh-spinner-ring-3"></div>
             </div>
-            <h1 className="hh-loading-title">Flash Gain</h1>
+            <h1 className="hh-loading-title">FlashGain 9ja</h1>
             <p className="hh-loading-text">Confirming your payment...</p>
           </div>
         </div>

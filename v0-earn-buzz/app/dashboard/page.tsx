@@ -338,7 +338,7 @@ export default function DashboardPage() {
       bgColor: "",
     },
     {
-      name: "Flash Gain Channel",
+      name: "FlashGain 9ja Channel",
       emoji: "📢",
       link: "https://t.me/helpinghandsnews",
       external: true,

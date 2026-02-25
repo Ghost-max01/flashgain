@@ -7,7 +7,7 @@ export function Logo({ className = "" }: LogoProps) {
     <div className={`flex items-center justify-center ${className}`}>
       <div className="relative">
         <div className="text-4xl font-bold text-orange-600 tracking-tight">
-          Flash Gain
+          FlashGain 9ja
         </div>
 
         <div className="text-sm text-gray-200 text-center mt-1 font-medium">

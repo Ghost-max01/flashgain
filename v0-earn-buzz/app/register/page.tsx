@@ -176,7 +176,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8 hh-entry-1">
-            <h1 className="hh-glow-title mb-2">Flash Gain</h1>
+            <h1 className="hh-glow-title mb-2">FlashGain 9ja</h1>
             <p className="hh-subtitle">Join thousands earning daily</p>
           </div>
 

@@ -43,12 +43,12 @@ export default function AboutPage() {
         </div>
 
         <h1 className="text-3xl font-bold text-center text-green-700">
-          About Flash Gain
+          About FlashGain 9ja
         </h1>
 
         <div className="space-y-5 leading-relaxed">
           <p>
-            Flash Gain is a fast-rising Nigerian digital platform built to
+            FlashGain 9ja is a fast-rising Nigerian digital platform built to
             empower individuals through financial growth, earning opportunities,
             and access to smart online services — all in one place. Our goal is
             simple: to help Nigerians earn, grow, and live better in this tough
@@ -56,7 +56,7 @@ export default function AboutPage() {
           </p>
 
           <p>
-            At Flash Gain, we provide users with access to a sustainable earning
+            At FlashGain 9ja, we provide users with access to a sustainable earning
             system through referrals, simple online tasks, and digital tools
             that pay real value for your effort. Every user matters to us — and
             that’s why our team works daily to stabilize the platform, improve
@@ -73,7 +73,7 @@ export default function AboutPage() {
           </p>
 
           <h2 className="text-xl font-semibold text-green-700">
-            What You Can Do on Flash Gain
+            What You Can Do on FlashGain 9ja
           </h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>Earn from daily tasks and referrals</li>
@@ -100,10 +100,10 @@ export default function AboutPage() {
           </p>
 
           <p className="font-medium text-green-800">
-            Flash Gain is not just a platform — it’s a movement built to help
+            FlashGain 9ja is not just a platform — it’s a movement built to help
             Nigerians earn online, support one another, and make digital income
             possible for everyone. The economy isn’t getting easier — but with
-            Flash Gain, your hustle will always pay off.
+            FlashGain 9ja, your hustle will always pay off.
           </p>
         </div>
 
@@ -134,7 +134,7 @@ export default function AboutPage() {
         </div>
 
         <div className="text-center text-sm text-gray-500 mt-10">
-          © 2025 Flash Gain. All rights reserved.
+          © 2025 FlashGain 9ja. All rights reserved.
         </div>
       </div>
     </div>

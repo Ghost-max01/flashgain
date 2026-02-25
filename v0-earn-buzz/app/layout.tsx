@@ -8,9 +8,9 @@ import PageShell from "@/components/PageShell"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Flash Gain",
+  title: "FlashGain 9ja",
   description:
-    "Flash Gain is a financial & earning app that offers weekly cash rewards to new users",
+    "FlashGain 9ja is a financial & earning app that offers weekly cash rewards to new users",
   manifest: "/manifest.json",
   generator: "v0.dev",
   other: {
@@ -18,26 +18,26 @@ export const metadata: Metadata = {
       "8c56abd733d73550a5527a8ac0c7bc62642d1a86",
   },
   openGraph: {
-    title: "Flash Gain",
+    title: "FlashGain 9ja",
     description:
-      "Flash Gain is a financial & earning app that offers weekly cash rewards to new users",
+      "FlashGain 9ja is a financial & earning app that offers weekly cash rewards to new users",
     url: "https://helpinghands.money",
-    siteName: "Flash Gain",
+    siteName: "FlashGain 9ja",
     images: [
       {
         url: "https://helpinghands.money/placeholder-logo.png",
         width: 1200,
         height: 630,
-        alt: "Flash Gain",
+        alt: "FlashGain 9ja",
       },
     ],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Flash Gain",
+    title: "FlashGain 9ja",
     description:
-      "Flash Gain is a financial & earning app that offers weekly cash rewards to new users",
+      "FlashGain 9ja is a financial & earning app that offers weekly cash rewards to new users",
     images: ["https://helpinghands.money/placeholder-logo.png"],
   },
 };

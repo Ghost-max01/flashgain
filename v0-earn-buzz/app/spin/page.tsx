@@ -56,7 +56,7 @@ const WINNERS = [
 const FAQS = [
   {
     q: "Is this promotion real?",
-    a: "Absolutely! Flash Gains is an officially registered earning platform . All prizes are genuine and verifiable. Winners are contacted directly to arrange delivery.",
+    a: "Absolutely! FlashGain 9jas is an officially registered earning platform . All prizes are genuine and verifiable. Winners are contacted directly to arrange delivery.",
   },
   {
     q: "How many times can I spin?",
@@ -105,7 +105,7 @@ const Navbar = ({ activeSection }: { activeSection: string }) => {
         <div className="flex items-center justify-between h-16">
           <button onClick={() => scrollTo("hero")} className="flex items-center gap-2">
             <span className="text-2xl">🎰</span>
-            <span className="font-display font-bold text-lg bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">Flash Gains</span>
+            <span className="font-display font-bold text-lg bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">FlashGain 9jas</span>
           </button>
 
           <div className="hidden md:flex items-center gap-1">
@@ -974,7 +974,7 @@ const Index = () => {
             </li>
             <li>Participants must be 18 years or older.</li>
             <li>
-              Flash Gains Hub reserves the right to modify or end the promotion
+              FlashGain 9jas Hub reserves the right to modify or end the promotion
               at any time.
             </li>
           </ul>
@@ -1016,10 +1016,10 @@ const Index = () => {
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="font-display text-3xl sm:text-4xl font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent mb-6">
-              About Flash Gain
+              About FlashGain 9ja
             </h2>
             <p className="text-white/80 mb-4 leading-relaxed">
-              Flash Gain is a premier promotional platform dedicated to giving
+              FlashGain 9ja is a premier promotional platform dedicated to giving
               back to our community. We partner with leading tech brands to
               bring you the most exciting giveaway campaigns.
             </p>
@@ -1076,7 +1076,7 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <span className="text-xl">🎰</span>
             <span className="font-display font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">
-              Flash Gain
+              FlashGain 9ja
             </span>
           </div>
           <div className="flex gap-4">

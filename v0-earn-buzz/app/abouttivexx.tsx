@@ -28,7 +28,7 @@ export default function AboutPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
         <div className="text-center p-6">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <div>Loading Flash Gain profile…</div>
+          <div>Loading FlashGain 9ja profile…</div>
         </div>
       </div>
     );
@@ -76,7 +76,7 @@ export default function AboutPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-extrabold text-white/90">
-                  Flash Gain
+                  FlashGain 9ja
                 </h1>
                 <p className="text-sm text-white/90 mt-0.5">
                   Empowering Hustlers. Changing Lives.
@@ -105,10 +105,10 @@ export default function AboutPage() {
             </div>
 
             <div className="flex-1">
-              <h2 className="text-2xl font-bold">Flash Gain</h2>
+              <h2 className="text-2xl font-bold">FlashGain 9ja</h2>
               <p className="text-white/70 mt-2 leading-relaxed">
                 {" "}
-                Flash Gain is a fintech rewards platform built to help Nigerians
+                FlashGain 9ja is a fintech rewards platform built to help Nigerians
                 earn, save and access fast financial products. We combine
                 referral rewards, daily earnings, and low-barrier loan options
                 in one mobile-friendly experience.{" "}
@@ -187,7 +187,7 @@ export default function AboutPage() {
             <h3 className="font-bold mb-3">Verification & Refundable Fee</h3>
             <p className="text-sm text-white/70 leading-relaxed">
               To comply with regulatory requirements and prevent automated
-              fraud, Flash Gain requires a one-time verification fee. This fee
+              fraud, FlashGain 9ja requires a one-time verification fee. This fee
               is used for identity documentation checks and is{" "}
               <strong>refunded</strong> to your dashboard balance after
               successful verification.
@@ -214,7 +214,7 @@ export default function AboutPage() {
           <Card className="p-5 bg-white/6">
             <h3 className="font-bold mb-3">Withdraw Options & Upgrade</h3>
             <p className="text-sm text-white/80 leading-relaxed">
-              Flash Gain offers two ways to withdraw:
+              FlashGain 9ja offers two ways to withdraw:
             </p>
             <ul className="list-disc pl-5 mt-3 text-sm text-white/80 space-y-2">
               <li>
@@ -325,7 +325,7 @@ export default function AboutPage() {
               </div>
 
               <div className="text-sm text-white/70">
-                Flash Gain © {new Date().getFullYear()}. All rights reserved.
+                FlashGain 9ja © {new Date().getFullYear()}. All rights reserved.
               </div>
             </div>
           </Card>
