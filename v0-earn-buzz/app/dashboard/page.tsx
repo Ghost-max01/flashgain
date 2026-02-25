@@ -4,13 +4,14 @@ import type React from "react"
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CreditCard, Gamepad2, History, Home, Bell, User, Gift, Clock, Headphones, Shield, TrendingUp, Users } from "lucide-react"
+import { CreditCard, Gamepad2, History, Home, Bell, User, Gift, Clock, Headphones, Shield, TrendingUp, Users, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardImageCarousel } from "@/components/dashboard-image-carousel"
 import { WithdrawalNotification } from "@/components/withdrawal-notification"
 import { ReferralCard } from "@/components/referral-card"
 import { TutorialModal } from "@/components/tutorial-modal"
 import { ScrollingText } from "@/components/scrolling-text"
+import { LiveChat } from "@/components/live-chat"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [showBrowserCheck, setShowBrowserCheck] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [showLiveChat, setShowLiveChat] = useState(false)
 
   // Animate balance changes
   useEffect(() => {
@@ -838,6 +840,22 @@ export default function DashboardPage() {
 
       </div>
 
+      {/* ── FLOATING LIVE CHAT BUTTON ── */}
+      <button
+        onClick={() => setShowLiveChat(true)}
+        className="hh-floating-chat-btn"
+        aria-label="Open live chat"
+      >
+        <MessageCircle className="h-6 w-6" />
+      </button>
+
+      {/* ── LIVE CHAT MODAL ── */}
+      {showLiveChat && (
+        <div className="hh-live-chat-modal">
+          <LiveChat onClose={() => setShowLiveChat(false)} />
+        </div>
+      )}
+
       {/* ── BOTTOM NAV ── */}
       <div className="hh-bottom-nav">
         <Link href="/dashboard" className="hh-nav-item hh-nav-active">
@@ -1428,6 +1446,55 @@ export default function DashboardPage() {
         .hh-see-more-btn:hover {
           background: rgba(16,185,129,0.15);
           transform: translateX(2px);
+        }
+
+        /* ─── FLOATING LIVE CHAT BUTTON ─── */
+        .hh-floating-chat-btn {
+          position: fixed;
+          bottom: 100px;
+          left: 20px;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #10b981, #059669);
+          border: 2px solid rgba(16,185,129,0.3);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 20px rgba(16,185,129,0.4);
+          transition: all 0.3s ease;
+          z-index: 35;
+        }
+
+        .hh-floating-chat-btn:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 30px rgba(16,185,129,0.6);
+        }
+
+        .hh-floating-chat-btn:active {
+          transform: scale(0.95);
+        }
+
+        /* ─── LIVE CHAT MODAL ─── */
+        .hh-live-chat-modal {
+          position: fixed;
+          bottom: 100px;
+          left: 20px;
+          z-index: 50;
+          animation: hh-chat-slide-up 0.3s ease;
+        }
+
+        @keyframes hh-chat-slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
 
         /* ─── BOTTOM NAV ─── */
