@@ -623,7 +623,10 @@ export default function DashboardPage() {
                   {userData?.profilePicture ? (
                     <img src={userData.profilePicture || "/placeholder.svg"} alt={userData.name} className="w-full h-full object-cover rounded-full" />
                   ) : (
-                    <span className="text-xl font-black text-emerald-400">{userData?.name.charAt(0)}</span>
+                    <div className="flex flex-col items-center justify-center text-emerald-400 text-xs">
+                      <span className="text-xl font-black">{userData?.name.charAt(0)}</span>
+                      <span className="mt-1">Add photo</span>
+                    </div>
                   )}
                   <input type="file" accept="image/*" onChange={handleProfileUpload} className="absolute inset-0 opacity-0 cursor-pointer rounded-full" aria-label="Upload profile picture" />
                 </div>
