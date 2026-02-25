@@ -1451,7 +1451,7 @@ export default function DashboardPage() {
         /* ─── FLOATING LIVE CHAT BUTTON ─── */
         .hh-floating-chat-btn {
           position: fixed;
-          bottom: 100px;
+          bottom: 150px;
           left: 20px;
           width: 56px;
           height: 56px;
@@ -1480,7 +1480,7 @@ export default function DashboardPage() {
         /* ─── LIVE CHAT MODAL ─── */
         .hh-live-chat-modal {
           position: fixed;
-          bottom: 100px;
+          bottom: 150px;
           left: 20px;
           z-index: 50;
           animation: hh-chat-slide-up 0.3s ease;
