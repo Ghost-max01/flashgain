@@ -316,9 +316,9 @@ export default function DashboardPage() {
   }
 
   const menuItems: MenuItem[] = [
-    { name: "Loans", emoji: "💳", link: "/loan", color: "text-purple-400", bgColor: "" },
-    { name: "Investments", emoji: "📈", link: "/investment", color: "text-violet-400", bgColor: "" },
     { name: "Daily Tasks", emoji: "🎁", link: "/task", color: "text-yellow-400", bgColor: "" },
+    { name: "Investments", emoji: "📈", link: "/investment", color: "text-violet-400", bgColor: "" },
+    { name: "Loans", emoji: "💳", link: "/loan", color: "text-purple-400", bgColor: "" },
     {
       name: "Helping Hands Channel",
       emoji: "📢",
