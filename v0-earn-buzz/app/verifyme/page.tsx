@@ -155,7 +155,7 @@ export default function VerifyMePage() {
               </div>
             </div>
             
-            <h1 className="hh-glow-title">Helping Hands</h1>
+            <h1 className="hh-glow-title">Flash Gain</h1>
             
             <div className="flex items-center justify-center mt-2">
               <div className="hh-icon-large">

@@ -28,22 +28,22 @@ export default function ReferPage() {
   const [isEarningsChanging, setIsEarningsChanging] = useState(false)
 
   const referralMessages = [
-    "Join Helping Hands now and start earning instantly! Complete simple tasks and get paid today!",
-    "Ready to earn from home? Helping Hands pays you for simple tasks! Join now and watch your wallet grow!",
-    "Don't miss out! Helping Hands gives you instant bonuses and daily earnings — sign up and start winning!",
-    "Helping Hands lets you earn money daily — invite friends and claim free rewards!",
-    "Turn your phone into an ATM! Join Helping Hands and get paid every day!",
-    "Earn ₦10,000 per referral and get instant signup bonuses — Helping Hands is the real deal!",
-    "Get rewarded for every invite! Join Helping Hands and earn without stress!",
-    "Helping Hands pays you for completing simple tasks — join today and start earning!",
-    "Make money online easily! Helping Hands gives you instant bonuses and daily claims!",
-    "Earn fast, withdraw easily! Helping Hands is your ticket to daily income!",
-    "Invite friends, earn ₦10,000 each! Start your earning journey with Helping Hands today!",
-    "Need cash fast? Helping Hands gives you loans in just 5 minutes — no BVN required!",
-    "Get instant loans without BVN! Helping Hands makes borrowing stress-free!",
-    "Need urgent money? Helping Hands offers quick loans in minutes — sign up now!",
-    "Take loans easily and start earning too! Helping Hands is your one-stop money app!",
-  ]
+    "Join Flash Gain now and start earning instantly! Complete simple tasks and get paid today!",
+    "Ready to earn from home? Flash Gain pays you for simple tasks! Join now and watch your wallet grow!",
+    "Don't miss out! Flash Gain gives you instant bonuses and daily earnings — sign up and start winning!",
+    "Flash Gain lets you earn money daily — invite friends and claim free rewards!",
+    "Turn your phone into an ATM! Join Flash Gain and get paid every day!",
+    "Earn ₦10,000 per referral and get instant signup bonuses — Flash Gain is the real deal!",
+    "Get rewarded for every invite! Join Flash Gain and earn without stress!",
+    "Flash Gain pays you for completing simple tasks — join today and start earning!",
+    "Make money online easily! Flash Gain gives you instant bonuses and daily claims!",
+    "Earn fast, withdraw easily! Flash Gain is your ticket to daily income!",
+    "Invite friends, earn ₦10,000 each! Start your earning journey with Flash Gain today!",
+    "Need cash fast? Flash Gain gives you loans in just 5 minutes — no BVN required!",
+    "Get instant loans without BVN! Flash Gain makes borrowing stress-free!",
+    "Need urgent money? Flash Gain offers quick loans in minutes — sign up now!",
+    "Take loans easily and start earning too! Flash Gain is your one-stop money app!",
+  ];
 
   // Animate earnings
   useEffect(() => {

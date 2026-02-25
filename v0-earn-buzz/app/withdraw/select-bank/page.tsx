@@ -162,15 +162,17 @@ export default function SetupWithdrawalAccountPage() {
             <div className="hh-spinner-ring hh-spinner-ring-2"></div>
             <div className="hh-spinner-ring hh-spinner-ring-3"></div>
           </div>
-          <h1 className="hh-loading-title">Helping Hands</h1>
+          <h1 className="hh-loading-title">Flash Gain</h1>
           <p className="hh-loading-text">
-            {transitioning ? "Redirecting securely..." : "Loading secure setup..."}
+            {transitioning
+              ? "Redirecting securely..."
+              : "Loading secure setup..."}
           </p>
         </div>
 
         <style jsx global>{`
           .hh-root {
-            font-family: 'Syne', sans-serif;
+            font-family: "Syne", sans-serif;
             background: #050d14;
             color: white;
             min-height: 100vh;
@@ -191,33 +193,187 @@ export default function SetupWithdrawalAccountPage() {
             animation: hh-bubble-rise linear infinite;
           }
 
-          .hh-bubble-1  { width: 8px; height: 8px; left: 10%; background: radial-gradient(circle, rgba(16,185,129,0.6), transparent); animation-duration: 8s; animation-delay: 0s; }
-          .hh-bubble-2  { width: 14px; height: 14px; left: 25%; background: radial-gradient(circle, rgba(59,130,246,0.5), transparent); animation-duration: 11s; animation-delay: 1.5s; }
-          .hh-bubble-3  { width: 6px; height: 6px; left: 40%; background: radial-gradient(circle, rgba(16,185,129,0.7), transparent); animation-duration: 9s; animation-delay: 3s; }
-          .hh-bubble-4  { width: 18px; height: 18px; left: 55%; background: radial-gradient(circle, rgba(139,92,246,0.4), transparent); animation-duration: 13s; animation-delay: 0.5s; }
-          .hh-bubble-5  { width: 10px; height: 10px; left: 70%; background: radial-gradient(circle, rgba(16,185,129,0.5), transparent); animation-duration: 10s; animation-delay: 2s; }
-          .hh-bubble-6  { width: 5px; height: 5px; left: 82%; background: radial-gradient(circle, rgba(52,211,153,0.8), transparent); animation-duration: 7s; animation-delay: 4s; }
-          .hh-bubble-7  { width: 12px; height: 12px; left: 15%; background: radial-gradient(circle, rgba(59,130,246,0.4), transparent); animation-duration: 12s; animation-delay: 5s; }
-          .hh-bubble-8  { width: 7px; height: 7px; left: 35%; background: radial-gradient(circle, rgba(16,185,129,0.6), transparent); animation-duration: 9.5s; animation-delay: 2.5s; }
-          .hh-bubble-9  { width: 20px; height: 20px; left: 60%; background: radial-gradient(circle, rgba(16,185,129,0.2), transparent); animation-duration: 15s; animation-delay: 1s; }
-          .hh-bubble-10 { width: 9px; height: 9px; left: 88%; background: radial-gradient(circle, rgba(139,92,246,0.5), transparent); animation-duration: 10.5s; animation-delay: 6s; }
-          .hh-bubble-11 { width: 4px; height: 4px; left: 5%; background: radial-gradient(circle, rgba(52,211,153,0.9), transparent); animation-duration: 6.5s; animation-delay: 3.5s; }
-          .hh-bubble-12 { width: 16px; height: 16px; left: 48%; background: radial-gradient(circle, rgba(59,130,246,0.3), transparent); animation-duration: 14s; animation-delay: 7s; }
+          .hh-bubble-1 {
+            width: 8px;
+            height: 8px;
+            left: 10%;
+            background: radial-gradient(
+              circle,
+              rgba(16, 185, 129, 0.6),
+              transparent
+            );
+            animation-duration: 8s;
+            animation-delay: 0s;
+          }
+          .hh-bubble-2 {
+            width: 14px;
+            height: 14px;
+            left: 25%;
+            background: radial-gradient(
+              circle,
+              rgba(59, 130, 246, 0.5),
+              transparent
+            );
+            animation-duration: 11s;
+            animation-delay: 1.5s;
+          }
+          .hh-bubble-3 {
+            width: 6px;
+            height: 6px;
+            left: 40%;
+            background: radial-gradient(
+              circle,
+              rgba(16, 185, 129, 0.7),
+              transparent
+            );
+            animation-duration: 9s;
+            animation-delay: 3s;
+          }
+          .hh-bubble-4 {
+            width: 18px;
+            height: 18px;
+            left: 55%;
+            background: radial-gradient(
+              circle,
+              rgba(139, 92, 246, 0.4),
+              transparent
+            );
+            animation-duration: 13s;
+            animation-delay: 0.5s;
+          }
+          .hh-bubble-5 {
+            width: 10px;
+            height: 10px;
+            left: 70%;
+            background: radial-gradient(
+              circle,
+              rgba(16, 185, 129, 0.5),
+              transparent
+            );
+            animation-duration: 10s;
+            animation-delay: 2s;
+          }
+          .hh-bubble-6 {
+            width: 5px;
+            height: 5px;
+            left: 82%;
+            background: radial-gradient(
+              circle,
+              rgba(52, 211, 153, 0.8),
+              transparent
+            );
+            animation-duration: 7s;
+            animation-delay: 4s;
+          }
+          .hh-bubble-7 {
+            width: 12px;
+            height: 12px;
+            left: 15%;
+            background: radial-gradient(
+              circle,
+              rgba(59, 130, 246, 0.4),
+              transparent
+            );
+            animation-duration: 12s;
+            animation-delay: 5s;
+          }
+          .hh-bubble-8 {
+            width: 7px;
+            height: 7px;
+            left: 35%;
+            background: radial-gradient(
+              circle,
+              rgba(16, 185, 129, 0.6),
+              transparent
+            );
+            animation-duration: 9.5s;
+            animation-delay: 2.5s;
+          }
+          .hh-bubble-9 {
+            width: 20px;
+            height: 20px;
+            left: 60%;
+            background: radial-gradient(
+              circle,
+              rgba(16, 185, 129, 0.2),
+              transparent
+            );
+            animation-duration: 15s;
+            animation-delay: 1s;
+          }
+          .hh-bubble-10 {
+            width: 9px;
+            height: 9px;
+            left: 88%;
+            background: radial-gradient(
+              circle,
+              rgba(139, 92, 246, 0.5),
+              transparent
+            );
+            animation-duration: 10.5s;
+            animation-delay: 6s;
+          }
+          .hh-bubble-11 {
+            width: 4px;
+            height: 4px;
+            left: 5%;
+            background: radial-gradient(
+              circle,
+              rgba(52, 211, 153, 0.9),
+              transparent
+            );
+            animation-duration: 6.5s;
+            animation-delay: 3.5s;
+          }
+          .hh-bubble-12 {
+            width: 16px;
+            height: 16px;
+            left: 48%;
+            background: radial-gradient(
+              circle,
+              rgba(59, 130, 246, 0.3),
+              transparent
+            );
+            animation-duration: 14s;
+            animation-delay: 7s;
+          }
 
           @keyframes hh-bubble-rise {
-            0%   { transform: translateY(100vh) scale(0.5); opacity: 0; }
-            10%  { opacity: 1; }
-            90%  { opacity: 0.6; }
-            100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+            0% {
+              transform: translateY(100vh) scale(0.5);
+              opacity: 0;
+            }
+            10% {
+              opacity: 1;
+            }
+            90% {
+              opacity: 0.6;
+            }
+            100% {
+              transform: translateY(-10vh) scale(1.2);
+              opacity: 0;
+            }
           }
 
           .hh-mesh-overlay {
             position: fixed;
             inset: 0;
             background:
-              radial-gradient(ellipse 60% 40% at 20% 80%, rgba(16,185,129,0.07) 0%, transparent 60%),
-              radial-gradient(ellipse 50% 50% at 80% 20%, rgba(59,130,246,0.06) 0%, transparent 60%),
-              radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139,92,246,0.04) 0%, transparent 60%);
+              radial-gradient(
+                ellipse 60% 40% at 20% 80%,
+                rgba(16, 185, 129, 0.07) 0%,
+                transparent 60%
+              ),
+              radial-gradient(
+                ellipse 50% 50% at 80% 20%,
+                rgba(59, 130, 246, 0.06) 0%,
+                transparent 60%
+              ),
+              radial-gradient(
+                ellipse 40% 30% at 50% 50%,
+                rgba(139, 92, 246, 0.04) 0%,
+                transparent 60%
+              );
             pointer-events: none;
             z-index: 0;
           }
@@ -243,7 +399,8 @@ export default function SetupWithdrawalAccountPage() {
             border-radius: 50%;
             border: 3px solid transparent;
             border-top-color: #10b981;
-            animation: hh-spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            animation: hh-spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)
+              infinite;
           }
 
           .hh-spinner-ring-2 {
@@ -266,8 +423,12 @@ export default function SetupWithdrawalAccountPage() {
           }
 
           @keyframes hh-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+              transform: rotate(0deg);
+            }
+            100% {
+              transform: rotate(360deg);
+            }
           }
 
           .hh-loading-title {
@@ -281,22 +442,34 @@ export default function SetupWithdrawalAccountPage() {
           }
 
           @keyframes hh-glow {
-            0% { text-shadow: 0 0 5px rgba(16,185,129,0.3); }
-            100% { text-shadow: 0 0 20px rgba(16,185,129,0.6), 0 0 30px rgba(251,191,36,0.3); }
+            0% {
+              text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+            }
+            100% {
+              text-shadow:
+                0 0 20px rgba(16, 185, 129, 0.6),
+                0 0 30px rgba(251, 191, 36, 0.3);
+            }
           }
 
           .hh-loading-text {
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             font-size: 14px;
           }
 
           @keyframes hh-entry {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
         `}</style>
       </div>
-    )
+    );
   }
 
   return (

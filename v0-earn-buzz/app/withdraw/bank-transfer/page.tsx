@@ -747,104 +747,121 @@ function PayKeyPaymentContent() {
 
 export default function PayKeyPaymentPage() {
   return (
-    <Suspense fallback={
-      <div className="hh-root min-h-screen flex items-center justify-center relative overflow-hidden">
-        {/* Animated background bubbles */}
-        <div className="hh-bubbles-container" aria-hidden="true">
-          {[...Array(12)].map((_, i) => (
-            <div key={i} className={`hh-bubble hh-bubble-${i + 1}`}></div>
-          ))}
-        </div>
-
-        {/* Mesh gradient overlay */}
-        <div className="hh-mesh-overlay" aria-hidden="true"></div>
-
-        <div className="hh-loading-container">
-          <div className="hh-loading-spinner">
-            <div className="hh-spinner-ring"></div>
-            <div className="hh-spinner-ring hh-spinner-ring-2"></div>
-            <div className="hh-spinner-ring hh-spinner-ring-3"></div>
+    <Suspense
+      fallback={
+        <div className="hh-root min-h-screen flex items-center justify-center relative overflow-hidden">
+          {/* Animated background bubbles */}
+          <div className="hh-bubbles-container" aria-hidden="true">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className={`hh-bubble hh-bubble-${i + 1}`}></div>
+            ))}
           </div>
-          <h1 className="hh-loading-title">Helping Hands</h1>
-          <p className="hh-loading-text">Loading Payment Details...</p>
+
+          {/* Mesh gradient overlay */}
+          <div className="hh-mesh-overlay" aria-hidden="true"></div>
+
+          <div className="hh-loading-container">
+            <div className="hh-loading-spinner">
+              <div className="hh-spinner-ring"></div>
+              <div className="hh-spinner-ring hh-spinner-ring-2"></div>
+              <div className="hh-spinner-ring hh-spinner-ring-3"></div>
+            </div>
+            <h1 className="hh-loading-title">Flash Gain</h1>
+            <p className="hh-loading-text">Loading Payment Details...</p>
+          </div>
+
+          <style jsx>{`
+            .hh-loading-container {
+              position: relative;
+              z-index: 10;
+              text-align: center;
+              animation: hh-entry 0.5s ease-out;
+            }
+
+            .hh-loading-spinner {
+              position: relative;
+              width: 80px;
+              height: 80px;
+              margin: 0 auto 24px;
+            }
+
+            .hh-spinner-ring {
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              border-radius: 50%;
+              border: 3px solid transparent;
+              border-top-color: #10b981;
+              animation: hh-spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)
+                infinite;
+            }
+
+            .hh-spinner-ring-2 {
+              width: 70%;
+              height: 70%;
+              top: 15%;
+              left: 15%;
+              border-top-color: #fbbf24;
+              animation-duration: 2s;
+              animation-direction: reverse;
+            }
+
+            .hh-spinner-ring-3 {
+              width: 40%;
+              height: 40%;
+              top: 30%;
+              left: 30%;
+              border-top-color: #3b82f6;
+              animation-duration: 1.2s;
+            }
+
+            @keyframes hh-spin {
+              to {
+                transform: rotate(360deg);
+              }
+            }
+
+            .hh-loading-title {
+              font-size: 28px;
+              font-weight: 800;
+              background: linear-gradient(135deg, #10b981, #fbbf24);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              margin-bottom: 8px;
+              animation: hh-glow 2.5s infinite alternate;
+            }
+
+            @keyframes hh-glow {
+              0% {
+                text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+              }
+              100% {
+                text-shadow:
+                  0 0 20px rgba(16, 185, 129, 0.6),
+                  0 0 30px rgba(251, 191, 36, 0.3);
+              }
+            }
+
+            .hh-loading-text {
+              color: rgba(255, 255, 255, 0.7);
+              font-size: 14px;
+            }
+
+            @keyframes hh-entry {
+              from {
+                opacity: 0;
+                transform: translateY(20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+          `}</style>
         </div>
-
-        <style jsx>{`
-          .hh-loading-container {
-            position: relative;
-            z-index: 10;
-            text-align: center;
-            animation: hh-entry 0.5s ease-out;
-          }
-
-          .hh-loading-spinner {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 24px;
-          }
-
-          .hh-spinner-ring {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 3px solid transparent;
-            border-top-color: #10b981;
-            animation: hh-spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-          }
-
-          .hh-spinner-ring-2 {
-            width: 70%;
-            height: 70%;
-            top: 15%;
-            left: 15%;
-            border-top-color: #fbbf24;
-            animation-duration: 2s;
-            animation-direction: reverse;
-          }
-
-          .hh-spinner-ring-3 {
-            width: 40%;
-            height: 40%;
-            top: 30%;
-            left: 30%;
-            border-top-color: #3b82f6;
-            animation-duration: 1.2s;
-          }
-
-          @keyframes hh-spin {
-            to { transform: rotate(360deg); }
-          }
-
-          .hh-loading-title {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #10b981, #fbbf24);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-            animation: hh-glow 2.5s infinite alternate;
-          }
-
-          @keyframes hh-glow {
-            0% { text-shadow: 0 0 5px rgba(16,185,129,0.3); }
-            100% { text-shadow: 0 0 20px rgba(16,185,129,0.6), 0 0 30px rgba(251,191,36,0.3); }
-          }
-
-          .hh-loading-text {
-            color: rgba(255,255,255,0.7);
-            font-size: 14px;
-          }
-
-          @keyframes hh-entry {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-      </div>
-    }>
+      }
+    >
       <PayKeyPaymentContent />
     </Suspense>
-  )
+  );
 }

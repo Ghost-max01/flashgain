@@ -70,13 +70,20 @@ export default function UpgradeTiersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-600 via-purple-600 to-green-700 p-6 text-white animate-page-fade">
       <div className="flex items-center gap-4 mb-8 animate-slide-down">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white/90 hover:bg-white/10 p-2 rounded-lg">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="text-white/90 hover:bg-white/10 p-2 rounded-lg"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-wide">Upgrade Your Tier</h1>
+          <h1 className="text-3xl font-extrabold tracking-wide">
+            Upgrade Your Tier
+          </h1>
           <p className="text-sm text-white/80">
-            One-time lifetime upgrade to unlock premium Helping Hands features.
+            One-time lifetime upgrade to unlock premium Flash Gain features.
           </p>
         </div>
       </div>
@@ -103,7 +110,9 @@ export default function UpgradeTiersPage() {
       {/* Telegram Support */}
       <div className="text-center mb-12 animate-slide-up">
         <Button
-          onClick={() => window.open("https://t.me/helpinghandsupport", '_self')}
+          onClick={() =>
+            window.open("https://t.me/helpinghandsupport", "_self")
+          }
           className="bg-white text-green-700 font-semibold hover:bg-white/80 rounded-xl px-5 py-2 shadow-md"
         >
           💬 Contact Support on Telegram
@@ -131,8 +140,8 @@ export default function UpgradeTiersPage() {
               </Button>
               <Button
                 onClick={() => {
-                  const amount = tiers[activeTier].price
-                  router.push(`/withdraw/bank-transfer?amount=${amount}`)
+                  const amount = tiers[activeTier].price;
+                  router.push(`/withdraw/bank-transfer?amount=${amount}`);
                 }}
                 className="w-1/2 bg-gradient-to-r from-green-600 to-purple-600 text-white font-semibold rounded-xl hover:scale-[1.03] transition-all"
               >
@@ -177,5 +186,5 @@ export default function UpgradeTiersPage() {
         .animate-page-fade { animation: pageFade 0.8s ease-in-out; }
       `}</style>
     </div>
-  )
+  );
 }

@@ -48,7 +48,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
   const steps = [
     {
       icon: Gift,
-      title: "Welcome to Helping Hands!",
+      title: "Welcome to Flash Gain!",
       description:
         "Earn welcome bonus and daily cash by completing easy tasks. But first, join our Telegram channel for updates!",
       color: "emerald",
@@ -201,7 +201,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
               </div>
               <h3 className="hh-success-title">Congratulations!</h3>
               <p className="hh-success-text">
-                You're all set to start earning with Helping Hands.
+                You're all set to start earning with Flash Gain.
               </p>
               <div className="hh-modal-actions">
                 <button onClick={onClose} className="hh-dashboard-btn">

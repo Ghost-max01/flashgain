@@ -7,7 +7,7 @@ import { Sparkles, Shield, Award, Star } from "lucide-react";
 export default function WelcomePage() {
   const router = useRouter();
   const [displayText, setDisplayText] = useState("");
-  const fullText = "Helping Hands";
+  const fullText = "Flash Gain";
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showDots, setShowDots] = useState(false);
@@ -108,7 +108,7 @@ export default function WelcomePage() {
         {/* Security Badge */}
         <div className="hh-security-badge">
           <Shield className="hh-shield-icon" />
-          <span className="hh-security-text">Secured by Helping Hands</span>
+          <span className="hh-security-text">Secured by Flash Gain</span>
         </div>
       </div>
 

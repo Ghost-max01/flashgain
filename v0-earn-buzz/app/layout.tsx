@@ -8,38 +8,39 @@ import PageShell from "@/components/PageShell"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Helping Hands",
+  title: "Flash Gain",
   description:
-    "Helping Hands is a financial & earning app that offers weekly cash rewards to new users",
+    "Flash Gain is a financial & earning app that offers weekly cash rewards to new users",
   manifest: "/manifest.json",
   generator: "v0.dev",
   other: {
-    "8c56abd733d73550a5527a8ac0c7bc62642d1a86": "8c56abd733d73550a5527a8ac0c7bc62642d1a86",
+    "8c56abd733d73550a5527a8ac0c7bc62642d1a86":
+      "8c56abd733d73550a5527a8ac0c7bc62642d1a86",
   },
   openGraph: {
-    title: "Helping Hands",
+    title: "Flash Gain",
     description:
-      "Helping Hands is a financial & earning app that offers weekly cash rewards to new users",
+      "Flash Gain is a financial & earning app that offers weekly cash rewards to new users",
     url: "https://helpinghands.money",
-    siteName: "Helping Hands",
+    siteName: "Flash Gain",
     images: [
       {
         url: "https://helpinghands.money/placeholder-logo.png",
         width: 1200,
         height: 630,
-        alt: "Helping Hands",
+        alt: "Flash Gain",
       },
     ],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Helping Hands",
+    title: "Flash Gain",
     description:
-      "Helping Hands is a financial & earning app that offers weekly cash rewards to new users",
+      "Flash Gain is a financial & earning app that offers weekly cash rewards to new users",
     images: ["https://helpinghands.money/placeholder-logo.png"],
   },
-}
+};
 
 export default function RootLayout({
   children,

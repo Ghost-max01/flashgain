@@ -219,7 +219,7 @@ export default function InvestmentPlatformPage() {
               </div>
               <div>
                 <span className="text-xl font-bold text-white block leading-tight">
-                  Helping Hands Investment.
+                  Flash Gain Investment.
                 </span>
                 <span className="text-xs text-emerald-300/70">
                   Est. 2018 • Regulated
@@ -282,8 +282,6 @@ export default function InvestmentPlatformPage() {
           </div>
         </div>
       </nav>
-
-
 
       {/* About Section: trimmed */}
       <section
@@ -442,8 +440,13 @@ export default function InvestmentPlatformPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      const amountNumeric = (plan.minDeposit || "").toString().replace(/[^\d]/g, "") || investmentAmount;
-                      router.push(`/investment/payment?amount=${amountNumeric}&plan=${encodeURIComponent(plan.id)}`);
+                      const amountNumeric =
+                        (plan.minDeposit || "")
+                          .toString()
+                          .replace(/[^\d]/g, "") || investmentAmount;
+                      router.push(
+                        `/investment/payment?amount=${amountNumeric}&plan=${encodeURIComponent(plan.id)}`,
+                      );
                     }}
                     className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group"
                   >
@@ -515,61 +518,95 @@ export default function InvestmentPlatformPage() {
 
                 <div className="pt-4 border-t border-white/10 space-y-4">
                   <div>
-                    <p className="text-xs text-white/50 uppercase tracking-wider mb-3 font-semibold">Initial Investment</p>
+                    <p className="text-xs text-white/50 uppercase tracking-wider mb-3 font-semibold">
+                      Initial Investment
+                    </p>
                     <p className="text-2xl font-bold text-white">
-                      ₦{parseInt(investmentAmount).toLocaleString('en-NG')}
+                      ₦{parseInt(investmentAmount).toLocaleString("en-NG")}
                     </p>
                   </div>
 
                   {/* Weekly Returns */}
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-white/70">Weekly Return (184.6%)</span>
+                      <span className="text-sm text-white/70">
+                        Weekly Return (184.6%)
+                      </span>
                       <span className="text-xs text-emerald-300">7 days</span>
                     </div>
                     <p className="text-xl font-bold text-emerald-400">
-                      ₦{Math.round(parseInt(investmentAmount) * (1 + 1.846)).toLocaleString('en-NG')}
+                      ₦
+                      {Math.round(
+                        parseInt(investmentAmount) * (1 + 1.846),
+                      ).toLocaleString("en-NG")}
                     </p>
                     <p className="text-xs text-white/50 mt-1">
-                      +₦{Math.round(parseInt(investmentAmount) * 1.846).toLocaleString('en-NG')} profit
+                      +₦
+                      {Math.round(
+                        parseInt(investmentAmount) * 1.846,
+                      ).toLocaleString("en-NG")}{" "}
+                      profit
                     </p>
                   </div>
 
                   {/* Monthly Returns */}
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-white/70">Monthly Return (800%)</span>
+                      <span className="text-sm text-white/70">
+                        Monthly Return (800%)
+                      </span>
                       <span className="text-xs text-blue-300">30 days</span>
                     </div>
                     <p className="text-xl font-bold text-blue-400">
-                      ₦{Math.round(parseInt(investmentAmount) * (1 + 8)).toLocaleString('en-NG')}
+                      ₦
+                      {Math.round(
+                        parseInt(investmentAmount) * (1 + 8),
+                      ).toLocaleString("en-NG")}
                     </p>
                     <p className="text-xs text-white/50 mt-1">
-                      +₦{Math.round(parseInt(investmentAmount) * 8).toLocaleString('en-NG')} profit
+                      +₦
+                      {Math.round(
+                        parseInt(investmentAmount) * 8,
+                      ).toLocaleString("en-NG")}{" "}
+                      profit
                     </p>
                   </div>
 
                   {/* Yearly Returns */}
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-white/70">Yearly Return (9600%)</span>
+                      <span className="text-sm text-white/70">
+                        Yearly Return (9600%)
+                      </span>
                       <span className="text-xs text-amber-300">365 days</span>
                     </div>
                     <p className="text-xl font-bold text-amber-400">
-                      ₦{Math.round(parseInt(investmentAmount) * (1 + 96)).toLocaleString('en-NG')}
+                      ₦
+                      {Math.round(
+                        parseInt(investmentAmount) * (1 + 96),
+                      ).toLocaleString("en-NG")}
                     </p>
                     <p className="text-xs text-white/50 mt-1">
-                      +₦{Math.round(parseInt(investmentAmount) * 96).toLocaleString('en-NG')} profit
+                      +₦
+                      {Math.round(
+                        parseInt(investmentAmount) * 96,
+                      ).toLocaleString("en-NG")}{" "}
+                      profit
                     </p>
                   </div>
 
                   <div className="pt-6">
                     <button
                       type="button"
-                      onClick={() => router.push(`/investment/payment?amount=${parseInt(investmentAmount)}&plan=custom`)}
+                      onClick={() =>
+                        router.push(
+                          `/investment/payment?amount=${parseInt(investmentAmount)}&plan=custom`,
+                        )
+                      }
                       className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-xl"
                     >
-                      Invest ₦{parseInt(investmentAmount).toLocaleString('en-NG')}
+                      Invest ₦
+                      {parseInt(investmentAmount).toLocaleString("en-NG")}
                     </button>
                   </div>
                 </div>
@@ -653,7 +690,7 @@ export default function InvestmentPlatformPage() {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-12 hh-entry-1">
             <h2 className="text-3xl font-bold text-white mb-4 relative inline-block">
-              Why Choose HelpingHands
+              Why Choose Flash Gain
               <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-emerald-500 rounded-full animate-width-slow"></span>
             </h2>
             <p className="text-xl text-white/70">
@@ -780,9 +817,7 @@ export default function InvestmentPlatformPage() {
                 <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                   <Building className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-lg font-bold text-white">
-                  HelpingHands
-                </span>
+                <span className="text-lg font-bold text-white">Flash Gain</span>
               </div>
               <p className="text-sm text-white/50">
                 SEC-registered investment advisor providing diversified
@@ -795,7 +830,7 @@ export default function InvestmentPlatformPage() {
 
           <div className="mt-12 pt-8 border-t border-white/10 text-center text-sm text-white/40">
             <p>
-              © {new Date().getFullYear()} HelpingHands Capital Management. All
+              © {new Date().getFullYear()} Flash Gain Capital Management. All
               rights reserved.
             </p>
             <p className="mt-2 animate-pulse-subtle">

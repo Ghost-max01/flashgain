@@ -54,12 +54,30 @@ const WINNERS = [
 ];
 
 const FAQS = [
-  { q: "Is this promotion real?", a: "Absolutely! Helping Hands is an officially registered earning platform . All prizes are genuine and verifiable. Winners are contacted directly to arrange delivery." },
-  { q: "How many times can I spin?", a: "You can spin as many times as you like! Each spin is completely independent, so your chances are fresh every time." },
-  { q: "How do I claim my prize?", a: "When you win, a congratulations screen will appear with instructions. You'll be asked to provide delivery details and our team will process your prize within 3-5 business days." },
-  { q: "Is there a cost to participate?", a: "No! Spinning the wheel is 100% free. There are no hidden charges, subscriptions, or fees of any kind." },
-  { q: "What are the odds of winning?", a: "Each segment of the wheel has an equal probability of being selected. With 12 segments, 10 of which are prizes, you have great odds!" },
-  { q: "Can I win more than once?", a: "Yes! There's no limit to the number of prizes you can win. Keep spinning and keep winning!" },
+  {
+    q: "Is this promotion real?",
+    a: "Absolutely! Flash Gains is an officially registered earning platform . All prizes are genuine and verifiable. Winners are contacted directly to arrange delivery.",
+  },
+  {
+    q: "How many times can I spin?",
+    a: "You can spin as many times as you like! Each spin is completely independent, so your chances are fresh every time.",
+  },
+  {
+    q: "How do I claim my prize?",
+    a: "When you win, a congratulations screen will appear with instructions. You'll be asked to provide delivery details and our team will process your prize within 3-5 business days.",
+  },
+  {
+    q: "Is there a cost to participate?",
+    a: "No! Spinning the wheel is 100% free. There are no hidden charges, subscriptions, or fees of any kind.",
+  },
+  {
+    q: "What are the odds of winning?",
+    a: "Each segment of the wheel has an equal probability of being selected. With 12 segments, 10 of which are prizes, you have great odds!",
+  },
+  {
+    q: "Can I win more than once?",
+    a: "Yes! There's no limit to the number of prizes you can win. Keep spinning and keep winning!",
+  },
 ];
 
 /* ──────────────────────────── COMPONENTS ──────────────────────────── */
@@ -87,7 +105,7 @@ const Navbar = ({ activeSection }: { activeSection: string }) => {
         <div className="flex items-center justify-between h-16">
           <button onClick={() => scrollTo("hero")} className="flex items-center gap-2">
             <span className="text-2xl">🎰</span>
-            <span className="font-display font-bold text-lg bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">Helping Hands</span>
+            <span className="font-display font-bold text-lg bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">Flash Gains</span>
           </button>
 
           <div className="hidden md:flex items-center gap-1">
@@ -722,26 +740,57 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-900 to-black text-white overflow-x-hidden">
       <style jsx global>{`
         @keyframes bounce-in {
-          0% { opacity: 0; transform: scale(0.9); }
-          100% { opacity: 1; transform: scale(1); }
+          0% {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
         @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
         }
         @keyframes slide-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes pulse-glow {
-          0%, 100% { opacity: 0.6; }
-          50% { opacity: 1; box-shadow: 0 0 10px currentColor; }
+          0%,
+          100% {
+            opacity: 0.6;
+          }
+          50% {
+            opacity: 1;
+            box-shadow: 0 0 10px currentColor;
+          }
         }
-        .animate-bounce-in { animation: bounce-in 0.4s ease; }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        .animate-slide-up { animation: slide-up 0.6s ease; }
-        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-        
+        .animate-bounce-in {
+          animation: bounce-in 0.4s ease;
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        .animate-slide-up {
+          animation: slide-up 0.6s ease;
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+
         /* Custom card styles */
         .card-premium {
           background: rgba(255, 255, 255, 0.06);
@@ -749,12 +798,12 @@ const Index = () => {
           border: 1px solid rgba(255, 255, 255, 0.08);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
-        
+
         .bg-hero {
           background: linear-gradient(145deg, #065f46, #022c22, #000000);
         }
       `}</style>
-      
+
       <Navbar activeSection={activeSection} />
 
       {/* ── HERO ── */}
@@ -777,14 +826,21 @@ const Index = () => {
           </div>
           <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-black tracking-tight mb-4">
             <span className="text-white">SPIN TO</span>{" "}
-            <span className="bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">WIN</span>
+            <span className="bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">
+              WIN
+            </span>
           </h1>
           <p className="text-white/80 text-base sm:text-lg max-w-lg mx-auto">
-            Win iPhones, MacBooks, Smart TVs and more — 100% free, no sign-up required!
+            Win iPhones, MacBooks, Smart TVs and more — 100% free, no sign-up
+            required!
           </p>
         </div>
 
-        <SpinWheel canSpin={canSpin} onSpinStart={handleSpinStart} remainingSpins={remainingSpins} />
+        <SpinWheel
+          canSpin={canSpin}
+          onSpinStart={handleSpinStart}
+          remainingSpins={remainingSpins}
+        />
 
         <div className="mt-8 sm:mt-10 flex flex-wrap justify-center gap-6 text-center text-sm text-white/80">
           <div>
@@ -792,7 +848,9 @@ const Index = () => {
             Amazing Prizes
           </div>
           <div>
-            <span className="block text-2xl font-bold text-amber-300">500+</span>
+            <span className="block text-2xl font-bold text-amber-300">
+              500+
+            </span>
             Winners So Far
           </div>
           <div>
@@ -802,7 +860,13 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce text-white/80">
-          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M12 5v14M5 12l7 7 7-7" />
           </svg>
         </div>
@@ -836,9 +900,15 @@ const Index = () => {
                   {prize.emoji}
                 </div>
               )}
-              <h3 className="font-display text-sm font-bold text-white mb-1">{prize.name}</h3>
-              <p className="text-amber-300 font-semibold text-sm mb-2">{prize.value}</p>
-              <p className="text-white/80 text-xs leading-relaxed">{prize.description}</p>
+              <h3 className="font-display text-sm font-bold text-white mb-1">
+                {prize.name}
+              </h3>
+              <p className="text-amber-300 font-semibold text-sm mb-2">
+                {prize.value}
+              </p>
+              <p className="text-white/80 text-xs leading-relaxed">
+                {prize.description}
+              </p>
             </div>
           ))}
         </div>
@@ -851,29 +921,62 @@ const Index = () => {
         </SectionTitle>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           {[
-            { step: "01", icon: "🖱️", title: "Hit Spin", desc: "Click the golden SPIN button on the wheel. It's completely free — no sign-up required." },
-            { step: "02", icon: "🎯", title: "Land on a Prize", desc: "Watch the wheel spin and land on one of 12 exciting segments. Each spin is random and fair." },
-            { step: "03", icon: "🎁", title: "Claim Your Prize", desc: "If you win, a congratulations screen pops up. Follow the steps to claim your amazing prize!" },
+            {
+              step: "01",
+              icon: "🖱️",
+              title: "Hit Spin",
+              desc: "Click the golden SPIN button on the wheel. It's completely free — no sign-up required.",
+            },
+            {
+              step: "02",
+              icon: "🎯",
+              title: "Land on a Prize",
+              desc: "Watch the wheel spin and land on one of 12 exciting segments. Each spin is random and fair.",
+            },
+            {
+              step: "03",
+              icon: "🎁",
+              title: "Claim Your Prize",
+              desc: "If you win, a congratulations screen pops up. Follow the steps to claim your amazing prize!",
+            },
           ].map((item, i) => (
-            <div key={i} className="card-premium rounded-xl p-8 text-center relative overflow-hidden group hover:border-amber-300/40 transition-all">
+            <div
+              key={i}
+              className="card-premium rounded-xl p-8 text-center relative overflow-hidden group hover:border-amber-300/40 transition-all"
+            >
               <div className="absolute top-3 right-4 font-display text-5xl font-black text-white/5 group-hover:text-amber-300/10 transition-colors">
                 {item.step}
               </div>
               <div className="text-4xl mb-4">{item.icon}</div>
-              <h3 className="font-display text-lg font-bold text-white mb-2">{item.title}</h3>
+              <h3 className="font-display text-lg font-bold text-white mb-2">
+                {item.title}
+              </h3>
               <p className="text-white/80 text-sm">{item.desc}</p>
             </div>
           ))}
         </div>
 
         <div className="mt-12 max-w-2xl mx-auto card-premium rounded-xl p-6">
-          <h4 className="font-display text-sm font-bold text-amber-300 mb-3">📜 Rules & Terms</h4>
+          <h4 className="font-display text-sm font-bold text-amber-300 mb-3">
+            📜 Rules & Terms
+          </h4>
           <ul className="text-white/80 text-xs space-y-2 list-disc list-inside">
-            <li>This is a promotional demo — prizes shown are for demonstration purposes.</li>
-            <li>Each spin result is randomly generated and independent of previous spins.</li>
-            <li>Prize fulfilment is subject to verification and availability.</li>
+            <li>
+              This is a promotional demo — prizes shown are for demonstration
+              purposes.
+            </li>
+            <li>
+              Each spin result is randomly generated and independent of previous
+              spins.
+            </li>
+            <li>
+              Prize fulfilment is subject to verification and availability.
+            </li>
             <li>Participants must be 18 years or older.</li>
-            <li>Helping Hands Hub reserves the right to modify or end the promotion at any time.</li>
+            <li>
+              Flash Gains Hub reserves the right to modify or end the promotion
+              at any time.
+            </li>
           </ul>
         </div>
       </Section>
@@ -893,8 +996,12 @@ const Index = () => {
                 {w.name.charAt(0)}
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-white text-sm truncate">{w.name}</p>
-                <p className="text-amber-300 text-xs font-medium truncate">Won: {w.prize}</p>
+                <p className="font-semibold text-white text-sm truncate">
+                  {w.name}
+                </p>
+                <p className="text-amber-300 text-xs font-medium truncate">
+                  Won: {w.prize}
+                </p>
                 <p className="text-white/80 text-xs">
                   {w.date} · {w.location}
                 </p>
@@ -909,16 +1016,17 @@ const Index = () => {
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="font-display text-3xl sm:text-4xl font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent mb-6">
-              About Helping Hands
+              About Flash Gain
             </h2>
             <p className="text-white/80 mb-4 leading-relaxed">
-              Helping Hands is a premier promotional platform dedicated to giving back to our community.
-              We partner with leading tech brands to bring you the most exciting giveaway campaigns.
+              Flash Gain is a premier promotional platform dedicated to giving
+              back to our community. We partner with leading tech brands to
+              bring you the most exciting giveaway campaigns.
             </p>
             <p className="text-white/80 mb-6 leading-relaxed">
-              Since launching, we've given away over ₦5 million in prizes to 500+ lucky winners across
-              Nigeria. Our mission is simple: reward loyalty, spread joy, and put premium tech in
-              everyone's hands.
+              Since launching, we've given away over ₦5 million in prizes to
+              500+ lucky winners across Nigeria. Our mission is simple: reward
+              loyalty, spread joy, and put premium tech in everyone's hands.
             </p>
             <div className="grid grid-cols-3 gap-4">
               {[
@@ -926,8 +1034,13 @@ const Index = () => {
                 { val: "₦5M+", label: "Prize Value" },
                 { val: "4.9★", label: "Rating" },
               ].map((s, i) => (
-                <div key={i} className="card-premium rounded-lg p-3 text-center">
-                  <div className="font-display text-xl font-bold text-amber-300">{s.val}</div>
+                <div
+                  key={i}
+                  className="card-premium rounded-lg p-3 text-center"
+                >
+                  <div className="font-display text-xl font-bold text-amber-300">
+                    {s.val}
+                  </div>
                   <div className="text-white/80 text-xs">{s.label}</div>
                 </div>
               ))}
@@ -935,10 +1048,13 @@ const Index = () => {
           </div>
           <div className="card-premium rounded-2xl p-8 flex flex-col items-center justify-center text-center">
             <div className="text-6xl mb-4">🏆</div>
-            <h3 className="font-display text-xl font-bold text-white mb-3">Our Promise</h3>
+            <h3 className="font-display text-xl font-bold text-white mb-3">
+              Our Promise
+            </h3>
             <p className="text-white/80 text-sm leading-relaxed">
-              Every spin is fair, every prize is real, and every winner is celebrated. We believe
-              everyone deserves a shot at something extraordinary.
+              Every spin is fair, every prize is real, and every winner is
+              celebrated. We believe everyone deserves a shot at something
+              extraordinary.
             </p>
           </div>
         </div>
@@ -946,9 +1062,7 @@ const Index = () => {
 
       {/* ── FAQ ── */}
       <Section id="faq">
-        <SectionTitle sub="Got questions? We've got answers.">
-          FAQ
-        </SectionTitle>
+        <SectionTitle sub="Got questions? We've got answers.">FAQ</SectionTitle>
         <div className="max-w-3xl mx-auto space-y-4">
           {FAQS.map((faq, i) => (
             <FaqItem key={i} q={faq.q} a={faq.a} />
@@ -956,25 +1070,31 @@ const Index = () => {
         </div>
       </Section>
 
-      
-
       {/* ── FOOTER ── */}
       <footer className="border-t border-white/10 bg-gradient-to-r from-green-900 via-green-900 to-black py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <span className="text-xl">🎰</span>
-            <span className="font-display font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">Helping Hands</span>
+            <span className="font-display font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">
+              Flash Gain
+            </span>
           </div>
           <div className="flex gap-4">
             {["Twitter", "Instagram", "Facebook", "TikTok"].map((s) => (
-              <a key={s} href="#" className="text-white/80 hover:text-amber-300 transition-colors text-sm">
+              <a
+                key={s}
+                href="#"
+                className="text-white/80 hover:text-amber-300 transition-colors text-sm"
+              >
                 {s}
               </a>
             ))}
           </div>
           <p className="text-white/60 text-xs">
-            © 2026 Helping Hands. All rights reserved. |{" "}
-            <a href="#" className="hover:text-amber-300 transition-colors">Privacy Policy</a>
+            © 2026 FlashGain. All rights reserved. |{" "}
+            <a href="#" className="hover:text-amber-300 transition-colors">
+              Privacy Policy
+            </a>
           </p>
         </div>
       </footer>

@@ -1,7 +1,8 @@
 export default function Head() {
   const site = "https://helpinghands.money"
-  const title = "Dashboard — Helping Hands"
-  const description = "Your Helping Hands dashboard — view balance, claim rewards, and manage your account."
+  const title = "Dashboard — Flash Gain";
+  const description =
+    "Your Flash Gain dashboard — view balance, claim rewards, and manage your account.";
   const image = `${site}/dashboard-3.jpg`
 
   return (
@@ -16,7 +17,7 @@ export default function Head() {
       <meta property="og:image:type" content="image/jpeg" />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:image:alt" content="Helping Hands — Dashboard preview" />
+      <meta property="og:image:alt" content="Flash Gain — Dashboard preview" />
       <link rel="image_src" href={image} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={`${site}/dashboard`} />

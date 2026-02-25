@@ -704,7 +704,7 @@ export default function InvestmentPaymentPage() {
               <div className="hh-spinner-ring hh-spinner-ring-2"></div>
               <div className="hh-spinner-ring hh-spinner-ring-3"></div>
             </div>
-            <h1 className="hh-loading-title">Helping Hands</h1>
+            <h1 className="hh-loading-title">Flash Gain</h1>
             <p className="hh-loading-text">Loading Payment Details...</p>
           </div>
 
@@ -730,7 +730,8 @@ export default function InvestmentPaymentPage() {
               border-radius: 50%;
               border: 3px solid transparent;
               border-top-color: #10b981;
-              animation: hh-spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+              animation: hh-spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)
+                infinite;
             }
 
             .hh-spinner-ring-2 {
@@ -753,7 +754,9 @@ export default function InvestmentPaymentPage() {
             }
 
             @keyframes hh-spin {
-              to { transform: rotate(360deg); }
+              to {
+                transform: rotate(360deg);
+              }
             }
 
             .hh-loading-title {
@@ -767,18 +770,30 @@ export default function InvestmentPaymentPage() {
             }
 
             @keyframes hh-glow {
-              0% { text-shadow: 0 0 5px rgba(16,185,129,0.3); }
-              100% { text-shadow: 0 0 20px rgba(16,185,129,0.6), 0 0 30px rgba(251,191,36,0.3); }
+              0% {
+                text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+              }
+              100% {
+                text-shadow:
+                  0 0 20px rgba(16, 185, 129, 0.6),
+                  0 0 30px rgba(251, 191, 36, 0.3);
+              }
             }
 
             .hh-loading-text {
-              color: rgba(255,255,255,0.7);
+              color: rgba(255, 255, 255, 0.7);
               font-size: 14px;
             }
 
             @keyframes hh-entry {
-              from { opacity: 0; transform: translateY(20px); }
-              to { opacity: 1; transform: translateY(0); }
+              from {
+                opacity: 0;
+                transform: translateY(20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
             }
           `}</style>
         </div>

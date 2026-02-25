@@ -316,18 +316,36 @@ export default function DashboardPage() {
   }
 
   const menuItems: MenuItem[] = [
-    { name: "Daily Tasks", emoji: "🎁", link: "/task", color: "text-yellow-400", bgColor: "" },
-    { name: "Investments", emoji: "📈", link: "/investment", color: "text-violet-400", bgColor: "" },
-    { name: "Loans", emoji: "💳", link: "/loan", color: "text-purple-400", bgColor: "" },
     {
-      name: "Helping Hands Channel",
+      name: "Daily Tasks",
+      emoji: "🎁",
+      link: "/task",
+      color: "text-yellow-400",
+      bgColor: "",
+    },
+    {
+      name: "Investments",
+      emoji: "📈",
+      link: "/investment",
+      color: "text-violet-400",
+      bgColor: "",
+    },
+    {
+      name: "Loans",
+      emoji: "💳",
+      link: "/loan",
+      color: "text-purple-400",
+      bgColor: "",
+    },
+    {
+      name: "Flash Gain Channel",
       emoji: "📢",
       link: "https://t.me/helpinghandsnews",
       external: true,
       color: "text-blue-400",
       bgColor: "",
     },
-  ]
+  ];
 
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user")
