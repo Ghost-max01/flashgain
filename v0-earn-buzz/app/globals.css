@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 /* Tivexx palette variables */
+
+*{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
 :root {
   --tiv-1: #6d2e46;
   --tiv-2: #e2d2d2; /* CTA bold color */

@@ -458,18 +458,6 @@ export default function ReferPage() {
         </Link>
       </div>
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-20 left-0 right-0 px-4 z-20">
-        <button 
-          onClick={shareWhatsApp}
-          className="hh-float-btn"
-        >
-          <span className="hh-float-shimmer"></span>
-          <Share2 className="h-5 w-5" />
-          <span>Start Sharing Now</span>
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

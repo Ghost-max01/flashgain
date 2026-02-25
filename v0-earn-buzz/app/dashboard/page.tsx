@@ -815,28 +815,7 @@ export default function DashboardPage() {
           {userData && <ReferralCard userId={userData.id || userData.userId} />}
         </div>
 
-        {/* ── SUPPORT CARD (moved) ── */}
-        <div className="hh-card hh-entry-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="hh-section-title mb-0.5">Help & Support</div>
-              <div className="text-xs text-gray-500">Available 24/7 for you</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="https://t.me/flashgainsupport">
-                <button className="hh-support-btn hh-support-blue">
-                  <Headphones className="h-5 w-5 text-white" />
-                </button>
-              </Link>
-              <Link href="https://t.me/helpinghandsnews">
-                <button className="hh-support-btn hh-support-green relative">
-                  <Bell className="h-5 w-5 text-white" />
-                  <span className="hh-notif-dot"></span>
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
+
 
       </div>
 
