@@ -22,7 +22,7 @@ export function LiveChat({ onClose }: LiveChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! Welcome to Earn Buzz support. How can I help you today?",
+      text: "Hello! Welcome to FlashGain 9ja support. How can I help you today?",
       sender: "agent",
       timestamp: new Date(),
     },
