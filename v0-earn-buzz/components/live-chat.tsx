@@ -17,6 +17,7 @@ interface Message {
   timestamp: Date
   isImage?: boolean
   imageUrl?: string
+  imageUrls?: string[]
 }
 
 export function LiveChat({ onClose }: LiveChatProps) {
@@ -90,6 +91,7 @@ export function LiveChat({ onClose }: LiveChatProps) {
         timestamp: new Date(),
         isImage: data.hasImage || false,
         imageUrl: data.imageUrl || undefined,
+        imageUrls: data.imageUrls || undefined,
       }
       setMessages(prev => [...prev, botMessage])
 
@@ -161,9 +163,10 @@ export function LiveChat({ onClose }: LiveChatProps) {
               variant="ghost" 
               size="icon" 
               onClick={onClose}
-              className="hover:bg-orange-200"
+              className="hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors"
+              title="Close Chat"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -196,6 +199,19 @@ export function LiveChat({ onClose }: LiveChatProps) {
                         className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition"
                         onClick={() => window.open(message.imageUrl, '_blank')}
                       />
+                    </div>
+                  )}
+                  {message.isImage && message.imageUrls && (
+                    <div className="mb-2 space-y-2">
+                      {message.imageUrls.map((url, idx) => (
+                        <img 
+                          key={idx}
+                          src={url} 
+                          alt={`Support image ${idx + 1}`} 
+                          className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition"
+                          onClick={() => window.open(url, '_blank')}
+                        />
+                      ))}
                     </div>
                   )}
                   <div className="whitespace-pre-line">{message.text}</div>

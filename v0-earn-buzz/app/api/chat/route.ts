@@ -13,28 +13,28 @@ const sessions: Record<string, Session> = {};
 const REPLIES = {
   "1": {
     text: "Here is a little highlight about flashgain but you can click on the link below to see more 👇👇\nhttps://flashgain9ja.money/abouttivexx",
-    image: "/images/placeholders/img1.jpg",
+    image: "/chatbot-img/image1.png",
     has_image: true
   },
   "2": {
     text: "If you have created an account on helpinghands you can use the claim button on the site dashboard to claim 1000 every 1 minutes👇👇👇\nhttps://flashgain9ja.money/dashboard",
-    image: "/images/placeholders/img2.jpg",
+    image: "/chatbot-img/image2.png",
     has_image: true
   },
   "3": {
     text: "If you have gotten up to 5 referrals and you have a minimum of 200k on your balance you can withdraw by clicking the withdraw button on the dashboard and following the instructions carefully \nhttps://flashgain9ja.money/withdraw",
-    image: "/images/placeholders/img3.jpg",
+    image: "/chatbot-img/image3.png",
     has_image: true
   },
   "4": {
     text: "Click on the refer and earn button on the site and follow the instructions carefully",
-    image: "/images/placeholders/img4.jpg",
+    image: "/chatbot-img/image4.png",
     has_image: true
   },
   "5": {
     text: "The verification fee is due process to ensure identity documentation and to confirm you're not a Bot programmed to accumulate cash automatically.\n\nIn accordance with the CBN regulations, we have to verify a tax withholding payment from users \nhttps://t.me/flashgain9janews/57",
-    image: "/images/placeholders/img5.jpg",
-    has_image: true
+    images: ["/chatbot-img/image5.png", "/chatbot-img/image05.png"],
+    has_multiple_images: true
   }
 } as const;
 
@@ -58,12 +58,25 @@ function processMessage(userInput: string, sessionId: string) {
   if (cleanInput in REPLIES) {
     const replyData = REPLIES[cleanInput as keyof typeof REPLIES];
     
-    return {
-      reply: replyData.text,
-      hasImage: replyData.has_image,
-      imageUrl: replyData.image,
-      followUpMenu: "Would you like to know about anything else?\n\n1. About FlashGain\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification."
-    };
+    // Handle both single and multiple images
+    const isMultiple = 'images' in replyData && replyData.has_multiple_images;
+    
+    if (isMultiple) {
+      return {
+        reply: replyData.text,
+        hasImage: true,
+        imageUrls: replyData.images,
+        followUpMenu: "Would you like to know about anything else?\n\n1. About FlashGain\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification."
+      };
+    } else {
+      const singleImage = 'image' in replyData ? replyData.image : null;
+      return {
+        reply: replyData.text,
+        hasImage: replyData.has_image,
+        imageUrl: singleImage || undefined,
+        followUpMenu: "Would you like to know about anything else?\n\n1. About FlashGain\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification."
+      };
+    }
   }
 
   // Check for common variations
@@ -107,7 +120,7 @@ function processMessage(userInput: string, sessionId: string) {
     return {
       reply: REPLIES['5'].text,
       hasImage: true,
-      imageUrl: REPLIES['5'].image,
+      imageUrls: REPLIES['5'].images,
       followUpMenu: null
     };
   }
