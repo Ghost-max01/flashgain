@@ -213,22 +213,6 @@ function PayKeyPaymentContent() {
             </button>
           </div>
 
-          {/* Payment Proof Section */}
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-inner-bounce-child delay-1">
-            <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-              <span>📸</span> Send Payment Proof
-            </h3>
-            <p className="text-sm text-blue-800 mb-4">
-              After making the transfer, please send a screenshot of your payment receipt to our Telegram support team for verification.
-            </p>
-            <a
-              href="https://t.me/flashgainsupport"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all"
-            >
-              <span>📱</span> Open Telegram Support
-            </a>
-          </div>
-
           {/* Confirm Button */}
           <Button
             className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold mt-4 animate-inner-bounce-child delay-0"

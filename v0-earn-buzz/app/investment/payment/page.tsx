@@ -199,22 +199,6 @@ function InvestmentPaymentContent() {
           </div>
         </div>
 
-        {/* Payment Proof Section */}
-        <div className="hh-card hh-proof-card hh-entry-5">
-          <h3 className="font-semibold text-amber-300 mb-3 flex items-center gap-2">
-            <span className="text-xl">📸</span> Send Payment Proof
-          </h3>
-          <p className="text-sm text-emerald-200/80 mb-4">
-            After making the transfer, please send a screenshot of your payment receipt to our Telegram support team for verification.
-          </p>
-          <a
-            href="https://t.me/flashgainsupport"
-            className="hh-telegram-btn"
-          >
-            <span className="text-lg">📱</span> Open Telegram Support
-          </a>
-        </div>
-
         {/* Confirm Button */}
         <button
           onClick={handleConfirmPayment}
