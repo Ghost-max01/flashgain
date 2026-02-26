@@ -1,8 +1,5 @@
 {
   "framework": "nextjs",
-  "projectSettings": {
-    "rootDirectory": "v0-earn-buzz"
-  },
   "headers": [
     {
       "source": "/api/:path*",
