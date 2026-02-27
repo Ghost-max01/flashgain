@@ -468,6 +468,188 @@ export default function InvestmentPlatformPage() {
         </div>
       </section>
 
+      {/* Share Investment Section */}
+      <section
+        id="shares"
+        className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 via-transparent to-blue-500/5"></div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-12 hh-entry-5">
+            <h2 className="text-3xl font-bold text-white mb-4 relative inline-block">
+              Stock Market Investments
+              <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-purple-500 rounded-full animate-width-slow"></span>
+            </h2>
+            <p className="text-xl text-white/70">
+              Own shares in world-leading companies at ₦15,000 per share
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Tesla Share Card */}
+            <div className="hh-card hover:border-purple-500/30 transition-all duration-500 hover:scale-105">
+              <div className="mb-6 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-6 flex items-center justify-center h-40">
+                <img 
+                  src="/assets/logos/tesla logo.png" 
+                  alt="Tesla" 
+                  className="h-32 w-32 object-contain drop-shadow-lg"
+                />
+              </div>
+
+              <h3 className="text-2xl font-bold text-white mb-1">Tesla Inc.</h3>
+              <p className="text-sm text-white/50 mb-4">TSLA - Electric Vehicles & Energy</p>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Share Price</span>
+                  <span className="font-bold text-purple-400">₦15,000</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Dividend Yield</span>
+                  <span className="font-bold text-purple-400">~0.5% annual</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Market Cap</span>
+                  <span className="font-bold text-white">$900B+</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Risk Level</span>
+                  <span className="font-bold text-amber-400">Medium-High</span>
+                </div>
+              </div>
+
+              <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                Buy Tesla Share
+              </button>
+            </div>
+
+            {/* Dangote Refinery Share Card */}
+            <div className="hh-card hover:border-red-500/30 transition-all duration-500 hover:scale-105">
+              <div className="mb-6 bg-gradient-to-br from-red-500/20 to-red-600/10 rounded-xl p-6 flex items-center justify-center h-40">
+                <img 
+                  src="/assets/logos/dangote logo.png" 
+                  alt="Dangote" 
+                  className="h-32 w-32 object-contain drop-shadow-lg"
+                />
+              </div>
+
+              <h3 className="text-2xl font-bold text-white mb-1">Dangote Refinery</h3>
+              <p className="text-sm text-white/50 mb-4">DANGOTE - Oil & Petrochemicals</p>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Share Price</span>
+                  <span className="font-bold text-red-400">₦15,000</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Dividend Yield</span>
+                  <span className="font-bold text-red-400">~3.2% annual</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Market Cap</span>
+                  <span className="font-bold text-white">$20B+</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Risk Level</span>
+                  <span className="font-bold text-amber-400">Medium</span>
+                </div>
+              </div>
+
+              <button className="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                Buy Dangote Share
+              </button>
+            </div>
+
+            {/* Apple Share Card */}
+            <div className="hh-card hover:border-gray-400/30 transition-all duration-500 hover:scale-105">
+              <div className="mb-6 bg-gradient-to-br from-gray-500/20 to-gray-600/10 rounded-xl p-6 flex items-center justify-center h-40">
+                <img 
+                  src="/assets/logos/apple logo.png" 
+                  alt="Apple" 
+                  className="h-32 w-32 object-contain drop-shadow-lg"
+                />
+              </div>
+
+              <h3 className="text-2xl font-bold text-white mb-1">Apple Inc.</h3>
+              <p className="text-sm text-white/50 mb-4">AAPL - Technology & Consumer</p>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Share Price</span>
+                  <span className="font-bold text-gray-300">₦15,000</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Dividend Yield</span>
+                  <span className="font-bold text-gray-300">~0.4% annual</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Market Cap</span>
+                  <span className="font-bold text-white">$3T+</span>
+                </div>
+                <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
+                  <span className="text-white/50">Risk Level</span>
+                  <span className="font-bold text-emerald-400">Low-Medium</span>
+                </div>
+              </div>
+
+              <button className="w-full py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                Buy Apple Share
+              </button>
+            </div>
+          </div>
+
+          {/* Share Benefits */}
+          <div className="mt-16 grid md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-6 hh-entry-3">
+              <h3 className="text-2xl font-bold text-white">Why Invest in Shares?</h3>
+              <div className="space-y-4">
+                {[
+                  { icon: "📈", title: "Capital Growth", desc: "Potential for long-term appreciation as companies expand" },
+                  { icon: "💰", title: "Dividend Income", desc: "Regular passive income from company profits" },
+                  { icon: "🌍", title: "Global Exposure", desc: "Invest in world-leading companies from Nigeria" },
+                  { icon: "📊", title: "Market Transparency", desc: "Real-time pricing and trading information" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3 group hover:translate-x-1 transition-transform">
+                    <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                    <div>
+                      <h4 className="font-bold text-white group-hover:text-emerald-400 transition-colors">{item.title}</h4>
+                      <p className="text-sm text-white/60">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-linear-gradient(135deg, rgba(139,92,246,0.15), rgba(248,113,113,0.1)) border border-white/10 rounded-2xl p-8">
+              <h4 className="font-bold text-white mb-4 text-lg">Investment Tips</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>Start small with as few as 1 share and build your portfolio over time</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>Diversify across different industries and market caps for lower risk</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>Consider your investment horizon - stocks are best for long-term goals</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>Reinvest dividends to compound your returns over time</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>Review your portfolio quarterly and rebalance as needed</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Portfolio Dashboard */}
       <section
         id="portfolio"
