@@ -47,7 +47,7 @@ export default function InvestmentPlatformPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [investmentAmount, setInvestmentAmount] = useState("10000");
+  const [investmentAmount, setInvestmentAmount] = useState("50000");
   const [selectedDuration, setSelectedDuration] = useState("1");
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
@@ -97,12 +97,12 @@ export default function InvestmentPlatformPage() {
       name: "Starter Portfolio",
       risk: "Conservative",
       riskLevel: "Low",
-      minDeposit: "₦5,000",
-      oneWeekReturn: "₦14,231",
+      minDeposit: "₦50,000",
+      oneWeekReturn: "₦200,000", // daily total (4x)
       maxDeposit: "₦50,000",
-      duration: "one week",
-      projectedReturn: "184.6%",
-      annualizedReturn: "9600%",
+      duration: "one day",
+      projectedReturn: "400%",
+      annualizedReturn: "~2800% weekly",
       color: "emerald",
       gradient: "from-emerald-500 to-emerald-600",
       lightGradient: "from-emerald-500/20 to-emerald-600/10",
@@ -125,11 +125,11 @@ export default function InvestmentPlatformPage() {
       name: "Growth Portfolio",
       risk: "Moderate",
       riskLevel: "Medium",
-      minDeposit: "₦50,000",
+      minDeposit: "₦100,000",
       maxDeposit: "₦250,000",
-      duration: "one week",
-      projectedReturn: "184.6%",
-      annualizedReturn: "9600%",
+      duration: "one day",
+      projectedReturn: "400%",
+      annualizedReturn: "~2800% weekly",
       color: "blue",
       gradient: "from-blue-500 to-blue-600",
       lightGradient: "from-blue-500/20 to-blue-600/10",
@@ -154,11 +154,11 @@ export default function InvestmentPlatformPage() {
       name: "Premium Portfolio",
       risk: "Aggressive",
       riskLevel: "High",
-      minDeposit: "₦250,000",
+      minDeposit: "₦150,000",
       maxDeposit: "₦1,000,000+",
-      duration: "one week",
-      projectedReturn: "184.6%",
-      annualizedReturn: "9600%",
+      duration: "one day",
+      projectedReturn: "400%",
+      annualizedReturn: "~2800% weekly",
       color: "amber",
       gradient: "from-amber-500 to-amber-600",
       lightGradient: "from-amber-500/20 to-amber-600/10",
@@ -181,13 +181,17 @@ export default function InvestmentPlatformPage() {
   ];
 
   const calculateProjectedValue = () => {
-    const amount = parseFloat(investmentAmount) || 10000;
-    const weeklyReturn = 0.9600 / 52; // 9600% annual / 52 weeks ≈ 184.6% per week
-    const growth = amount * weeklyReturn;
+    const amount = parseFloat(investmentAmount) || 50000;
+    // 4x return in 24 hours (profit = 3x). weekly assumed as 7 days
+    const dailyGrowthRate = 3; // growth factor (profit multiplier)
+    const weeklyGrowthRate = dailyGrowthRate * 7;
+    const growth = amount * dailyGrowthRate;
     return {
       invested: amount,
       growth: Math.round(growth),
-      total: Math.round(amount + growth),
+      total: Math.round(amount * (1 + dailyGrowthRate)),
+      weeklyTotal: Math.round(amount * (1 + weeklyGrowthRate)),
+      weeklyGrowth: Math.round(amount * weeklyGrowthRate),
     };
   };
 
@@ -374,7 +378,7 @@ export default function InvestmentPlatformPage() {
                     </div>
                     {plan.oneWeekReturn && (
                       <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
-                        <span className="text-white/50">Returns (1 week)</span>
+                        <span className="text-white/50">Returns (1 day)</span>
                         <span className="font-bold text-emerald-400">
                           {plan.oneWeekReturn}
                         </span>
@@ -393,7 +397,7 @@ export default function InvestmentPlatformPage() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
-                      <span className="text-white/50">Annualized Return</span>
+                      <span className="text-white/50">Weekly Return</span>
                       <span className="font-bold text-emerald-400">
                         {plan.annualizedReturn}
                       </span>
@@ -553,21 +557,17 @@ export default function InvestmentPlatformPage() {
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-white/70">
-                        Monthly Return (800%)
+                        Daily Return (4×)
                       </span>
-                      <span className="text-xs text-blue-300">30 days</span>
+                      <span className="text-xs text-blue-300">1 day</span>
                     </div>
                     <p className="text-xl font-bold text-blue-400">
                       ₦
-                      {Math.round(
-                        parseInt(investmentAmount) * (1 + 8),
-                      ).toLocaleString("en-NG")}
+                      {projected.total.toLocaleString("en-NG")}
                     </p>
                     <p className="text-xs text-white/50 mt-1">
                       +₦
-                      {Math.round(
-                        parseInt(investmentAmount) * 8,
-                      ).toLocaleString("en-NG")}{" "}
+                      {projected.growth.toLocaleString("en-NG")}{" "}
                       profit
                     </p>
                   </div>
@@ -576,20 +576,20 @@ export default function InvestmentPlatformPage() {
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-white/70">
-                        Yearly Return (9600%)
+                        Weekly Return
                       </span>
-                      <span className="text-xs text-amber-300">365 days</span>
+                      <span className="text-xs text-amber-300">7 days</span>
                     </div>
                     <p className="text-xl font-bold text-amber-400">
                       ₦
                       {Math.round(
-                        parseInt(investmentAmount) * (1 + 96),
+                        projected.weeklyTotal,
                       ).toLocaleString("en-NG")}
                     </p>
                     <p className="text-xs text-white/50 mt-1">
                       +₦
                       {Math.round(
-                        parseInt(investmentAmount) * 96,
+                        projected.weeklyGrowth,
                       ).toLocaleString("en-NG")}{" "}
                       profit
                     </p>
