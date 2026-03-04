@@ -484,7 +484,7 @@ export default function InvestmentPlatformPage() {
               <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-purple-500 rounded-full animate-width-slow"></span>
             </h2>
             <p className="text-xl text-white/70">
-              Own shares in world-leading companies at ₦15,000 per share
+              Own shares in world-leading companies at ₦50,000 per share
             </p>
           </div>
 
@@ -507,7 +507,7 @@ export default function InvestmentPlatformPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
                   <span className="text-white/50">Share Price</span>
-                  <span className="font-bold text-purple-400">₦15,000</span>
+                  <span className="font-bold text-purple-400">₦50,000</span>
                 </div>
                 <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
                   <span className="text-white/50">Dividend Yield</span>
@@ -555,7 +555,7 @@ export default function InvestmentPlatformPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
                   <span className="text-white/50">Share Price</span>
-                  <span className="font-bold text-red-400">₦15,000</span>
+                  <span className="font-bold text-red-400">₦50,000</span>
                 </div>
                 <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
                   <span className="text-white/50">Dividend Yield</span>
@@ -599,7 +599,7 @@ export default function InvestmentPlatformPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
                   <span className="text-white/50">Share Price</span>
-                  <span className="font-bold text-gray-300">₦15,000</span>
+                  <span className="font-bold text-gray-300">₦50,000</span>
                 </div>
                 <div className="flex justify-between text-sm group hover:translate-x-1 transition-transform">
                   <span className="text-white/50">Dividend Yield</span>
