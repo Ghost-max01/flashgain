@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CreditCard, Gamepad2, History, Home, Bell, User, Gift, Clock, Headphones, Shield, TrendingUp, Users, MessageCircle } from "lucide-react"
+import { CreditCard, Gamepad2, History, Home, Bell, User, Gift, Clock, Headphones, Shield, TrendingUp, Users, MessageCircle, Chrome, Firefox, Safari } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardImageCarousel } from "@/components/dashboard-image-carousel"
 import { WithdrawalNotification } from "@/components/withdrawal-notification"
@@ -295,12 +295,13 @@ export default function DashboardPage() {
     if (/Chrome/.test(ua) && !/Edge|Edg/.test(ua)) return 'Chrome'
     if (/Safari/.test(ua) && !/Chrome|CriOS|Chromium/.test(ua)) return 'Safari'
     if (/Opera|OPR/.test(ua)) return 'Opera'
-    return 'Other'
+    if (/Firefox/.test(ua)) return 'Firefox'
+    return 'An Unsupported Browser'
   }
 
   const isSupportedBrowser = () => {
     const browser = detectBrowser()
-    return ['Chrome', 'Safari', 'Opera'].includes(browser)
+    return ['Chrome', 'Safari', 'Opera', 'Firefox'].includes(browser)
   }
 
   const copyLinkToClipboard = async () => {
@@ -562,19 +563,40 @@ export default function DashboardPage() {
             {!isSupportedBrowser() ? (
               <>
                 <p className="text-sm text-gray-300 mb-4 text-center">
-                  ⚠️ You're using {detectBrowser()}. For the best security, please use Safari, Chrome, or Opera Mini.
+                  ⚠️ Browser Not Recommended
                 </p>
-                <p className="text-xs text-gray-400 mb-6 text-center">
-                  Copy your secure link and save your login credentials to prevent access loss.
+                <p className="text-xs text-gray-400 mb-4 text-center leading-relaxed">
+                  You're currently using <strong className="text-gray-200">{detectBrowser()}</strong>. For optimal security and compatibility, please use one of these supported browsers:
+                </p>
+                <div className="flex justify-center gap-4 mb-6 flex-wrap">
+                  <div className="flex flex-col items-center gap-1">
+                    <Chrome className="h-8 w-8 text-blue-400" />
+                    <span className="text-xs text-gray-300">Chrome</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Firefox className="h-8 w-8 text-orange-400" />
+                    <span className="text-xs text-gray-300">Firefox</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Safari className="h-8 w-8 text-blue-300" />
+                    <span className="text-xs text-gray-300">Safari</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="h-8 w-8 flex items-center justify-center text-red-400 font-bold text-lg">O</span>
+                    <span className="text-xs text-gray-300">Opera</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 text-center leading-relaxed">
+                  Copy your secure link below and paste it in a supported browser, then log in with your credentials to ensure you don't lose access to your account.
                 </p>
               </>
             ) : (
               <>
                 <p className="text-sm text-gray-300 mb-2 text-center">
-                  ✓ {detectBrowser()} is secure
+                  ✓ {detectBrowser()} is Secure
                 </p>
                 <p className="text-xs text-gray-400 mb-6 text-center">
-                  Save your login link and credentials for account recovery.
+                  Save your secure login link and credentials for account recovery.
                 </p>
               </>
             )}
