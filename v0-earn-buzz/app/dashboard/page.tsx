@@ -60,6 +60,7 @@ export default function DashboardPage() {
   const [showBrowserCheck, setShowBrowserCheck] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [showLiveChat, setShowLiveChat] = useState(false)
+  const [tapCount, setTapCount] = useState(0)
   // open chat if URL hash is #chat (on mount or when hash changes)
   useEffect(() => {
     const checkHash = () => {
@@ -79,6 +80,35 @@ export default function DashboardPage() {
       }
     }
   }, [])
+
+  // tap counter for blog promotion
+  useEffect(() => {
+    const handleTap = () => {
+      setTapCount(prev => {
+        const next = prev + 1
+        if (next <= 50 && next % 10 === 0) {
+          toast({
+            title: 'Check out our blog!',
+            description: (
+              <span>
+                Visit <a href="https://flashgain.online" target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">flashgain.online</a> for articles and updates.
+              </span>
+            ),
+          })
+        }
+        return next
+      })
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('click', handleTap)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('click', handleTap)
+      }
+    }
+  }, [toast])
 
   // Animate balance changes
   useEffect(() => {
