@@ -575,11 +575,12 @@ export default function DashboardPage() {
             </p>
 
             {/* Secure Link Display */}
+            {userData && (
             <div className="hh-browser-check-link-container">
               <p className="text-xs font-semibold text-emerald-400 mb-2 uppercase tracking-wider">Your Secure Link</p>
               <div className="hh-browser-check-link-box">
                 <code className="text-xs text-white break-all">
-                  {typeof window !== 'undefined' ? `${window.location.origin}/refer?ref=${userData?.userId || 'ref'}` : 'Loading...'}
+                  {typeof window !== 'undefined' ? `${window.location.origin}/refer?ref=${userData.userId || 'ref'}` : 'Loading...'}
                 </code>
               </div>
               <button
@@ -603,18 +604,21 @@ export default function DashboardPage() {
                 )}
               </button>
             </div>
+            )}
 
             <div className="hh-browser-check-divider"></div>
 
+            {userData && (
             <div className="space-y-2 mb-6">
               <p className="text-xs font-semibold text-white uppercase tracking-wider">Save These Credentials:</p>
               <p className="text-xs text-gray-400">
-                Email: <span className="text-emerald-300 font-mono">{userData?.email}</span>
+                Email: <span className="text-emerald-300 font-mono">{userData.email}</span>
               </p>
               <p className="text-xs text-gray-400">
-                User ID: <span className="text-emerald-300 font-mono">{userData?.userId}</span>
+                User ID: <span className="text-emerald-300 font-mono">{userData.userId}</span>
               </p>
             </div>
+            )}
 
             <button
               onClick={() => setShowBrowserCheck(false)}
