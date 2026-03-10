@@ -41,7 +41,7 @@ export default function LoginPage() {
   }, [mounted, router]);
 
   const handleWhatsAppSupport = () => {
-    const phoneNumber = "+2349064845210";
+    const phoneNumber = "09064845210";
     const message = encodeURIComponent("hello, am from FlashGain 9ja.");
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(whatsappUrl, "_self");
