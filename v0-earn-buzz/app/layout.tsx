@@ -56,7 +56,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <PageShell exclude={["/dashboard"]}>
-            <main className="min-h-screen max-w-md mx-auto relative overflow-hidden">
+            <main className="min-h-screen max-w-md mx-auto md:w-full relative overflow-hidden">
               {children}
             </main>
           </PageShell>
