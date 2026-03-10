@@ -40,12 +40,12 @@ export default function LoginPage() {
     }
   }, [mounted, router]);
 
-  //const handleWhatsAppSupport = () => {
-    //const phoneNumber = "2349059089490";
-    //const message = encodeURIComponent("hello, am from FlashGain 9ja.");
-    //const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-   // window.open(whatsappUrl, "_self");
- // };
+  const handleWhatsAppSupport = () => {
+    const phoneNumber = "+2349064845210";
+    const message = encodeURIComponent("hello, am from FlashGain 9ja.");
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(whatsappUrl, "_self");
+   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
