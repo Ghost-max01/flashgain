@@ -34,16 +34,16 @@ const faqs = [
   },
 ]
 
-export default function HelpPage() {
-  const handleContactSupport = () => {
+//export default function HelpPage() {
+  //const handleContactSupport = () => {
     // Create WhatsApp URL with phone number and pre-filled message
-    const phoneNumber = "2349059089490" // Updated to UK number without +
-    const message = encodeURIComponent("Hello, I need help with Earn Buzz app.")
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
+   // const phoneNumber = "2349059089490" // Updated to UK number without +
+    //const message = encodeURIComponent("Hello, I need help with Earn Buzz app.")
+    //const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
 
     // Open WhatsApp in same tab
-    window.open(whatsappUrl, '_self')
-  }
+    //window.open(whatsappUrl, '_self')
+  //}
 
   return (
     <div className="min-h-screen pb-6 bg-white">
