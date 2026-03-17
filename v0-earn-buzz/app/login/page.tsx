@@ -244,7 +244,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         /* ─── IMPORT FONT ─── */
         @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
 

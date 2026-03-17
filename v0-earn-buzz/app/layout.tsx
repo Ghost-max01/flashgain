@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import PageShell from "@/components/PageShell"
+import { NotificationHelperTools } from "@/components/notification-helper-tools"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   title: "FlashGain 9ja",
   description:
     "FlashGain 9ja is a financial & earning app that offers weekly cash rewards to new users",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest?v=20260317",
   generator: "v0.dev",
   other: {
     "8c56abd733d73550a5527a8ac0c7bc62642d1a86":
@@ -51,6 +52,11 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#ea580c" />
+        <link rel="manifest" href="/manifest.webmanifest?v=20260317" />
+        <link rel="apple-touch-icon" href="/icons/icon-180x180.png?v=20260317" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=20260317" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png?v=20260317" />
+        <link rel="icon" href="/favicon.ico?v=20260317" />
         {/* Head scripts intentionally left minimal */}
       </head>
       <body className={inter.className}>
@@ -60,6 +66,7 @@ export default function RootLayout({
               {children}
             </main>
           </PageShell>
+          <NotificationHelperTools />
         </ThemeProvider>
         <script src="https://pl28642303.effectivegatecpm.com/45/a8/f9/45a8f9e6b9c71890da4d65396ab53e17.js"></script>
       </body>

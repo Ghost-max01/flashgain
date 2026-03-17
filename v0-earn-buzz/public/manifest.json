@@ -1,0 +1,26 @@
+{
+  "name": "FlashGain 9ja",
+  "short_name": "FlashGain",
+  "description": "FlashGain 9ja is a financial & earning app that offers weekly cash rewards to new users",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#ea580c",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icons/icon-180x180.png?v=20260317",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png?v=20260317",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png?v=20260317",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

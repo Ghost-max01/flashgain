@@ -1,23 +1,19 @@
 // Service Worker Registration
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-  if ("serviceWorker" in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register("/sw.js")
-      console.log("Service Worker registered successfully:", registration)
-      return registration
-    } catch (error) {
-      console.error("Service Worker registration failed:", error)
-      return null
-    }
+  if (!("serviceWorker" in navigator)) return null
+  try {
+    const registration = await navigator.serviceWorker.register("/sw.js")
+    return registration
+  } catch (error) {
+    console.error("Service Worker registration failed:", error)
+    return null
   }
-  return null
 }
 
 // Request notification permission
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
   if ("Notification" in window) {
-    const permission = await Notification.requestPermission()
-    return permission
+    return Notification.requestPermission()
   }
   return "denied"
 }
@@ -33,35 +29,47 @@ export function showLocalNotification(title: string, options?: NotificationOptio
   }
 }
 
-// Subscribe to push notifications
-export async function subscribeToPushNotifications(): Promise<PushSubscription | null> {
-  const registration = await registerServiceWorker()
-  if (!registration) return null
-
+// Register device for FCM push notifications and save the token to the server.
+// Call this after the user logs in (pass their uid).
+export async function registerForFCM(uid: string): Promise<boolean> {
   try {
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        "BEl62iUYgUivxIkv69yViEuiBIa40HI80NqIUHI80NqIUHI80NqIUHI80NqIUHI80NqIUHI80NqIUHI80NqIUHI80NqI",
-      ),
+    const permission = await requestNotificationPermission()
+    if (permission !== "granted") return false
+
+    const sw = await registerServiceWorker()
+    if (!sw) return false
+
+    const { initializeApp, getApps } = await import("firebase/app")
+    const { getMessaging, getToken } = await import("firebase/messaging")
+
+    const firebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    }
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
+    const messaging = getMessaging(app)
+
+    const token = await getToken(messaging, {
+      vapidKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      serviceWorkerRegistration: sw,
     })
-    return subscription
+
+    if (!token) return false
+
+    await fetch("/api/notifications/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid, type: "fcm", token }),
+    })
+
+    return true
   } catch (error) {
-    console.error("Failed to subscribe to push notifications:", error)
-    return null
+    console.error("FCM registration failed:", error)
+    return false
   }
-}
-
-// Helper function to convert VAPID key
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
-
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
 }

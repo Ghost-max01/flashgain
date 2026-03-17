@@ -1,0 +1,13 @@
+{
+  "name": "helpinghand/pwa-notification-backend",
+  "type": "project",
+  "require": {
+    "php": ">=8.0",
+    "minishlink/web-push": "^9.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "HelpingHand\\": "lib/"
+    }
+  }
+}

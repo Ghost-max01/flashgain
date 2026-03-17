@@ -27,14 +27,24 @@ self.addEventListener("fetch", (event) => {
 
 // Push event
 self.addEventListener("push", (event) => {
+  let payload = {}
+  if (event.data) {
+    try {
+      payload = event.data.json()
+    } catch {
+      payload = { body: event.data.text() }
+    }
+  }
+
   const options = {
-    body: event.data ? event.data.text() : "New notification from Earn Buzz",
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/icon-72x72.png",
+    body: payload.body || "New notification from Earn Buzz",
+    icon: payload.icon || "/icons/icon-192x192.png",
+    badge: payload.badge || "/icons/icon-192x192.png",
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
       primaryKey: 1,
+      url: payload.clickUrl || "/",
     },
     actions: [
       {
@@ -50,14 +60,40 @@ self.addEventListener("push", (event) => {
     ],
   }
 
-  event.waitUntil(self.registration.showNotification("Earn Buzz", options))
+  event.waitUntil(self.registration.showNotification(payload.title || "Earn Buzz", options))
 })
 
 // Notification click event
 self.addEventListener("notificationclick", (event) => {
   event.notification.close()
 
-  if (event.action === "explore") {
-    event.waitUntil(clients.openWindow("/dashboard"))
+  const targetUrl = event.notification?.data?.url || "/"
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client && (client.url === targetUrl || targetUrl === "/")) {
+          return client.focus()
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl)
+      }
+    }),
+  )
+})
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SHOW_NOTIFICATION") {
+    const notification = event.data.notification || {}
+    event.waitUntil(
+      self.registration.showNotification(notification.title || "Earn Buzz", {
+        body: notification.body || "",
+        icon: notification.icon || "/icons/icon-192x192.png",
+        badge: notification.badge || "/icons/icon-192x192.png",
+        data: {
+          url: notification.clickUrl || notification.link || "/",
+        },
+      }),
+    )
   }
 })

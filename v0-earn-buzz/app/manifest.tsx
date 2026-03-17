@@ -2,18 +2,28 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Earn Buzz',
-    short_name: 'EarnBuzz', 
+    name: 'FlashGain 9ja',
+    short_name: 'FlashGain',
     description: 'Your ultimate financial companion',
     start_url: '/',
     display: 'standalone',
-    background_color: '#fff',
-    theme_color: '#000',
+    background_color: '#ffffff',
+    theme_color: '#ea580c',
     icons: [
       {
-        src: '/<a href="https://www.flaticon.com/free-icons/explore" title="explore icons">Explore icons created by Hilmy Abiyyu A. - Flaticon</a>favicon.ico',
-        sizes: 'any',
-        type: 'image/x-icon',
+        src: '/icons/icon-180x180.png?v=20260317',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+      {
+        src: '/icons/icon-192x192.png?v=20260317',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: '/icons/icon-512x512.png?v=20260317',
+        sizes: '512x512',
+        type: 'image/png',
       },
     ],
   }

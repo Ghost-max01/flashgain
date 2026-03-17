@@ -13,6 +13,7 @@ import { TutorialModal } from "@/components/tutorial-modal"
 import { ScrollingText } from "@/components/scrolling-text"
 import { LiveChat } from "@/components/live-chat"
 import { useToast } from "@/hooks/use-toast"
+import { registerForFCM } from "@/services/notification-service"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface UserData {
@@ -414,6 +415,8 @@ export default function DashboardPage() {
     if (!user.userId) {
       user.userId = `TX${Math.random().toString(36).substr(2, 9).toUpperCase()}`
     }
+
+    registerForFCM(user.id || user.userId)
 
     const fetchUserBalance = async () => {
       try {

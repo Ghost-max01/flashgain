@@ -1,21 +1,27 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { saveNotificationSubscription } from "@/lib/notifications/server.js"
+import type { NotificationSubscribePayload } from "@/lib/notifications/types"
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const subscription = await request.json()
+    const payload = (await req.json()) as NotificationSubscribePayload
+    const result = await saveNotificationSubscription(payload)
 
-    // In a real implementation, you would:
-    // 1. Validate the subscription
-    // 2. Store the subscription in a database
-    // 3. Associate it with the user
-
-    // For demo purposes, we're just returning success
     return NextResponse.json({
       success: true,
-      message: "Subscription saved successfully",
+      ...result,
     })
   } catch (error) {
-    console.error("Error saving subscription:", error)
-    return NextResponse.json({ success: false, message: "Failed to save subscription" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Subscription save failed",
+      },
+      { status: 400 },
+    )
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204 })
 }

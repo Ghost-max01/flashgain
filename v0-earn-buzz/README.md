@@ -28,3 +28,47 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## Notifications (FCM + iOS Web Push)
+
+This app now includes dual-path PWA notifications:
+
+- Path A (Android/Desktop): Firebase Web Push token flow (`type: "fcm"`)
+- Path B (iOS Home Screen): Native Web Push via `PushManager` + VAPID (`type: "webpush"`)
+
+### Vercel + PHP backend split
+
+Because Vercel does not run PHP directly in this Next.js app, the setup is:
+
+1. Deploy this Next.js app on Vercel.
+2. Deploy the PHP notification backend (`backend/`) on a PHP host.
+3. Configure Vercel env vars to proxy requests:
+
+- `NOTIFICATION_BACKEND_URL`
+- `NOTIFICATION_SUBSCRIBE_PATH`
+- `NOTIFICATION_SEND_PATH`
+
+The app calls local Vercel routes:
+
+- `/api/notifications/subscribe`
+- `/api/notifications/send`
+
+Those routes forward to PHP endpoints.
+
+### Supabase integration note
+
+- Use Supabase auth user id (`user.id`) as `uid` in subscribe payloads.
+- Existing business data can stay in Supabase; push subscriptions are stored in backend MySQL as requested.
+
+### GitHub/Vercel deployment checklist
+
+- Commit and push changes to GitHub.
+- In Vercel project settings, add env values from `.env.local.example`.
+- Redeploy.
+- Verify helper buttons appear once per 24h and diagnostics JSON is copyable.
+
+### iOS QA notes
+
+- Safari tab mode should show Add-to-Home-Screen guidance only.
+- Home Screen install should allow prompt on user gesture.
+- If icons/manifest changed, uninstall PWA, clear site data, re-add to Home Screen.
