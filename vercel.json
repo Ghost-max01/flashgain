@@ -9,5 +9,11 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/timer/cron",
+      "schedule": "*/1 * * * *"
+    }
   ]
 }

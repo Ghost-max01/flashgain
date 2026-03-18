@@ -364,6 +364,21 @@ export default function DashboardPage() {
         localStorage.setItem("tivexx-timer", "60")
         localStorage.setItem("tivexx-timer-timestamp", Date.now().toString())
         localStorage.setItem("tivexx-claim-ready-notified", "0")
+
+        // Notify server about new timer
+        try {
+          const userId = userData?.id || userData?.userId
+          if (userId) {
+            console.log("[dashboard] Starting timer on server for user:", userId)
+            await fetch("/api/timer/start", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, timerDuration: 60 }),
+            })
+          }
+        } catch (error) {
+          console.error("[dashboard] Error notifying server of timer start:", error)
+        }
       }
 
       if (newClaimCount === 50) {
@@ -521,6 +536,29 @@ export default function DashboardPage() {
 
     registerForFCM(user.id || user.userId)
 
+    // Check if timer expired while app was closed
+    const checkServerTimer = async () => {
+      try {
+        const userId = user.id || user.userId
+        console.log("[dashboard] Checking server timer for user:", userId)
+        const response = await fetch("/api/timer/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        })
+        const data = await response.json()
+        
+        if (data.success && data.timerReady) {
+          console.log("[dashboard] Timer expired on server, showing claim ready notification")
+          setCanClaim(true)
+          setIsCounting(false)
+          void notifyClaimReady()
+        }
+      } catch (error) {
+        console.error("[dashboard] Error checking server timer:", error)
+      }
+    }
+
     const fetchUserBalance = async () => {
       try {
         const response = await fetch(`/api/user-balance?userId=${user.id || user.userId}&t=${Date.now()}`)
@@ -566,6 +604,7 @@ export default function DashboardPage() {
     }
 
     fetchUserBalance()
+    checkServerTimer()
 
     setTimeout(() => {
       setShowWithdrawalNotification(true)
