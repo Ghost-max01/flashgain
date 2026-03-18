@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { generateReferralCode } from "@/lib/utils/referral"
-import { supabaseAdmin as supabase } from "@/lib/supabase/admin"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin()
     const { name, email, password, referralCode } = await request.json()
 
     if (!name || !email || !password) {

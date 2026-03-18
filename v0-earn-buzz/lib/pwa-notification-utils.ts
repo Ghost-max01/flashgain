@@ -351,16 +351,19 @@ export function needsAddToHomeScreen(capabilities: CapabilityDetection): boolean
 
 // Storage helpers for throttling
 export function setHelperButtonTimestamp(key: string): void {
+  if (typeof window === 'undefined') return;
   const timestamp = Date.now();
   localStorage.setItem(`notification_helper_${key}`, timestamp.toString());
 }
 
 export function getHelperButtonTimestamp(key: string): number | null {
+  if (typeof window === 'undefined') return null;
   const stored = localStorage.getItem(`notification_helper_${key}`);
   return stored ? parseInt(stored, 10) : null;
 }
 
 export function isHelperButtonThrottled(key: string, hours: number = 24): boolean {
+  if (typeof window === 'undefined') return false;
   const timestamp = getHelperButtonTimestamp(key);
   if (!timestamp) {
     return false;
