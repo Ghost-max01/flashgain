@@ -66,9 +66,14 @@ export default function DashboardPage() {
   const notifyClaimReady = useCallback(async () => {
     if (typeof window === "undefined") return
 
+    console.log("[dashboard] notifyClaimReady called")
     const alreadyNotified = localStorage.getItem("tivexx-claim-ready-notified") === "1"
-    if (alreadyNotified) return
+    if (alreadyNotified) {
+      console.log("[dashboard] Already notified for this cycle, skipping")
+      return
+    }
 
+    console.log("[dashboard] Showing claim-ready toast + notification")
     toast({
       title: "Claim Ready!",
       description: "Your timer is 00:00. Claim your ₦1,000 now.",
@@ -88,6 +93,7 @@ export default function DashboardPage() {
     const targetUserId = userData?.id || userData?.userId || storedUser?.id || storedUser?.userId
     if (targetUserId) {
       try {
+        console.log("[dashboard] Sending claim-ready push notification")
         await fetch("/api/notifications/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -110,8 +116,10 @@ export default function DashboardPage() {
     async (amount: number, newBalance: number) => {
       if (typeof window === "undefined") return
 
+      console.log("[dashboard] notifyClaimSuccess called with amount:", amount, "newBalance:", newBalance)
       const message = `You successfully claimed ₦${amount.toLocaleString()}. New balance: ₦${newBalance.toLocaleString()}.`
 
+      console.log("[dashboard] Showing claim-success toast")
       toast({
         title: "Claim Successful!",
         description: message,
@@ -121,6 +129,7 @@ export default function DashboardPage() {
         await requestNotificationPermission()
       }
 
+      console.log("[dashboard] Showing claim-success browser notification")
       showLocalNotification("Claim Successful!", {
         body: message,
         data: { url: "/dashboard" },
@@ -132,6 +141,7 @@ export default function DashboardPage() {
 
       if (targetUserId) {
         try {
+          console.log("[dashboard] Sending claim-success push notification")
           await fetch("/api/notifications/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -304,11 +314,7 @@ export default function DashboardPage() {
         localStorage.setItem("tivexx-timer", newTime.toString())
         localStorage.setItem("tivexx-timer-timestamp", Date.now().toString())
 
-        if (newTime === 0) {
-          setCanClaim(true)
-          setIsCounting(false)
-          void notifyClaimReady()
-        }
+        if (newTime === 0) {\n          console.log(\"[dashboard] Timer hit 00:00, triggering notifyClaimReady\")\n          setCanClaim(true)\n          setIsCounting(false)\n          void notifyClaimReady()\n        }
         return newTime
       })
     }, 1000)
