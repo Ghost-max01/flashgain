@@ -259,22 +259,23 @@ export default function DashboardPage() {
       }
     }
 
-    const savedTimer = localStorage.getItem("tivexx-timer")
-    const savedTimestamp = localStorage.getItem("tivexx-timer-timestamp")
+    // Use absolute end time for reliable cross-session timer restore
+    const savedTimerEnd = localStorage.getItem("tivexx-timer-end")
 
-    if (savedTimer && savedTimestamp) {
-      const elapsed = Math.floor((Date.now() - Number.parseInt(savedTimestamp)) / 1000)
-      const remaining = Number.parseInt(savedTimer) - elapsed
+    if (savedTimerEnd) {
+      const timerEnd = Number.parseInt(savedTimerEnd)
+      const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000))
 
       if (remaining > 0) {
-        localStorage.setItem("tivexx-claim-ready-notified", "0")
         setTimeRemaining(remaining)
         setIsCounting(true)
         if (!pauseEndTime) {
           setCanClaim(false)
         }
       } else {
+        // Timer already expired while app was closed
         setTimeRemaining(0)
+        localStorage.removeItem("tivexx-timer-end")
         if (!pauseEndTime) {
           setCanClaim(true)
           void notifyClaimReady()
@@ -308,20 +309,19 @@ export default function DashboardPage() {
     if (!isCounting) return
 
     const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        const newTime = prev <= 1 ? 0 : prev - 1
+      // Compute remaining from absolute end time — works correctly after app wake
+      const timerEnd = Number.parseInt(localStorage.getItem("tivexx-timer-end") || "0")
+      const remaining = timerEnd ? Math.max(0, Math.floor((timerEnd - Date.now()) / 1000)) : 0
 
-        localStorage.setItem("tivexx-timer", newTime.toString())
-        localStorage.setItem("tivexx-timer-timestamp", Date.now().toString())
+      setTimeRemaining(remaining)
 
-        if (newTime === 0) {
-          console.log("[dashboard] Timer hit 00:00, triggering notifyClaimReady")
-          setCanClaim(true)
-          setIsCounting(false)
-          void notifyClaimReady()
-        }
-        return newTime
-      })
+      if (remaining === 0) {
+        console.log("[dashboard] Timer hit 00:00, triggering notifyClaimReady")
+        localStorage.removeItem("tivexx-timer-end")
+        setCanClaim(true)
+        setIsCounting(false)
+        void notifyClaimReady()
+      }
     }, 1000)
 
     return () => clearInterval(timer)
@@ -358,22 +358,23 @@ export default function DashboardPage() {
         localStorage.setItem("tivexx-pause-end-time", fiveHoursLater.toString())
         setCanClaim(false)
       } else {
+        const timerEndMs = Date.now() + 60 * 1000
         setCanClaim(false)
         setTimeRemaining(60)
         setIsCounting(true)
-        localStorage.setItem("tivexx-timer", "60")
-        localStorage.setItem("tivexx-timer-timestamp", Date.now().toString())
-        localStorage.setItem("tivexx-claim-ready-notified", "0")
+        // Save single absolute end time — no need to update every tick
+        localStorage.setItem("tivexx-timer-end", timerEndMs.toString())
+        localStorage.removeItem("tivexx-claim-ready-notified")
 
-        // Notify server about new timer
+        // Notify server so cron can send push if app is closed before timer ends
         try {
           const userId = userData?.id || userData?.userId
           if (userId) {
-            console.log("[dashboard] Starting timer on server for user:", userId)
+            console.log("[dashboard] Starting server timer for user:", userId)
             await fetch("/api/timer/start", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId, timerDuration: 60 }),
+              body: JSON.stringify({ userId, timerEndsAt: new Date(timerEndMs).toISOString() }),
             })
           }
         } catch (error) {

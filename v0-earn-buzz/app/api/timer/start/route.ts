@@ -18,11 +18,17 @@ function getSupabaseAdmin() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, timerDuration } = await req.json()
+    const body = await req.json()
+    const { userId } = body
 
-    if (!userId || !timerDuration) {
+    // Accept either absolute timerEndsAt or legacy timerDuration
+    const timerEndsAt: Date = body.timerEndsAt
+      ? new Date(body.timerEndsAt)
+      : new Date(Date.now() + (body.timerDuration ?? 60) * 1000)
+
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: "Missing userId or timerDuration" },
+        { success: false, error: "Missing userId" },
         { status: 400 },
       )
     }
@@ -34,19 +40,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "Timer started (local only)",
-        timerEndsAt: new Date(Date.now() + timerDuration * 1000).toISOString(),
+        timerEndsAt: timerEndsAt.toISOString(),
       })
     }
 
     try {
-      const timerEndsAt = new Date(Date.now() + timerDuration * 1000)
-
-      // Store timer info in a timers table
+      // Store timer — upsert so re-claiming resets the timer
       const { error } = await supabase.from("user_timers").upsert(
         {
           user_id: userId,
           timer_ends_at: timerEndsAt.toISOString(),
-          timer_duration: timerDuration,
+          timer_duration: Math.round((timerEndsAt.getTime() - Date.now()) / 1000),
           created_at: new Date().toISOString(),
           notified: false,
         },
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
         {
           success: true,
           message: "Timer started (local fallback - exception)",
-          timerEndsAt: new Date(Date.now() + timerDuration * 1000).toISOString(),
+          timerEndsAt: timerEndsAt.toISOString(),
         },
         { status: 200 },
       )
