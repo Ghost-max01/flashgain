@@ -53,19 +53,28 @@ async function runCron(req: NextRequest) {
       try {
         console.log(`[timer/cron] Sending notification to user: ${timer.user_id}`)
 
-        await sendNotificationToUser({
+        const stats = await sendNotificationToUser({
           uid: timer.user_id,
           title: "⏰ Claim Ready!",
           body: "Your timer hit 00:00. Open FlashGain 9ja to claim your ₦1,000 now!",
           clickUrl: "/dashboard",
         })
 
-        await supabase
-          .from("user_timers")
-          .update({ notified: true })
-          .eq("user_id", timer.user_id)
+        const sentCount = (stats?.fcmSent || 0) + (stats?.webpushSent || 0)
+        const attemptedCount = (stats?.fcmAttempted || 0) + (stats?.webpushAttempted || 0)
 
-        successCount++
+        if (sentCount > 0) {
+          await supabase
+            .from("user_timers")
+            .update({ notified: true })
+            .eq("user_id", timer.user_id)
+          successCount++
+        } else {
+          console.warn(
+            `[timer/cron] No push sent for user ${timer.user_id}. Keeping timer pending for retry. attempted=${attemptedCount} reason=${stats?.reason || "unknown"}`,
+          )
+          failureCount++
+        }
       } catch (error) {
         console.error(`[timer/cron] Error processing timer for user ${timer.user_id}:`, error)
         failureCount++

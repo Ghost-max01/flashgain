@@ -69,8 +69,9 @@ export async function POST(req: NextRequest) {
         console.log(`[timer/check] Timer expired for user ${userId}, sending notification`)
 
         // Send push notification
+        let stats: any = null
         try {
-          await sendNotificationToUser({
+          stats = await sendNotificationToUser({
             uid: userId,
             title: "Claim Ready!",
             body: "Your timer is 00:00. Claim your ₦1,000 now.",
@@ -79,20 +80,27 @@ export async function POST(req: NextRequest) {
           console.error("[timer/check] Error sending notification:", notifyErr)
         }
 
-        // Mark as notified
-        try {
-          await supabase
-            .from("user_timers")
-            .update({ notified: true })
-            .eq("user_id", userId)
-        } catch (updateErr) {
-          console.error("[timer/check] Error marking notified:", updateErr)
+        const sentCount = (stats?.fcmSent || 0) + (stats?.webpushSent || 0)
+
+        if (sentCount > 0) {
+          try {
+            await supabase
+              .from("user_timers")
+              .update({ notified: true })
+              .eq("user_id", userId)
+          } catch (updateErr) {
+            console.error("[timer/check] Error marking notified:", updateErr)
+          }
+        } else {
+          console.warn(
+            `[timer/check] No background push sent for ${userId}; timer remains pending for retry. reason=${stats?.reason || "unknown"}`,
+          )
         }
 
         return NextResponse.json({
           success: true,
           timerReady: true,
-          message: "Timer expired, notification sent",
+          message: sentCount > 0 ? "Timer expired, notification sent" : "Timer expired, push pending retry",
         })
       }
 
