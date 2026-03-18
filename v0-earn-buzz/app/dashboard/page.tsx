@@ -739,21 +739,21 @@ export default function DashboardPage() {
               <div className="hh-browser-check-icon">
                 <Shield className="h-6 w-6 text-emerald-400" />
               </div>
-              <h2 className="text-lg font-bold text-white">Secure Your Account</h2>
+              <h2 className="text-base font-bold text-white">Secure Your Account</h2>
             </div>
 
-            <p className="text-sm text-gray-300 mb-4 text-center">
+            <p className="text-xs text-gray-300 mb-2 text-center">
               ⚠️ Use a Supported Browser
             </p>
-            <p className="text-xs text-gray-400 mb-4 text-center leading-relaxed">
+            <p className="text-[11px] text-gray-400 mb-3 text-center leading-snug">
               Supported browsers: Chrome, Firefox, Safari, Opera. If you're not using one, copy your link below and log in with your credentials so you don't lose access to your account.
             </p>
 
             {/* Secure Link Display */}
             <div className="hh-browser-check-link-container">
-              <p className="text-xs font-semibold text-emerald-400 mb-2 uppercase tracking-wider">Your Secure Link</p>
+              <p className="text-[10px] font-semibold text-emerald-400 mb-1 uppercase tracking-wider">Your Secure Link</p>
               <div className="hh-browser-check-link-box">
-                <code className="text-xs text-white break-all">
+                <code className="text-[10px] text-white break-all">
                   {typeof window !== 'undefined' ? `${window.location.origin}/refer?ref=${userData?.userId || 'ref'}` : 'Loading...'}
                 </code>
               </div>
@@ -781,12 +781,12 @@ export default function DashboardPage() {
 
             <div className="hh-browser-check-divider"></div>
 
-            <div className="space-y-1.5 mb-4">
-              <p className="text-xs font-semibold text-white uppercase tracking-wider">Save These Credentials:</p>
-              <p className="text-xs text-gray-400">
+            <div className="space-y-1 mb-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-wider">Save These Credentials:</p>
+              <p className="text-[11px] text-gray-400">
                 Email: <span className="text-emerald-300 font-mono">{userData?.email}</span>
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-[11px] text-gray-400">
                 User ID: <span className="text-emerald-300 font-mono">{userData?.userId}</span>
               </p>
             </div>
@@ -1750,14 +1750,16 @@ export default function DashboardPage() {
         .hh-browser-check-popup {
           background: linear-gradient(135deg, #0d1f2d, #0a1628);
           border: 1px solid rgba(16,185,129,0.2);
-          border-radius: 24px;
-          padding: 20px;
+          border-radius: 18px;
+          padding: 16px;
           max-width: 380px;
           width: 100%;
           max-height: 70vh;
           overflow-y: auto;
           margin: auto 0;
           -webkit-overflow-scrolling: touch;
+          line-height: 1.25;
+          overscroll-behavior: contain;
           box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 30px rgba(16,185,129,0.1);
           animation: hh-browser-check-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -1777,14 +1779,14 @@ export default function DashboardPage() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-          margin-bottom: 14px;
+          gap: 6px;
+          margin-bottom: 10px;
         }
 
         .hh-browser-check-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 14px;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
           background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05));
           border: 1px solid rgba(16,185,129,0.3);
           display: flex;
@@ -1796,19 +1798,19 @@ export default function DashboardPage() {
         .hh-browser-check-link-container {
           background: rgba(16,185,129,0.08);
           border: 1px solid rgba(16,185,129,0.2);
-          border-radius: 14px;
-          padding: 12px;
-          margin-bottom: 14px;
+          border-radius: 10px;
+          padding: 10px;
+          margin-bottom: 10px;
         }
 
         .hh-browser-check-link-box {
           background: rgba(0,0,0,0.3);
           border: 1px solid rgba(16,185,129,0.15);
-          border-radius: 10px;
-          padding: 8px;
-          margin-bottom: 8px;
+          border-radius: 8px;
+          padding: 6px;
+          margin-bottom: 6px;
           overflow-x: auto;
-          max-height: 64px;
+          max-height: 48px;
           overflow-y: auto;
         }
 
@@ -1817,14 +1819,14 @@ export default function DashboardPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 9px;
+          gap: 6px;
+          padding: 7px;
           background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1));
           border: 1px solid rgba(16,185,129,0.3);
-          border-radius: 10px;
+          border-radius: 8px;
           color: #10b981;
           font-weight: 600;
-          font-size: 14px;
+          font-size: 12px;
           cursor: pointer;
           transition: all 0.3s ease;
           position: relative;
@@ -1850,17 +1852,17 @@ export default function DashboardPage() {
         .hh-browser-check-divider {
           height: 1px;
           background: linear-gradient(90deg, transparent, rgba(16,185,129,0.2), transparent);
-          margin: 14px 0;
+          margin: 10px 0;
         }
 
         .hh-browser-check-close-btn {
           background: linear-gradient(135deg, #10b981, #059669);
           color: white;
           font-weight: 700;
-          font-size: 15px;
+          font-size: 13px;
           border: none;
-          border-radius: 12px;
-          padding: 10px;
+          border-radius: 10px;
+          padding: 8px;
           cursor: pointer;
           transition: all 0.3s ease;
           box-shadow: 0 6px 20px rgba(16,185,129,0.3);
