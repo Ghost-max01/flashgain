@@ -13,7 +13,8 @@ import { TutorialModal } from "@/components/tutorial-modal"
 import { ScrollingText } from "@/components/scrolling-text"
 import { LiveChat } from "@/components/live-chat"
 import { useToast } from "@/hooks/use-toast"
-import { registerForFCM, requestNotificationPermission, showLocalNotification } from "@/services/notification-service"
+import { ensurePushRegistrationIntegrity, registerForFCM, requestNotificationPermission, showLocalNotification } from "@/services/notification-service"
+import { persistUserSession, restoreUserSessionFromCookie } from "@/lib/session-client"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface UserData {
@@ -344,7 +345,7 @@ export default function DashboardPage() {
       
       if (userData) {
         const updatedUser = { ...userData, balance: newBalance }
-        localStorage.setItem("tivexx-user", JSON.stringify(updatedUser))
+        persistUserSession(updatedUser)
         setUserData(updatedUser)
       }
 
@@ -461,7 +462,7 @@ export default function DashboardPage() {
       const updatedUser = userData ? { ...userData, profilePicture: result } : { name: "User", email: "", balance, userId: `TX${Math.random().toString(36).substr(2, 9).toUpperCase()}`, hasMomoNumber: false, profilePicture: result }
       setUserData(updatedUser)
       try {
-        localStorage.setItem("tivexx-user", JSON.stringify(updatedUser))
+        persistUserSession(updatedUser)
       } catch (err) {
         console.error("Failed to persist profile picture to localStorage:", err)
       }
@@ -506,7 +507,8 @@ export default function DashboardPage() {
   ];
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("tivexx-user")
+    const restoredUser = restoreUserSessionFromCookie()
+    const storedUser = localStorage.getItem("tivexx-user") || (restoredUser ? JSON.stringify(restoredUser) : null)
 
     if (!storedUser) {
       router.push("/login")
@@ -535,7 +537,20 @@ export default function DashboardPage() {
       user.userId = `TX${Math.random().toString(36).substr(2, 9).toUpperCase()}`
     }
 
-    registerForFCM(user.id || user.userId)
+    const uid = user.id || user.userId
+    registerForFCM(uid)
+    void ensurePushRegistrationIntegrity(uid)
+
+    const handleVisibilityRegistrationCheck = () => {
+      if (document.visibilityState === "visible") {
+        void ensurePushRegistrationIntegrity(uid)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityRegistrationCheck)
+
+    const recheckInterval = window.setInterval(() => {
+      void ensurePushRegistrationIntegrity(uid)
+    }, 10 * 60 * 1000)
 
     // Check if timer expired while app was closed
     const checkServerTimer = async () => {
@@ -582,7 +597,7 @@ export default function DashboardPage() {
           ...user, 
           balance: totalBalance
         }
-        localStorage.setItem("tivexx-user", JSON.stringify(updatedUser))
+        persistUserSession(updatedUser)
         
         if (newReferralEarnings > 0) {
           localStorage.setItem("tivexx-last-synced-referrals", referralEarnings.toString())
@@ -620,6 +635,11 @@ export default function DashboardPage() {
     }
 
     showRandomNotification()
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityRegistrationCheck)
+      clearInterval(recheckInterval)
+    }
   }, [router])
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { persistUserSession, restoreUserSessionFromCookie } from "@/lib/session-client";
 import {
   Home,
   Gamepad2,
@@ -37,7 +38,7 @@ export default function RegisterPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    const storedUser = localStorage.getItem("tivexx-user");
+    const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie();
     if (storedUser) {
       router.push("/dashboard");
     }
@@ -109,7 +110,7 @@ export default function RegisterPage() {
         referralCode: data.user.referral_code,
       };
 
-      localStorage.setItem("tivexx-user", JSON.stringify(userData));
+      persistUserSession(userData);
       localStorage.removeItem("tivexx-welcome-popup-shown");
 
       router.push("/welcome");

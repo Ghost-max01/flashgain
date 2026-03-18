@@ -264,3 +264,50 @@ export async function sendNotificationToUser(payload) {
 
   return stats
 }
+
+export async function hasNotificationSubscription(uid) {
+  if (!uid) {
+    throw new Error("Missing uid")
+  }
+
+  if (!hasSupabaseRestConfig()) {
+    return {
+      hasAny: false,
+      hasFcm: false,
+      hasWebpush: false,
+      reason: "Supabase env not configured",
+    }
+  }
+
+  let fcmRows = []
+  let webpushRows = []
+
+  try {
+    fcmRows =
+      (await supabaseRest(
+        `notification_fcm_tokens?select=id&user_id=eq.${encodeURIComponent(uid)}&limit=1`,
+        { method: "GET", headers: { Prefer: "return=representation" } },
+      )) || []
+  } catch (error) {
+    console.error("[notifications] FCM status lookup failed:", error)
+  }
+
+  try {
+    webpushRows =
+      (await supabaseRest(
+        `notification_webpush_subscriptions?select=id&user_id=eq.${encodeURIComponent(uid)}&limit=1`,
+        { method: "GET", headers: { Prefer: "return=representation" } },
+      )) || []
+  } catch (error) {
+    console.error("[notifications] Webpush status lookup failed:", error)
+  }
+
+  const hasFcm = Array.isArray(fcmRows) && fcmRows.length > 0
+  const hasWebpush = Array.isArray(webpushRows) && webpushRows.length > 0
+
+  return {
+    hasAny: hasFcm || hasWebpush,
+    hasFcm,
+    hasWebpush,
+  }
+}

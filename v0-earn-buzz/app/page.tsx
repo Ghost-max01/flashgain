@@ -2,12 +2,13 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { restoreUserSessionFromCookie } from "@/lib/session-client"
 
 export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("tivexx-user")
+    const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie()
 
     if (storedUser) {
       router.push("/dashboard")

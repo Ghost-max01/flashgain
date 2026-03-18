@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { LogoutConfirmation } from "@/components/logout-confirmation"
 import { requestNotificationPermission, showLocalNotification } from "@/services/notification-service"
+import { clearUserSession } from "@/lib/session-client"
 
 interface UserData {
   name: string
@@ -58,6 +59,7 @@ export default function ProfilePage() {
 
   const handleLogoutConfirm = () => {
     localStorage.removeItem("momo-credit-user")
+    clearUserSession()
     router.push("/login")
   }
 

@@ -7,6 +7,7 @@ import { ArrowLeft, User, Mail, Award, CheckCircle, LogOut, Copy } from "lucide-
 import { Button } from "@/components/ui/button"
 import { LogoutConfirmation } from "@/components/logout-confirmation"
 import { useToast } from "@/hooks/use-toast" // Import useToast
+import { clearUserSession } from "@/lib/session-client"
 
 interface UserData {
   name: string
@@ -54,6 +55,7 @@ export default function ProfileInformationPage() {
 
   const handleLogoutConfirm = () => {
     localStorage.removeItem("momo-credit-user")
+      clearUserSession()
     router.push("/login")
   }
 

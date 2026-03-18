@@ -90,7 +90,7 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     const existing = await sw.pushManager.getSubscription()
     const subscription = existing ?? await sw.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
     })
 
     await fetch("/api/notifications/subscribe", {
@@ -98,6 +98,12 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON() }),
     })
+
+    try {
+      localStorage.setItem("tivexx-notification-optin", "1")
+      localStorage.setItem("tivexx-notification-channel", "webpush")
+      localStorage.setItem("tivexx-notification-registered-at", Date.now().toString())
+    } catch {}
 
     console.log("[notification-service] iOS Web Push subscription saved")
     return true
@@ -147,6 +153,13 @@ async function registerFCMPush(uid: string): Promise<boolean> {
       body: JSON.stringify({ uid, type: "fcm", token }),
     })
 
+    try {
+      localStorage.setItem("tivexx-notification-optin", "1")
+      localStorage.setItem("tivexx-notification-channel", "fcm")
+      localStorage.setItem("tivexx-notification-registered-at", Date.now().toString())
+      localStorage.setItem("tivexx-fcm-token", token)
+    } catch {}
+
     console.log("[notification-service] FCM token saved")
     return true
   } catch (error) {
@@ -186,4 +199,57 @@ export async function registerForFCM(uid: string): Promise<boolean> {
     console.error("[notification-service] registerForFCM error:", error)
     return false
   }
+}
+
+export async function getSubscriptionStatus(uid: string): Promise<{
+  hasAny: boolean
+  hasFcm: boolean
+  hasWebpush: boolean
+}> {
+  if (!uid || typeof window === "undefined") {
+    return { hasAny: false, hasFcm: false, hasWebpush: false }
+  }
+
+  try {
+    const response = await fetch("/api/notifications/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid }),
+    })
+
+    if (!response.ok) {
+      return { hasAny: false, hasFcm: false, hasWebpush: false }
+    }
+
+    const data = await response.json()
+    return {
+      hasAny: Boolean(data?.hasAny),
+      hasFcm: Boolean(data?.hasFcm),
+      hasWebpush: Boolean(data?.hasWebpush),
+    }
+  } catch (error) {
+    console.error("[notification-service] Failed to fetch subscription status:", error)
+    return { hasAny: false, hasFcm: false, hasWebpush: false }
+  }
+}
+
+export async function ensurePushRegistrationIntegrity(uid: string): Promise<boolean> {
+  if (!uid || typeof window === "undefined") return false
+
+  const optedIn = localStorage.getItem("tivexx-notification-optin") === "1"
+  const legacyWelcomeSeen = localStorage.getItem("tivexx-welcome-popup-shown") === "true"
+  const permissionGranted = "Notification" in window && Notification.permission === "granted"
+
+  if (!permissionGranted || (!optedIn && !legacyWelcomeSeen)) {
+    return false
+  }
+
+  const status = await getSubscriptionStatus(uid)
+
+  if (status.hasAny) {
+    return true
+  }
+
+  console.log("[notification-service] Missing subscription on server, auto re-subscribing")
+  return registerForFCM(uid)
 }

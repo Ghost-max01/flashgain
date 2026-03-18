@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
+import { persistUserSession, restoreUserSessionFromCookie } from "@/lib/session-client";
 import {
   Home,
   Gamepad2,
@@ -34,7 +35,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    const storedUser = localStorage.getItem("tivexx-user");
+    const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie();
     if (storedUser) {
       router.push("/dashboard");
     }
@@ -92,15 +93,12 @@ export default function LoginPage() {
       }
 
       // Save the FULL user object with correct numbers
-      localStorage.setItem(
-        "tivexx-user",
-        JSON.stringify({
-          ...fullUser,
-          balance: Number(fullUser?.balance || 0),
-          referral_balance: Number(fullUser?.referral_balance || 0),
-          referral_count: Number(fullUser?.referral_count || 0),
-        }),
-      );
+      persistUserSession({
+        ...fullUser,
+        balance: Number(fullUser?.balance || 0),
+        referral_balance: Number(fullUser?.referral_balance || 0),
+        referral_count: Number(fullUser?.referral_count || 0),
+      });
 
       router.push("/dashboard");
     } catch (err) {
