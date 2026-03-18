@@ -132,7 +132,7 @@ export function NotificationPermissionPopup({
               <Button
                 onClick={onEnableNotifications}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold shadow-md"
               >
                 {isLoading ? 'Processing...' : 'Enable Notifications'}
               </Button>

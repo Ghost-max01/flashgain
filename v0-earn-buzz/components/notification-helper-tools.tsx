@@ -94,7 +94,12 @@ export function NotificationHelperTools() {
   return (
     <>
       <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
-        <Button size="sm" onClick={onEnable} disabled={isLoading}>
+        <Button 
+          size="sm" 
+          onClick={onEnable} 
+          disabled={isLoading}
+          className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold shadow-lg rounded-lg transition-colors"
+        >
           Enable Notifications
         </Button>
         <Button size="sm" variant="outline" onClick={onCheck} disabled={isLoading}>
