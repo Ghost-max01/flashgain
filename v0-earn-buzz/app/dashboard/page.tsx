@@ -13,7 +13,7 @@ import { TutorialModal } from "@/components/tutorial-modal"
 import { ScrollingText } from "@/components/scrolling-text"
 import { LiveChat } from "@/components/live-chat"
 import { useToast } from "@/hooks/use-toast"
-import { registerForFCM } from "@/services/notification-service"
+import { registerForFCM, showLocalNotification } from "@/services/notification-service"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface UserData {
@@ -62,6 +62,38 @@ export default function DashboardPage() {
   const [copiedLink, setCopiedLink] = useState(false)
   const [showLiveChat, setShowLiveChat] = useState(false)
   const [tapCount, setTapCount] = useState(0)
+
+  const notifyClaimReady = useCallback(async () => {
+    if (typeof window === "undefined") return
+
+    const alreadyNotified = localStorage.getItem("tivexx-claim-ready-notified") === "1"
+    if (alreadyNotified) return
+
+    showLocalNotification("Claim Ready!", {
+      body: "Your timer is 00:00. Claim your ₦1,000 now.",
+      data: { url: "/dashboard" },
+    })
+
+    const targetUserId = userData?.id || userData?.userId
+    if (targetUserId) {
+      try {
+        await fetch("/api/notifications/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: targetUserId,
+            title: "Claim Ready!",
+            body: "Your timer is 00:00. Claim your ₦1,000 now.",
+            clickUrl: "/dashboard",
+          }),
+        })
+      } catch (error) {
+        console.error("Failed to send claim-ready push:", error)
+      }
+    }
+
+    localStorage.setItem("tivexx-claim-ready-notified", "1")
+  }, [userData])
   // open chat if URL hash is #chat (on mount or when hash changes)
   useEffect(() => {
     const checkHash = () => {
@@ -170,6 +202,7 @@ export default function DashboardPage() {
       const remaining = Number.parseInt(savedTimer) - elapsed
 
       if (remaining > 0) {
+        localStorage.setItem("tivexx-claim-ready-notified", "0")
         setTimeRemaining(remaining)
         setIsCounting(true)
         if (!pauseEndTime) {
@@ -179,6 +212,7 @@ export default function DashboardPage() {
         setTimeRemaining(0)
         if (!pauseEndTime) {
           setCanClaim(true)
+          void notifyClaimReady()
         }
         setIsCounting(false)
       }
@@ -186,7 +220,7 @@ export default function DashboardPage() {
       setCanClaim(!pauseEndTime)
       setIsCounting(false)
     }
-  }, [])
+  }, [notifyClaimReady, pauseEndTime])
 
   useEffect(() => {
     if (!pauseEndTime) return
@@ -218,13 +252,14 @@ export default function DashboardPage() {
         if (newTime === 0) {
           setCanClaim(true)
           setIsCounting(false)
+          void notifyClaimReady()
         }
         return newTime
       })
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [isCounting])
+  }, [isCounting, notifyClaimReady])
 
   const handleClaim = () => {
     if (pauseEndTime && pauseEndTime > Date.now()) {
@@ -261,6 +296,7 @@ export default function DashboardPage() {
         setIsCounting(true)
         localStorage.setItem("tivexx-timer", "60")
         localStorage.setItem("tivexx-timer-timestamp", Date.now().toString())
+        localStorage.setItem("tivexx-claim-ready-notified", "0")
       }
 
       if (newClaimCount === 50) {
