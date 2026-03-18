@@ -733,7 +733,7 @@ export default function DashboardPage() {
 
       {/* Browser Check Popup */}
       {showBrowserCheck && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-start sm:items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="hh-browser-check-popup">
             <div className="hh-browser-check-header">
               <div className="hh-browser-check-icon">
@@ -1756,6 +1756,8 @@ export default function DashboardPage() {
           width: 100%;
           max-height: 70vh;
           overflow-y: auto;
+          margin: auto 0;
+          -webkit-overflow-scrolling: touch;
           box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 30px rgba(16,185,129,0.1);
           animation: hh-browser-check-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
