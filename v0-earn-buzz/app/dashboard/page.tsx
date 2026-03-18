@@ -459,7 +459,12 @@ export default function DashboardPage() {
     const reader = new FileReader()
     reader.onloadend = () => {
       const result = reader.result as string
-      const updatedUser = userData ? { ...userData, profilePicture: result } : { name: "User", email: "", balance, userId: `TX${Math.random().toString(36).substr(2, 9).toUpperCase()}`, hasMomoNumber: false, profilePicture: result }
+      const fallbackRaw = typeof window !== "undefined" ? localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie() : null
+      const fallbackUser = typeof fallbackRaw === "string" ? JSON.parse(fallbackRaw) : fallbackRaw
+      const stableFallbackUserId = fallbackUser?.userId || fallbackUser?.referral_code || fallbackUser?.referralCode || fallbackUser?.id || ""
+      const updatedUser = userData
+        ? { ...userData, profilePicture: result }
+        : { name: "User", email: "", balance, userId: stableFallbackUserId, hasMomoNumber: false, profilePicture: result }
       setUserData(updatedUser)
       try {
         persistUserSession(updatedUser)
@@ -534,8 +539,10 @@ export default function DashboardPage() {
     }
 
     if (!user.userId) {
-      user.userId = `TX${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      user.userId = user.referral_code || user.referralCode || user.id || ""
     }
+
+    persistUserSession(user)
 
     const uid = user.id || user.userId
     registerForFCM(uid)

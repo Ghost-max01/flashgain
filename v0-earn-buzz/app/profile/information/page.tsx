@@ -40,9 +40,9 @@ export default function ProfileInformationPage() {
     if (!user.level) {
       user.level = "Basic"
     }
-    // Ensure userId is present, if not, generate a placeholder (should be set on registration)
+    // Ensure userId is stable per user
     if (!user.userId) {
-      user.userId = `MC${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      user.userId = user.referral_code || user.referralCode || user.id || ""
       localStorage.setItem("momo-credit-user", JSON.stringify(user))
     }
 

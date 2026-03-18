@@ -98,8 +98,10 @@ export default function LoginPage() {
       }
 
       // Save the FULL user object with correct numbers
+      const stableUserId = fullUser?.userId || fullUser?.referral_code || fullUser?.referralCode || fullUser?.id
       persistUserSession({
         ...fullUser,
+        userId: stableUserId,
         balance: Number(fullUser?.balance || 0),
         referral_balance: Number(fullUser?.referral_balance || 0),
         referral_count: Number(fullUser?.referral_count || 0),
