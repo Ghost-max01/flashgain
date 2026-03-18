@@ -314,7 +314,12 @@ export default function DashboardPage() {
         localStorage.setItem("tivexx-timer", newTime.toString())
         localStorage.setItem("tivexx-timer-timestamp", Date.now().toString())
 
-        if (newTime === 0) {\n          console.log(\"[dashboard] Timer hit 00:00, triggering notifyClaimReady\")\n          setCanClaim(true)\n          setIsCounting(false)\n          void notifyClaimReady()\n        }
+        if (newTime === 0) {
+          console.log("[dashboard] Timer hit 00:00, triggering notifyClaimReady")
+          setCanClaim(true)
+          setIsCounting(false)
+          void notifyClaimReady()
+        }
         return newTime
       })
     }, 1000)
