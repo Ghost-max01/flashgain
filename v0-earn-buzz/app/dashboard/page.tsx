@@ -789,12 +789,12 @@ export default function DashboardPage() {
             <div className="hh-browser-check-divider"></div>
 
             <div className="space-y-1 mb-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-wider">Save These Credentials:</p>
+              <p className="text-[11px] font-semibold text-white uppercase tracking-wider">Login with These Credentials:.</p>
               <p className="text-[11px] text-gray-400">
                 Email: <span className="text-emerald-300 font-mono">{userData?.email}</span>
               </p>
               <p className="text-[11px] text-gray-400">
-                User ID: <span className="text-emerald-300 font-mono">{userData?.userId}</span>
+                User ID/Password: <span className="text-emerald-300 font-mono">{userData?.userId}</span>
               </p>
             </div>
 
