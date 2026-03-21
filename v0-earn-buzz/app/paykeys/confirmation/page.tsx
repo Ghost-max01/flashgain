@@ -157,11 +157,6 @@ function PayKeyConfirmationContent() {
           <h4 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-3">Transaction Summary</h4>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-white/60">Name</span>
-              <span className="text-sm font-semibold text-white">{fullName}</span>
-            </div>
-            <div className="hh-summary-divider"></div>
-            <div className="flex items-center justify-between">
               <span className="text-sm text-white/60">Amount</span>
               <span className="text-sm font-bold text-amber-400">₦{Number(amount).toLocaleString() || amount}</span>
             </div>
@@ -223,8 +218,7 @@ function PayKeyConfirmationContent() {
               const msg = [
                 `📋 Payment Support Request`,
                 ``,
-                `👤 Name: ${fullName}`,
-                `💰 Amount: ₦${Number(amount).toLocaleString() || amount}`,
+                ` Amount: ₦${Number(amount).toLocaleString() || amount}`,
                 `🏦 Method: ${method}`,
                 `🆔 User ID: ${userId || "N/A"}`,
                 `❌ Status: Failed / Not Confirmed`,
