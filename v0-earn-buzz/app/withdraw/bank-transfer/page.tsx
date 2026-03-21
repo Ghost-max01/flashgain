@@ -67,7 +67,7 @@ function PayKeyPaymentContent() {
 
   const handleConfirmPayment = () => {
     const rawAmount = String(amount).replace(/[^0-9.-]/g, "")
-    const params = new URLSearchParams({ fullName, amount: rawAmount })
+    const params = new URLSearchParams({ fullName, amount: rawAmount, method: "Bank Transfer" })
     router.push(`/paykeys/confirmation?${params.toString()}`)
   }
 

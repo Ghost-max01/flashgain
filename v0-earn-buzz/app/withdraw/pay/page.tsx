@@ -37,6 +37,7 @@ function PayKeyPaymentContent() {
     const params = new URLSearchParams({
       fullName,
       amount,
+      method: "PayKey",
     })
     router.push(`/paykeys/confirmation?${params.toString()}`)
   }

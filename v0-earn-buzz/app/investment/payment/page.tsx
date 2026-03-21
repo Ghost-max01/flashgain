@@ -56,7 +56,7 @@ function InvestmentPaymentContent() {
 
   const handleConfirmPayment = () => {
     const rawAmount = String(amountParam).replace(/[^0-9.-]/g, "");
-    const params = new URLSearchParams({ fullName, amount: rawAmount });
+    const params = new URLSearchParams({ fullName, amount: rawAmount, method: "Investment" });
     router.push(`/paykeys/confirmation?${params.toString()}`);
   };
 

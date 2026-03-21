@@ -10,6 +10,10 @@ import {
   User,
   Shield,
   AlertTriangle,
+  Copy,
+  Check,
+  Mail,
+  KeyRound,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -17,6 +21,27 @@ function PayKeyConfirmationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showResult, setShowResult] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Read transaction details from search params
+  const fullName = searchParams.get("fullName") || "N/A";
+  const amount = searchParams.get("amount") || "N/A";
+  const method = searchParams.get("method") || "Unknown";
+
+  // Read user credentials from localStorage
+  const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState("");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("tivexx-user");
+      if (stored) {
+        const user = JSON.parse(stored);
+        setUserEmail(user.email || "");
+        setUserId(user.userId || user.referral_code || user.referralCode || user.id || "");
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -130,24 +155,64 @@ function PayKeyConfirmationContent() {
           </div>
         </div>
 
-        {/* Status Card */}
+        {/* Transaction Summary Card */}
         <div className="hh-card hh-entry-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="hh-status-icon-error">
-                <XCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="hh-status-label">Payment Status</div>
-                <div className="hh-status-value-error">Invalid Payment</div>
+          <h4 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-3">Transaction Summary</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white/60">Name</span>
+              <span className="text-sm font-semibold text-white">{fullName}</span>
+            </div>
+            <div className="hh-summary-divider"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white/60">Amount</span>
+              <span className="text-sm font-bold text-amber-400">₦{Number(amount).toLocaleString() || amount}</span>
+            </div>
+            <div className="hh-summary-divider"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white/60">Payment Method</span>
+              <span className="text-sm font-semibold text-white">{method}</span>
+            </div>
+            <div className="hh-summary-divider"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white/60">Status</span>
+              <span className="hh-status-badge-inline hh-status-badge-inline-error">
+                <XCircle className="h-3 w-3" />
+                Failed
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Login Credentials Card */}
+        <div className="hh-card hh-credentials-card hh-entry-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="hh-cred-icon">
+              <KeyRound className="h-4 w-4 text-emerald-300" />
+            </div>
+            <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Your Login Credentials</h4>
+          </div>
+          <p className="text-xs text-white/60 mb-3">Use these to log back into your account at any time.</p>
+          <div className="space-y-2">
+            <div className="hh-cred-row">
+              <Mail className="h-4 w-4 text-white/40 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] text-white/40 uppercase tracking-wider">Email</span>
+                <p className="text-sm font-semibold text-white truncate">{userEmail || "—"}</p>
               </div>
             </div>
-            <span className="hh-status-emoji">🚫</span>
+            <div className="hh-cred-row">
+              <KeyRound className="h-4 w-4 text-white/40 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] text-white/40 uppercase tracking-wider">User ID (use as password)</span>
+                <p className="text-sm font-semibold text-emerald-400 truncate">{userId || "—"}</p>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3 hh-entry-3">
+        <div className="space-y-3 hh-entry-4">
           <button
             onClick={() => router.push("/dashboard")}
             className="hh-secondary-btn w-full"
@@ -156,7 +221,34 @@ function PayKeyConfirmationContent() {
           </button>
 
           <button
-            onClick={() => window.open("https://t.me/m/Xj2VqXYBYjE0", "_self")}
+            onClick={() => {
+              // Build pre-filled support message with transaction summary
+              const msg = [
+                `📋 Payment Support Request`,
+                `━━━━━━━━━━━━━━━━━━━━`,
+                ``,
+                `👤 Name: ${fullName}`,
+                `💰 Amount: ₦${Number(amount).toLocaleString() || amount}`,
+                `🏦 Method: ${method}`,
+                `📧 Email: ${userEmail || "N/A"}`,
+                `🆔 User ID: ${userId || "N/A"}`,
+                `❌ Status: Failed / Not Confirmed`,
+                ``,
+                `━━━━━━━━━━━━━━━━━━━━`,
+                `I have made this payment but it was not verified. Please check and credit my account. Thank you.`,
+              ].join("\n");
+              
+              navigator.clipboard.writeText(msg).then(() => {
+                setCopied(true);
+              }).catch(() => {
+                setCopied(true);
+              });
+              
+              // Open Telegram DM after clipboard write
+              setTimeout(() => {
+                window.open("https://t.me/m/Xj2VqXYBYjE0", "_self");
+              }, 400);
+            }}
             className="hh-support-btn-full"
           >
             <svg
@@ -166,12 +258,19 @@ function PayKeyConfirmationContent() {
             >
               <path d="M12 0a12 12 0 100 24A12 12 0 0012 0zm5.303 7.224c.1-.002.32.023.464.14.05.035.084.076.117.12a.502.502 0 01.17.325c.016.093.036.305.02.471-.18 1.897-.962 6.502-1.36 8.627-.168.9-.5 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.183 3.247-2.977 3.307-3.23.007-.031.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014z" />
             </svg>
-            Contact Support
+            {copied ? "Details Copied — Opening Telegram..." : "Forward Details to Support"}
           </button>
+
+          {copied && (
+            <div className="hh-copied-notice">
+              <Check className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs text-emerald-300">Your payment details have been copied. Just tap and hold → Paste in the Telegram chat to send.</span>
+            </div>
+          )}
         </div>
 
         {/* Help Card */}
-        <div className="hh-card hh-tip-card hh-entry-4">
+        <div className="hh-card hh-tip-card hh-entry-5">
           <div className="flex items-start gap-3">
             <div className="hh-tip-icon">
               <Shield className="h-5 w-5 text-emerald-300" />
@@ -180,7 +279,7 @@ function PayKeyConfirmationContent() {
               <h4 className="font-bold text-white mb-1">Need Help?</h4>
               <p className="text-sm text-emerald-200/80">
                 Our support team is available 24/7 to assist you with any
-                payment issues.
+                payment issues. Tap the button above — your details will be copied automatically.
               </p>
             </div>
           </div>
@@ -972,6 +1071,75 @@ function PayKeyConfirmationContent() {
         }
         .hh-entry-4 {
           animation: hh-entry 0.5s ease-out 0.3s both;
+        }
+        .hh-entry-5 {
+          animation: hh-entry 0.5s ease-out 0.4s both;
+        }
+
+        /* ─── SUMMARY CARD ─── */
+        .hh-summary-divider {
+          height: 1px;
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .hh-status-badge-inline {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 10px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .hh-status-badge-inline-error {
+          background: rgba(239, 68, 68, 0.15);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+
+        /* ─── CREDENTIALS CARD ─── */
+        .hh-credentials-card {
+          background: linear-gradient(
+            135deg,
+            rgba(16, 185, 129, 0.08) 0%,
+            rgba(255, 255, 255, 0.03) 100%
+          );
+          border-color: rgba(16, 185, 129, 0.15);
+        }
+
+        .hh-cred-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          background: rgba(16, 185, 129, 0.15);
+          border: 1px solid rgba(16, 185, 129, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .hh-cred-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 10px 12px;
+        }
+
+        /* ─── COPIED NOTICE ─── */
+        .hh-copied-notice {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.25);
+          border-radius: 10px;
+          padding: 10px 14px;
+          animation: hh-entry 0.3s ease-out both;
         }
 
         @keyframes hh-entry {
