@@ -15,7 +15,7 @@ function PayKeyPaymentContent() {
   const fullName = searchParams.get("fullName") || ""
   const amount = searchParams.get("amount") || "6,100"
   // Reference ID: dynamic from ?ref= or fallback
-  const referenceId = searchParams.get("ref") || "500770"
+  const referenceId = searchParams.get("ref") || "500404"
   
   const bankName = "Moniepoint"
   const accountNumber = "6706330707"
