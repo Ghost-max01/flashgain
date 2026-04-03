@@ -18,6 +18,8 @@ interface Task {
   icon: string
 }
 
+const TASK_COOLDOWN_MS = 12 * 60 * 60 * 1000
+
 const AVAILABLE_TASKS: Task[] = [
   {
     id: "Monetage-our-most-earned-spin-to-win-ad.",
@@ -135,25 +137,19 @@ export default function TaskPage() {
     setBalance(user.balance || 0)
 
     const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
-    setCompletedTasks(completed)
-
     const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
-    
-    // Check if tasks should reset (daily reset at midnight)
-    const lastResetDate = localStorage.getItem("tivexx-last-reset-date")
-    const today = new Date().toDateString()
-    
-    if (lastResetDate !== today) {
-      // Reset all tasks for the new day
-      setCompletedTasks([])
-      setCooldowns({})
-      setVerifyingTasks({})
-      localStorage.setItem("tivexx-completed-tasks", "[]")
-      localStorage.setItem("tivexx-task-cooldowns", "{}")
-      localStorage.setItem("tivexx-last-reset-date", today)
-    } else {
-      setCooldowns(savedCooldowns)
-    }
+    const now = Date.now()
+
+    const activeCooldowns = Object.fromEntries(
+      Object.entries(savedCooldowns).filter(([, expiry]) => Number(expiry) > now)
+    ) as Record<string, number>
+
+    const activeCompleted = completed.filter((taskId: string) => activeCooldowns[taskId])
+
+    setCompletedTasks(activeCompleted)
+    setCooldowns(activeCooldowns)
+    localStorage.setItem("tivexx-completed-tasks", JSON.stringify(activeCompleted))
+    localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(activeCooldowns))
   }, [router])
 
   // Initialize task timer hook
@@ -268,25 +264,28 @@ export default function TaskPage() {
     const timer = setInterval(() => {
       const now = Date.now()
       const updated = { ...cooldowns }
-      let changed = false
+      const expiredTaskIds: string[] = []
 
       Object.keys(updated).forEach((key) => {
-        if (updated[key] > now) {
-          updated[key] -= 1000
-          changed = true
-        } else {
+        if (updated[key] <= now) {
           delete updated[key]
-          changed = true
+          expiredTaskIds.push(key)
         }
       })
 
-      if (changed) {
+      if (expiredTaskIds.length > 0) {
         setCooldowns({ ...updated })
         localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(updated))
+
+        const nextCompleted = completedTasks.filter((taskId) => !expiredTaskIds.includes(taskId))
+        if (nextCompleted.length !== completedTasks.length) {
+          setCompletedTasks(nextCompleted)
+          localStorage.setItem("tivexx-completed-tasks", JSON.stringify(nextCompleted))
+        }
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [cooldowns])
+  }, [cooldowns, completedTasks])
 
   const completeVerification = async (taskId: string) => {
     const task = AVAILABLE_TASKS.find((t) => t.id === taskId)
@@ -316,12 +315,8 @@ export default function TaskPage() {
     setCompletedTasks(newCompleted)
     localStorage.setItem("tivexx-completed-tasks", JSON.stringify(newCompleted))
 
-    // Calculate time until midnight
-    const now = new Date()
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-    const timeUntilMidnight = tomorrow.getTime() - now.getTime()
-    
-    const newCooldowns = { ...cooldowns, [task.id]: now.getTime() + timeUntilMidnight }
+    const cooldownExpiry = Date.now() + TASK_COOLDOWN_MS
+    const newCooldowns = { ...cooldowns, [task.id]: cooldownExpiry }
     setCooldowns(newCooldowns)
     localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(newCooldowns))
 
@@ -361,7 +356,7 @@ export default function TaskPage() {
     if (cooldowns[task.id] && cooldowns[task.id] > Date.now()) {
       toast({
         title: "Task on Cooldown",
-        description: "You can only do this task once every 24 hours.",
+        description: "You can only do this task once every 12 hours.",
         variant: "destructive",
       })
       return
@@ -534,7 +529,7 @@ export default function TaskPage() {
                     {isCompleted && !isPending && (
                       <span className="hh-status-badge hh-status-completed">
                         <CheckCircle2 className="h-3 w-3" />
-                        Claimed Today
+                        On Cooldown
                       </span>
                     )}
                     
@@ -561,7 +556,7 @@ export default function TaskPage() {
                   >
                     {isProcessing ? 'Processing...' : 
                      isPending ? 'Verify & Claim' : 
-                     isCompleted ? 'Claimed Today' : 
+                    isCompleted ? 'On Cooldown' : 
                      'Claim Now'}
                   </button>
 
@@ -606,9 +601,9 @@ export default function TaskPage() {
               <Sparkles className="h-5 w-5 text-amber-300" />
             </div>
             <div>
-              <h4 className="font-bold text-white mb-1">Daily Reset</h4>
+              <h4 className="font-bold text-white mb-1">12-Hour Cooldown</h4>
               <p className="text-sm text-emerald-200/80">
-                Tasks reset every day at midnight. Check back tomorrow for more rewards!
+                Each task becomes available again 12 hours after completion.
               </p>
             </div>
           </div>
