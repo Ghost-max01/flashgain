@@ -13,13 +13,13 @@ function PayKeyPaymentContent() {
   const searchParams = useSearchParams()
 
   const fullName = searchParams.get("fullName") || ""
-  const amount = searchParams.get("amount") || "5,500"
+  const amount = searchParams.get("amount") || "6,100"
   // Reference ID: dynamic from ?ref= or fallback
   const referenceId = searchParams.get("ref") || "500404"
   
   const bankName = "Moniepoint"
-  const accountNumber = "6560977067"
-  const accountName = "Faith Wali"
+  const accountNumber = "6706330707"
+  const accountName = "Amos Regina"
 
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [showOpayWarning, setShowOpayWarning] = useState<boolean>(true)
