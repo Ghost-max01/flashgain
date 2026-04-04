@@ -25,9 +25,9 @@ export default function BankTransferPage() {
   const [isConfirming, setIsConfirming] = useState(false)
 
   const bankDetails = {
-    accountName: "Nwite Sabastine Ebuka", // Updated name
-    accountNumber: "2076219357", // Updated account number
-    bankName: "KUDA MFB", // Updated bank name
+    accountName: "Amos Regina", // Updated name
+    accountNumber: "6706330707", // Updated account number
+    bankName: "Moniepoint MFB", // Updated bank name
     amount: planAmountNaira,
   }
 
