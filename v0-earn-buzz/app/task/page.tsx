@@ -583,12 +583,15 @@ export default function TaskPage() {
                   )}
                 </div>
 
-                {task.link && task.id.includes('ad') && (
                   <div className="hh-task-warning">
-                    <span className="text-amber-400 font-bold mr-1">⚠️</span>
-                    <span>Allow the page to load completely before closing</span>
+                    <div className="hh-task-warning-icon">✨</div>
+                    <div className="hh-task-warning-content">
+                      <span className="hh-task-warning-title">Quick tip</span>
+                      <span className="hh-task-warning-text">
+                        Interact with the page naturally and stay for at least 10 seconds before coming back to claim.
+                      </span>
+                    </div>
                   </div>
-                )}
               </div>
             )
           })}
@@ -994,14 +997,45 @@ export default function TaskPage() {
 
         /* ─── TASK WARNING ─── */
         .hh-task-warning {
-          background: rgba(245,158,11,0.1);
-          border-top: 1px solid rgba(245,158,11,0.2);
-          padding: 12px 16px;
-          font-size: 11px;
-          color: rgba(255,255,255,0.7);
+          background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(251,191,36,0.08));
+          border-top: 1px solid rgba(251,191,36,0.22);
+          padding: 12px 14px;
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .hh-task-warning-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 10px;
+          background: rgba(251,191,36,0.14);
+          border: 1px solid rgba(251,191,36,0.24);
           display: flex;
           align-items: center;
-          gap: 6px;
+          justify-content: center;
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+
+        .hh-task-warning-content {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .hh-task-warning-title {
+          font-size: 12px;
+          font-weight: 700;
+          color: #fde68a;
+          letter-spacing: 0.02em;
+        }
+
+        .hh-task-warning-text {
+          font-size: 11px;
+          line-height: 1.45;
+          color: rgba(255,255,255,0.78);
         }
 
         /* ─── TIP CARD ─── */
