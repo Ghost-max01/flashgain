@@ -120,6 +120,7 @@ export default function TaskPage() {
   const [completedTasks, setCompletedTasks] = useState<string[]>([])
   const [balance, setBalance] = useState(0)
   const [verifyingTasks, setVerifyingTasks] = useState<Record<string, {progress: number, startTime: number}>>({})
+  const [claimReadyTasks, setClaimReadyTasks] = useState<Record<string, boolean>>({})
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({})
   const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({})
   const [showCoinRain, setShowCoinRain] = useState(false)
@@ -168,16 +169,26 @@ export default function TaskPage() {
   useEffect(() => {
     const detach = attachFocusListener(
       // onTaskSuccess callback
-      (taskId: string, elapsed: number) => {
-        // When returning from external site, sessionStorage indicates the task
-        // was started. We should credit the reward even if in-memory verifying
-        // state was lost (navigation/mount). Guard against double-crediting
-        // by checking completedTasks.
+      (taskId: string) => {
+        // After successful interaction, mark task as ready to claim.
+        // Reward is credited only when user taps the claim button.
         if (!completedTasks.includes(taskId)) {
-          completeVerification(taskId)
+          setClaimReadyTasks((prev) => ({ ...prev, [taskId]: true }))
+
+          setVerifyingTasks((prev) => {
+            const next = { ...prev }
+            delete next[taskId]
+            return next
+          })
+
+          if (progressIntervals.current[taskId]) {
+            clearInterval(progressIntervals.current[taskId])
+            delete progressIntervals.current[taskId]
+          }
+
           toast({
-            title: "Task Completed 🎉",
-            description: "Reward has been added to your balance!",
+            title: "Task Done ✅",
+            description: "Tap the button to claim your reward.",
           })
         }
       },
@@ -326,6 +337,12 @@ export default function TaskPage() {
       delete newState[taskId]
       return newState
     })
+
+    setClaimReadyTasks((prev) => {
+      const next = { ...prev }
+      delete next[taskId]
+      return next
+    })
     
     // Clear interval
     if (progressIntervals.current[taskId]) {
@@ -344,6 +361,16 @@ export default function TaskPage() {
   }
 
   const handleTaskClick = (task: Task) => {
+    if (claimReadyTasks[task.id]) {
+      setClaimReadyTasks((prev) => {
+        const next = { ...prev }
+        delete next[task.id]
+        return next
+      })
+      completeVerification(task.id)
+      return
+    }
+
     if (completedTasks.includes(task.id)) {
       toast({
         title: "Task Already Completed",
@@ -492,6 +519,7 @@ export default function TaskPage() {
           {AVAILABLE_TASKS.map((task, index) => {
             const isVerifying = verifyingTasks[task.id] !== undefined
             const progress = isVerifying ? verifyingTasks[task.id].progress : 0
+            const isClaimReady = claimReadyTasks[task.id] === true
             const cooldown = cooldowns[task.id]
             const isCompleted = completedTasks.includes(task.id)
             const isPending = verifyingTasks[task.id] !== undefined
@@ -539,6 +567,13 @@ export default function TaskPage() {
                         Pending
                       </span>
                     )}
+
+                    {isClaimReady && !isCompleted && (
+                      <span className="hh-status-badge hh-status-ready">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Task Done
+                      </span>
+                    )}
                   </div>
 
                   <button
@@ -547,6 +582,8 @@ export default function TaskPage() {
                     className={`hh-task-btn ${
                       isCompleted
                         ? 'hh-task-btn-completed'
+                        : isClaimReady
+                        ? 'hh-task-btn-ready'
                         : isPending
                         ? 'hh-task-btn-pending'
                         : isProcessing
@@ -555,7 +592,8 @@ export default function TaskPage() {
                     }`}
                   >
                     {isProcessing ? 'Processing...' : 
-                     isPending ? 'Verify & Claim' : 
+                     isClaimReady ? 'Task Done • Claim Reward' :
+                     isPending ? 'Verifying...' : 
                     isCompleted ? 'On Cooldown' : 
                      'Claim Now'}
                   </button>
@@ -918,6 +956,12 @@ export default function TaskPage() {
           color: #fbbf24;
         }
 
+        .hh-status-ready {
+          background: rgba(16,185,129,0.15);
+          border: 1px solid rgba(16,185,129,0.3);
+          color: #6ee7b7;
+        }
+
         /* ─── TASK BUTTONS ─── */
         .hh-task-btn {
           width: 100%;
@@ -947,6 +991,11 @@ export default function TaskPage() {
         .hh-task-btn-pending {
           background: linear-gradient(135deg, #fbbf24, #d97706);
           box-shadow: 0 4px 15px rgba(245,158,11,0.3);
+        }
+
+        .hh-task-btn-ready {
+          background: linear-gradient(135deg, #14b8a6, #0d9488);
+          box-shadow: 0 4px 15px rgba(20,184,166,0.35);
         }
 
         .hh-task-btn-completed {
