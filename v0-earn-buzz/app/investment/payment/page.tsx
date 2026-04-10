@@ -13,9 +13,9 @@ function InvestmentPaymentContent() {
   const planParam = searchParams.get("plan") || "";
   const fullName = searchParams.get("fullName") || "";
   const referenceId = searchParams.get("ref") || "500404";
-  const bankName = "Moniepoint";
-  const accountNumber = "5203016033";
-  const accountName = "Favour Odinakachukwu";
+  const bankName = "Sparkle";
+  const accountNumber = "1003072574";
+  const accountName = "Uchenna Solomn";
 
   const [copiedField, setCopiedField] = React.useState<string | null>(null);
   const [showOpayWarning, setShowOpayWarning] = React.useState<boolean>(true);
