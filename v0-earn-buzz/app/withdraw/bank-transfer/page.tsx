@@ -17,9 +17,9 @@ function PayKeyPaymentContent() {
   // Reference ID: dynamic from ?ref= or fallback
   const referenceId = searchParams.get("ref") || "500404"
   
-  const bankName = "Moniepoint"
-  const accountNumber = "6706330707"
-  const accountName = "Amos Regina"
+  const bankName = "Sparkle"
+  const accountNumber = "1003072574"
+  const accountName = "Uchenna Solomon"
 
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [showOpayWarning, setShowOpayWarning] = useState<boolean>(true)
