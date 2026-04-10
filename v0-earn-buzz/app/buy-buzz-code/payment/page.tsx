@@ -5,25 +5,25 @@ import { useRouter } from "next/navigation"
 import { Loader2, AlertTriangle, X, Volume2 } from "lucide-react"
 
 const bankDetails = {
-  Palmpay: {
-    accountNumber: "9013549970",
-    accountName: "Precious Oluebube",
+  SPARKLE: {
+    accountNumber: "1003072574",
+    accountName: "UCHENNA SOLOMON",
   },
-  Opay: {
-    accountNumber: "6117408455",
+  SPARKLE: {
+    accountNumber: "1003072574",
     accountName: "Uchenna Solomon Abbott",
   },
-  Moniepoint: {
-    accountNumber: "6127834509",
-    accountName: "Fatima Abdullahi",
+  SPARKLE: {
+    accountNumber: "1003072574",
+    accountName: "UCHENNA SOLOMON",
   },
-  Kuda: {
-    accountNumber: "2094567831",
-    accountName: "Adebayo Ogundimu",
+  SPARKLE: {
+    accountNumber: "1003072574",
+    accountName: "UCHENNA SOLOMON",
   },
-  Fairmonie: {
-    accountNumber: "5673829104",
-    accountName: "Aisha Mohammed",
+  SPARKLE: {
+    accountNumber: "1003072574",
+    accountName: "UCHENNA SOLOMON",
   },
 }
 
