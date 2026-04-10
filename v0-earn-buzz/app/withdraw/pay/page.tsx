@@ -12,9 +12,9 @@ function PayKeyPaymentContent() {
 
   const fullName = searchParams.get("fullName") || ""
   const amount = searchParams.get("amount") || "5000"
-  const bankName = searchParams.get("bankName") || "Moniepoint"
-  const accountNumber = searchParams.get("accountNumber") || "6687709471"
-  const accountName = searchParams.get("accountName") || "FlashGain 9ja Enterprise";
+  const bankName = searchParams.get("bankName") || "Sparkle"
+  const accountNumber = searchParams.get("accountNumber") || "1003072574"
+  const accountName = searchParams.get("accountName") || "Uchenna Solomon";
 
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [showPopup, setShowPopup] = useState(true)
