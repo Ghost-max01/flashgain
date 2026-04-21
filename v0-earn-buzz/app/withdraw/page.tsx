@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { WithdrawalStagesModal } from "@/components/withdrawal-stages-modal"
+import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -19,7 +19,7 @@ export default function WithdrawPage() {
   const [showUpgradePopup, setShowUpgradePopup] = useState(false)
   const [completedTasksCount, setCompletedTasksCount] = useState(0)
   const [showRequirementsModal, setShowRequirementsModal] = useState(false)
-  const [showWithdrawalStagesModal, setShowWithdrawalStagesModal] = useState(false)
+  const [showWithdrawalInfoModal, setShowWithdrawalInfoModal] = useState(false)
   const TOTAL_DAILY_TASKS = 10
 
   useEffect(() => {
@@ -122,12 +122,18 @@ export default function WithdrawPage() {
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
   const handleCashout = () => {
-    // Show the 3-stage withdrawal modal
-    setShowWithdrawalStagesModal(true)
+    // Check if requirements are NOT met
+    const needsReferralCheck = !toggleActive
+    const meetsRequirements = toggleActive
+      ? (balance >= 200000 && completedTasksCount >= TOTAL_DAILY_TASKS)
+      : (balance >= 200000 && referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS)
+
+    // Show the modal - it will display appropriate content based on isEligible
+    setShowWithdrawalInfoModal(true)
   }
 
   const handleProceedToWithdrawal = () => {
-    setShowWithdrawalStagesModal(false)
+    setShowWithdrawalInfoModal(false)
     
     // If user chose "Withdraw Without Referral", show upgrade modal when they click withdraw.
     if (toggleActive) {
@@ -259,7 +265,25 @@ export default function WithdrawPage() {
         {/* Progress Section */}
         <div className="hh-card hh-entry-4">
           <div className="space-y-4">
-                {!toggleActive && (
+            {/* Daily Tasks Progress - Always Show First */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-medium text-white">Daily Tasks Progress</span>
+                </div>
+                <span className="text-sm font-bold text-amber-300">{completedTasksCount}/{TOTAL_DAILY_TASKS}</span>
+              </div>
+              <div className="hh-progress-track">
+                <div 
+                  className="hh-progress-fill hh-progress-tasks" 
+                  style={{ width: `${Math.min((completedTasksCount / TOTAL_DAILY_TASKS) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Referral Progress - Only Show After Tasks Complete */}
+            {completedTasksCount >= TOTAL_DAILY_TASKS && !toggleActive && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -276,16 +300,6 @@ export default function WithdrawPage() {
                 </div>
               </div>
             )}
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-400" />
-                  <span className="text-sm font-medium text-white">Daily Tasks Progress</span>
-                </div>
-                <span className="text-sm font-bold text-amber-300">{completedTasksCount}/{TOTAL_DAILY_TASKS}</span>
-              </div>
-              <div className="hh-progress-track">
                 <div 
                   className="hh-progress-fill hh-progress-tasks" 
                   style={{ width: `${Math.min((completedTasksCount / TOTAL_DAILY_TASKS) * 100, 100)}%` }}
@@ -411,13 +425,14 @@ export default function WithdrawPage() {
           </div>
         )}
 
-        {/* Withdrawal Stages Modal */}
-        <WithdrawalStagesModal
-          isOpen={showWithdrawalStagesModal}
+        {/* Withdrawal Info Modal */}
+        <WithdrawalInfoModal
+          isOpen={showWithdrawalInfoModal}
+          isEligible={balance >= 200000 && (toggleActive ? (completedTasksCount >= TOTAL_DAILY_TASKS) : (referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS))}
           completedTasksCount={completedTasksCount}
           referralCount={referralCount}
-          onClose={() => setShowWithdrawalStagesModal(false)}
-          onProceedToWithdrawal={handleProceedToWithdrawal}
+          onClose={() => setShowWithdrawalInfoModal(false)}
+          onProceed={handleProceedToWithdrawal}
         />
 
         {/* Upgrade Popup */}
