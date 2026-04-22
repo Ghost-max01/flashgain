@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, Clock, X, AlertCircle, Gift, Users } from "lucide-react"
+import { CheckCircle2, X, AlertCircle, Gift, Users } from "lucide-react"
 
 interface WithdrawalInfoModalProps {
   isOpen: boolean
@@ -24,33 +24,7 @@ export function WithdrawalInfoModal({
 
   if (!isOpen) return null
 
-  const getWithdrawalStatusText = () => {
-    const now = new Date()
-    const dayOfWeek = now.getDay() // 0 = Sunday, 4 = Thursday, 5 = Friday, 6 = Saturday
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
 
-    // Convert to minutes since midnight
-    const minutesSinceMidnight = hours * 60 + minutes
-
-    // Thursday 23:50 = 1430 minutes
-    // Sunday 23:59 = 1439 minutes
-    const THURSDAY_OPEN = 23 * 60 + 50 // 1430
-    const SUNDAY_CLOSE = 23 * 60 + 59 // 1439
-
-    // Check if we're in Thursday after 23:50 (11:50pm)
-    const thursdayOpen = dayOfWeek === 4 && minutesSinceMidnight >= THURSDAY_OPEN
-    // Check if we're on Friday or Saturday anytime
-    const fridayOrSaturday = dayOfWeek === 5 || dayOfWeek === 6
-    // Check if we're on Sunday before 23:59 (11:59pm)
-    const sundayOpen = dayOfWeek === 0 && minutesSinceMidnight < SUNDAY_CLOSE
-
-    const isWithdrawalOpen = thursdayOpen || fridayOrSaturday || sundayOpen
-
-    return { isWithdrawalOpen }
-  }
-
-  const withdrawalStatus = getWithdrawalStatusText()
 
   return (
     <>
@@ -85,33 +59,6 @@ export function WithdrawalInfoModal({
                     <span className="summary-value">{referralCount}/5 Active</span>
                   </div>
                 </div>
-              </div>
-
-              <div className="withdrawal-window-card">
-                <div className="window-header">
-                  <Clock className="h-5 w-5" />
-                  <span>Withdrawal Window</span>
-                </div>
-                <div className="window-times">
-                  <div className="time-item">
-                    <span className="time-label">Opens</span>
-                    <span className="time-value">Thursday 11:50 PM</span>
-                  </div>
-                  <div className="time-divider">→</div>
-                  <div className="time-item">
-                    <span className="time-label">Closes</span>
-                    <span className="time-value">Sunday 11:59 PM</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={`window-status ${withdrawalStatus.isWithdrawalOpen ? 'status-open' : 'status-closed'}`}>
-                <div className="status-dot"></div>
-                <span>
-                  {withdrawalStatus.isWithdrawalOpen
-                    ? "✓ Withdrawal Window is Currently OPEN"
-                    : "⏰ Withdrawal Window is Currently CLOSED"}
-                </span>
               </div>
 
               <button className="modal-btn btn-proceed" onClick={onProceed}>
