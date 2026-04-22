@@ -555,6 +555,28 @@ export default function DashboardPage() {
     }
     document.addEventListener("visibilitychange", handleVisibilityRegistrationCheck)
 
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === "visible") {
+        try {
+          const stored = localStorage.getItem("tivexx-user")
+          if (stored) {
+            const parsed = JSON.parse(stored)
+            if (typeof parsed.balance === "number") {
+              // Update local UI if balance changed while away
+              if (parsed.balance !== balance) {
+                setBalance(parsed.balance)
+                setAnimatedBalance(parsed.balance)
+              }
+            }
+            setUserData(parsed)
+          }
+        } catch (err) {
+          console.error("[dashboard] Error refreshing user from localStorage:", err)
+        }
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityRefresh)
+
     const recheckInterval = window.setInterval(() => {
       void ensurePushRegistrationIntegrity(uid)
     }, 10 * 60 * 1000)
@@ -645,6 +667,7 @@ export default function DashboardPage() {
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityRegistrationCheck)
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh)
       clearInterval(recheckInterval)
     }
   }, [router])
