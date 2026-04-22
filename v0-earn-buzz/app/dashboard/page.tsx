@@ -609,7 +609,10 @@ export default function DashboardPage() {
         const response = await fetch(`/api/user-balance?userId=${user.id || user.userId}&t=${Date.now()}`)
         const data = await response.json()
         
-        const localStorageBalance = user.balance || 50000
+        // Read the latest local storage value (in case it changed while user was away)
+        const storedLatestRaw = localStorage.getItem("tivexx-user")
+        const storedLatest = storedLatestRaw ? JSON.parse(storedLatestRaw) : null
+        const localStorageBalance = (storedLatest && typeof storedLatest.balance === 'number') ? storedLatest.balance : (user.balance || 50000)
         const dbBalance = data.balance || 50000
         const baseBalance = Math.max(localStorageBalance, dbBalance)
         
@@ -622,16 +625,16 @@ export default function DashboardPage() {
         setBalance(totalBalance)
         setAnimatedBalance(totalBalance)
         
-        const updatedUser = { 
-          ...user, 
-          balance: totalBalance
+        const updatedUser = {
+          ...(storedLatest || user),
+          balance: totalBalance,
         }
         persistUserSession(updatedUser)
-        
+
         if (newReferralEarnings > 0) {
           localStorage.setItem("tivexx-last-synced-referrals", referralEarnings.toString())
         }
-        
+
         setUserData(updatedUser)
 
         await fetch(`/api/user-balance`, {
@@ -665,9 +668,31 @@ export default function DashboardPage() {
 
     showRandomNotification()
 
+    // Also refresh when window/tab gains focus so returned users see updated balance
+    const handleFocusRefresh = () => {
+      try {
+        const stored = localStorage.getItem("tivexx-user")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (typeof parsed.balance === "number") {
+            if (parsed.balance !== balance) {
+              setBalance(parsed.balance)
+              setAnimatedBalance(parsed.balance)
+            }
+          }
+          setUserData(parsed)
+        }
+      } catch (err) {
+        console.error("[dashboard] Error on focus refresh:", err)
+      }
+      void fetchUserBalance()
+    }
+    window.addEventListener('focus', handleFocusRefresh)
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityRegistrationCheck)
       document.removeEventListener("visibilitychange", handleVisibilityRefresh)
+      window.removeEventListener('focus', handleFocusRefresh)
       clearInterval(recheckInterval)
     }
   }, [router])
