@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -130,29 +130,20 @@ export default function TaskPage() {
   const { toast } = useToast();
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [balance, setBalance] = useState(0);
-  const [verifyingTasks, setVerifyingTasks] = useState<
-    Record<string, { progress: number; startTime: number }>
-  >({});
-  const [claimReadyTasks, setClaimReadyTasks] = useState<
-    Record<string, boolean>
-  >({});
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const [shortPopupTasks, setShortPopupTasks] = useState<
-    Record<string, boolean>
-  >({});
-  const [partialReadyTasks, setPartialReadyTasks] = useState<
-    Record<string, boolean>
-  >({});
-  // NEW: after 2s from tapping, button flips to "Task Done ✅" regardless of redirect
-  const [earlyReadyTasks, setEarlyReadyTasks] = useState<
-    Record<string, boolean>
-  >({});
-  const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({});
-  const progressTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
-  const earlyReadyTimers = useRef<Record<string, NodeJS.Timeout>>({});
   const [showCoinRain, setShowCoinRain] = useState(false);
 
-  // Load user and tasks
+  // Unified state for tasks currently being verified (start time in sessionStorage)
+  const [activeVerifications, setActiveVerifications] = useState<string[]>([]);
+  const [claimReadyTasks, setClaimReadyTasks] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // Refs for intervals and focus listener
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const focusListenerCleanupRef = useRef<(() => void) | null>(null);
+
+  // Load user data and persisted state
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user");
     if (!storedUser) {
@@ -191,185 +182,131 @@ export default function TaskPage() {
       "tivexx-task-cooldowns",
       JSON.stringify(activeCooldowns),
     );
+
+    // Restore active verifications from sessionStorage
+    const verificationTasks: string[] = [];
+    const readySet = new Set<string>();
+    for (const task of AVAILABLE_TASKS) {
+      const startTimeStr = sessionStorage.getItem(`task_start_${task.id}`);
+      if (startTimeStr) {
+        const startTime = parseInt(startTimeStr, 10);
+        if (!isNaN(startTime)) {
+          const elapsed = (now - startTime) / 1000;
+          if (elapsed >= 10) {
+            readySet.add(task.id);
+            // Optionally clear sessionStorage if we're going to claim soon
+          } else {
+            verificationTasks.push(task.id);
+          }
+        }
+      }
+    }
+    setActiveVerifications(verificationTasks);
+    setClaimReadyTasks(readySet);
   }, [router]);
 
   // Initialize task timer hook
   const { attachFocusListener, startTaskTimer } = useTaskTimer();
 
-  // Clean up intervals and timers on unmount
+  // Set up focus listener to detect returns and update claimReady
   useEffect(() => {
-    return () => {
-      Object.values(progressIntervals.current).forEach((interval) =>
-        clearInterval(interval),
-      );
-      Object.values(progressTimeouts.current).forEach((t) => clearTimeout(t));
-      Object.values(earlyReadyTimers.current).forEach((timer) =>
-        clearTimeout(timer),
-      );
+    const handleTaskSuccess = (taskId: string) => {
+      setClaimReadyTasks((prev) => new Set(prev).add(taskId));
+      setActiveVerifications((prev) => prev.filter((id) => id !== taskId));
+      sessionStorage.removeItem(`task_start_${taskId}`);
+      toast({
+        title: "Task Done ✅",
+        description: "Tap the button to claim your reward.",
+      });
     };
-  }, []);
 
-  // Set up focus listener on mount
-  useEffect(() => {
-    const detach = attachFocusListener(
-      // onTaskSuccess callback (>=10s)
-      (taskId: string) => {
-        if (!completedTasks.includes(taskId)) {
-          setClaimReadyTasks((prev) => ({ ...prev, [taskId]: true }));
-
-          setVerifyingTasks((prev) => {
-            const next = { ...prev };
-            delete next[taskId];
-            return next;
-          });
-
-          if (progressIntervals.current[taskId]) {
-            clearInterval(progressIntervals.current[taskId]);
-            delete progressIntervals.current[taskId];
-          }
-
-          setPartialReadyTasks((prev) => {
-            const next = { ...prev };
-            delete next[taskId];
-            return next;
-          });
-
-          // Clear early ready since claimReady takes precedence
-          setEarlyReadyTasks((prev) => {
-            const next = { ...prev };
-            delete next[taskId];
-            return next;
-          });
-
-          toast({
-            title: "Task Done ✅",
-            description: "Tap the button to claim your reward.",
-          });
-        }
-      },
-      // onTaskIncomplete callback (<10s)
-      (taskId: string, elapsed: number) => {
-        setVerifyingTasks((prev) => {
-          const newState = { ...prev };
-          delete newState[taskId];
-          return newState;
-        });
-
-        if (progressIntervals.current[taskId]) {
-          clearInterval(progressIntervals.current[taskId]);
-          delete progressIntervals.current[taskId];
-        }
-
-        const timeSpent = Math.round(elapsed);
-
-        if (elapsed >= 2) {
-          setPartialReadyTasks((prev) => ({ ...prev, [taskId]: true }));
-          toast({
-            title: "Almost there ⏱️",
-            description: `You spent ${timeSpent}s — tap 'Task Done' to attempt claim. You need 10s for a successful reward.`,
-          });
-          return;
-        }
-
+    const handleTaskIncomplete = (taskId: string, elapsed: number) => {
+      setActiveVerifications((prev) => prev.filter((id) => id !== taskId));
+      sessionStorage.removeItem(`task_start_${taskId}`);
+      if (elapsed < 2) {
         toast({
           title: "You didn't interact with the task ❌",
-          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least 10 seconds before coming back.`,
+          description: `You only spent ${Math.round(elapsed)}s outside. Please tap the task again and stay on the page for at least 10 seconds before coming back.`,
           variant: "destructive",
           duration: 6000,
         });
-      },
-      // isTaskCompleted checker
-      (taskId: string) => {
-        return completedTasks.includes(taskId);
-      },
+      } else {
+        toast({
+          title: "Almost there ⏱️",
+          description: `You spent ${Math.round(elapsed)}s — you need 10 seconds for a successful reward. Please try again.`,
+        });
+      }
+    };
+
+    const isTaskCompleted = (taskId: string) => {
+      return completedTasks.includes(taskId);
+    };
+
+    const cleanup = attachFocusListener(
+      handleTaskSuccess,
+      handleTaskIncomplete,
+      isTaskCompleted,
     );
-    return detach;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completedTasks, toast]);
+    focusListenerCleanupRef.current = cleanup;
 
-  // Start progress animation for a specific task
-  const startProgressAnimation = (taskId: string) => {
-    if (progressIntervals.current[taskId]) {
-      clearInterval(progressIntervals.current[taskId]);
+    return () => {
+      cleanup();
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, [attachFocusListener, completedTasks, toast]);
+
+  // Update active verifications UI progress (every second)
+  useEffect(() => {
+    if (activeVerifications.length === 0) {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      return;
     }
 
-    const startTime = Date.now();
+    const updateProgress = () => {
+      const now = Date.now();
+      const newReady = new Set(claimReadyTasks);
+      let changed = false;
 
-    setVerifyingTasks((prev) => ({
-      ...prev,
-      [taskId]: { progress: 0, startTime },
-    }));
+      for (const taskId of activeVerifications) {
+        const startTimeStr = sessionStorage.getItem(`task_start_${taskId}`);
+        if (!startTimeStr) continue;
+        const startTime = parseInt(startTimeStr, 10);
+        if (isNaN(startTime)) continue;
 
-    // Update more frequently for an accurate 10s countdown (every 100ms)
-    const interval = setInterval(() => {
-      setVerifyingTasks((prev) => {
-        if (!prev[taskId]) return prev;
-
-        const elapsed = (Date.now() - prev[taskId].startTime) / 1000;
-        const newProgress = Math.min((elapsed / 10) * 100, 100);
-
-        // When progress reaches 100% (exactly 10s), mark claim-ready and clear the interval
-        if (newProgress >= 100) {
-          if (progressIntervals.current[taskId]) {
-            clearInterval(progressIntervals.current[taskId]);
-            delete progressIntervals.current[taskId];
-          }
-
-          // clear forced timeout if set
-          if (progressTimeouts.current[taskId]) {
-            clearTimeout(progressTimeouts.current[taskId]);
-            delete progressTimeouts.current[taskId];
-          }
-
-          // set final progress then mark claim-ready so user can tap to claim immediately
-          const next = { ...prev } as typeof prev;
-          if (next[taskId]) next[taskId] = { ...next[taskId], progress: 100 };
-
-          // mark as ready
-          setClaimReadyTasks((cprev) => ({ ...cprev, [taskId]: true }));
-
-          // small toast to inform user their timer completed
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (toast as any)?.({ title: "Ready to claim ✅", description: "You can now claim this task." });
-          } catch (e) {}
-
-          return next;
+        const elapsed = (now - startTime) / 1000;
+        if (elapsed >= 10) {
+          newReady.add(taskId);
+          changed = true;
+          sessionStorage.removeItem(`task_start_${taskId}`);
         }
-
-        return {
-          ...prev,
-          [taskId]: { ...prev[taskId], progress: newProgress },
-        };
-      });
-    }, 100);
-
-    progressIntervals.current[taskId] = interval;
-
-    // As a fallback, ensure the task completes at 10s even if interval is throttled
-    if (progressTimeouts.current[taskId]) {
-      clearTimeout(progressTimeouts.current[taskId]);
-    }
-    progressTimeouts.current[taskId] = setTimeout(() => {
-      // force mark progress 100 and claim-ready
-      setVerifyingTasks((prev) => {
-        const next = { ...prev } as typeof prev;
-        if (next[taskId]) next[taskId] = { ...next[taskId], progress: 100 };
-        return next;
-      });
-      setClaimReadyTasks((cprev) => ({ ...cprev, [taskId]: true }));
-
-      if (progressIntervals.current[taskId]) {
-        clearInterval(progressIntervals.current[taskId]);
-        delete progressIntervals.current[taskId];
       }
 
-      if (progressTimeouts.current[taskId]) {
-        clearTimeout(progressTimeouts.current[taskId]);
-        delete progressTimeouts.current[taskId];
+      if (changed) {
+        setClaimReadyTasks(newReady);
+        setActiveVerifications((prev) =>
+          prev.filter((id) => !newReady.has(id)),
+        );
       }
-    }, 10000);
-  };
+    };
+
+    // Run immediately
+    updateProgress();
+
+    // Set up interval
+    progressIntervalRef.current = setInterval(updateProgress, 1000);
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+  }, [activeVerifications, claimReadyTasks]);
 
   // Countdown for cooldowns
   useEffect(() => {
@@ -398,16 +335,29 @@ export default function TaskPage() {
             "tivexx-completed-tasks",
             JSON.stringify(nextCompleted),
           );
+          // Notify user that tasks are available again
+          toast({
+            title: "Tasks Refreshed 🔄",
+            description: "Some tasks are now available again!",
+          });
         }
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [cooldowns, completedTasks]);
+  }, [cooldowns, completedTasks, toast]);
 
   const completeVerification = async (taskId: string) => {
     const task = AVAILABLE_TASKS.find((t) => t.id === taskId);
     if (!task) return;
 
+    // Remove from claimReady
+    setClaimReadyTasks((prev) => {
+      const next = new Set(prev);
+      next.delete(taskId);
+      return next;
+    });
+
+    // Update balance
     const newBalance = balance + task.reward;
     setBalance(newBalance);
 
@@ -442,42 +392,6 @@ export default function TaskPage() {
     setCooldowns(newCooldowns);
     localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(newCooldowns));
 
-    setVerifyingTasks((prev) => {
-      const n = { ...prev };
-      delete n[taskId];
-      return n;
-    });
-    setClaimReadyTasks((prev) => {
-      const n = { ...prev };
-      delete n[taskId];
-      return n;
-    });
-    setPartialReadyTasks((prev) => {
-      const n = { ...prev };
-      delete n[taskId];
-      return n;
-    });
-    setEarlyReadyTasks((prev) => {
-      const n = { ...prev };
-      delete n[taskId];
-      return n;
-    });
-
-    if (progressIntervals.current[taskId]) {
-      clearInterval(progressIntervals.current[taskId]);
-      delete progressIntervals.current[taskId];
-    }
-
-    if (earlyReadyTimers.current[taskId]) {
-      clearTimeout(earlyReadyTimers.current[taskId]);
-      delete earlyReadyTimers.current[taskId];
-    }
-
-    if (progressTimeouts.current[taskId]) {
-      clearTimeout(progressTimeouts.current[taskId]);
-      delete progressTimeouts.current[taskId];
-    }
-
     toast({
       title: "Reward Credited 🎉",
       description: `₦${task.reward.toLocaleString()} has been added to your balance.`,
@@ -488,77 +402,13 @@ export default function TaskPage() {
   };
 
   const handleTaskClick = (task: Task) => {
-    // ── 1. Already verified by focus listener — immediate claim ──
-    if (claimReadyTasks[task.id]) {
-      setClaimReadyTasks((prev) => {
-        const n = { ...prev };
-        delete n[task.id];
-        return n;
-      });
+    // If claim ready, complete verification
+    if (claimReadyTasks.has(task.id)) {
       completeVerification(task.id);
       return;
     }
 
-    // ── 2. NEW: "Task Done ✅" shown after 2s — verify 10s requirement ──
-    if (earlyReadyTasks[task.id]) {
-      const started = verifyingTasks[task.id]?.startTime || 0;
-      const elapsed = started ? (Date.now() - started) / 1000 : 0;
-
-      if (elapsed >= 10) {
-        // 10s met — reward them
-        setEarlyReadyTasks((prev) => {
-          const n = { ...prev };
-          delete n[task.id];
-          return n;
-        });
-        completeVerification(task.id);
-      } else {
-        // Not enough time — show 2s popup then revert button back to "Claim Now"
-        setShortPopupTasks((prev) => ({ ...prev, [task.id]: true }));
-        setTimeout(() => {
-          setShortPopupTasks((prev) => {
-            const n = { ...prev };
-            delete n[task.id];
-            return n;
-          });
-          setEarlyReadyTasks((prev) => {
-            const n = { ...prev };
-            delete n[task.id];
-            return n;
-          });
-          // Revert verifying so the button goes cleanly back to "Claim Now"
-          setVerifyingTasks((prev) => {
-            const n = { ...prev };
-            delete n[task.id];
-            return n;
-          });
-          if (progressIntervals.current[task.id]) {
-            clearInterval(progressIntervals.current[task.id]);
-            delete progressIntervals.current[task.id];
-          }
-        }, 2000);
-      }
-      return;
-    }
-
-    // ── 3. Partial ready (focus listener returned with >=2s but <10s) ──
-    if (partialReadyTasks[task.id]) {
-      setShortPopupTasks((prev) => ({ ...prev, [task.id]: true }));
-      setTimeout(() => {
-        setShortPopupTasks((prev) => {
-          const n = { ...prev };
-          delete n[task.id];
-          return n;
-        });
-        setPartialReadyTasks((prev) => {
-          const n = { ...prev };
-          delete n[task.id];
-          return n;
-        });
-      }, 2000);
-      return;
-    }
-
+    // If already completed and on cooldown
     if (completedTasks.includes(task.id)) {
       toast({
         title: "Task Already Completed",
@@ -568,6 +418,7 @@ export default function TaskPage() {
       return;
     }
 
+    // If on cooldown
     if (cooldowns[task.id] && cooldowns[task.id] > Date.now()) {
       toast({
         title: "Task on Cooldown",
@@ -577,6 +428,7 @@ export default function TaskPage() {
       return;
     }
 
+    // If no link
     if (!task.link) {
       toast({
         title: "No link set",
@@ -587,29 +439,22 @@ export default function TaskPage() {
       return;
     }
 
-    // If verification already in progress, check elapsed time
-    if (verifyingTasks[task.id]) {
-      const started = verifyingTasks[task.id].startTime || 0;
-      const elapsed = (Date.now() - started) / 1000;
-      const progress = verifyingTasks[task.id].progress || 0;
-
-      if (elapsed >= 10 || progress >= 100) {
-        setClaimReadyTasks((prev) => ({ ...prev, [task.id]: true }));
-        setTimeout(() => completeVerification(task.id), 300);
-        return;
-      }
-
-      setShortPopupTasks((prev) => ({ ...prev, [task.id]: true }));
-      setTimeout(() => {
-        setShortPopupTasks((prev) => {
-          const n = { ...prev };
-          delete n[task.id];
-          return n;
+    // If already verifying, show progress toast
+    if (activeVerifications.includes(task.id)) {
+      const startTimeStr = sessionStorage.getItem(`task_start_${task.id}`);
+      if (startTimeStr) {
+        const startTime = parseInt(startTimeStr, 10);
+        const elapsed = (Date.now() - startTime) / 1000;
+        const remaining = Math.max(0, 10 - elapsed);
+        toast({
+          title: "Verification in progress ⏳",
+          description: `You've spent ${Math.round(elapsed)}s. Stay on the external page for ${Math.ceil(remaining)} more seconds.`,
         });
-      }, 2000);
+      }
       return;
     }
 
+    // Start new task
     confirmStartTask(task);
   };
 
@@ -621,17 +466,16 @@ export default function TaskPage() {
       duration: 5000,
     });
 
-    startProgressAnimation(task.id);
+    const now = Date.now();
+    sessionStorage.setItem(`task_start_${task.id}`, now.toString());
+    setActiveVerifications((prev) => [...prev, task.id]);
 
+    // Notify the task timer hook
     try {
       startTaskTimer(task.id);
     } catch (e) {
       console.error("Failed to start task timer:", e);
     }
-
-    // After 2s, flip the button to "Task Done ✅" regardless of whether redirect happened
-    // Flip the button to "Task Done ✅" immediately so users see immediate feedback
-    setEarlyReadyTasks((prev) => ({ ...prev, [task.id]: true }));
 
     // Open link in same tab so visibilitychange/blur fires reliably on return
     window.open(task.link, "_self");
@@ -644,6 +488,17 @@ export default function TaskPage() {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return `${hours > 0 ? hours + "h " : ""}${minutes}m ${seconds}s`;
+  };
+
+  // Helper to get progress for a task
+  const getTaskProgress = (taskId: string): number => {
+    if (claimReadyTasks.has(taskId)) return 100;
+    const startTimeStr = sessionStorage.getItem(`task_start_${taskId}`);
+    if (!startTimeStr) return 0;
+    const startTime = parseInt(startTimeStr, 10);
+    if (isNaN(startTime)) return 0;
+    const elapsed = (Date.now() - startTime) / 1000;
+    return Math.min((elapsed / 10) * 100, 100);
   };
 
   return (
@@ -733,22 +588,34 @@ export default function TaskPage() {
         {/* Tasks List */}
         <div className="space-y-4">
           {AVAILABLE_TASKS.map((task, index) => {
-            const isVerifying = verifyingTasks[task.id] !== undefined;
-            const progress = isVerifying ? verifyingTasks[task.id].progress : 0;
-            const isClaimReady = claimReadyTasks[task.id] === true;
-            const isEarlyReady = earlyReadyTasks[task.id] === true;
-            const isPartialReady = partialReadyTasks[task.id] === true;
-            const cooldown = cooldowns[task.id];
+            const isClaimReady = claimReadyTasks.has(task.id);
+            const isVerifying = activeVerifications.includes(task.id);
             const isCompleted = completedTasks.includes(task.id);
-            const isPending = verifyingTasks[task.id] !== undefined;
-            // Button is disabled only when truly processing (not when earlyReady — user needs to tap it)
-            const isProcessing = isVerifying && !isEarlyReady;
+            const cooldown = cooldowns[task.id];
             const timeLeft = cooldown ? cooldown - Date.now() : 0;
+            const progress = isVerifying ? getTaskProgress(task.id) : 0;
+
+            // Determine button state
+            let buttonText = "Claim Now";
+            let buttonDisabled = false;
+            let buttonClass = "hh-task-btn-available";
+
+            if (isCompleted) {
+              buttonText = "On Cooldown";
+              buttonDisabled = true;
+              buttonClass = "hh-task-btn-completed";
+            } else if (isClaimReady) {
+              buttonText = "Task Done ✅ • Claim Reward";
+              buttonClass = "hh-task-btn-ready";
+            } else if (isVerifying) {
+              buttonText = `Verifying... ${Math.floor(progress)}%`;
+              buttonClass = "hh-task-btn-pending";
+            }
 
             return (
               <div
                 key={task.id}
-                className={`hh-task-card hh-entry-${(index % 3) + 2}`}
+                className={`hh-task-card hh-entry-${(index % 3) + 2} relative`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="hh-task-header">
@@ -773,72 +640,37 @@ export default function TaskPage() {
                       <span className="text-xs text-gray-500">reward</span>
                     </div>
 
-                    {isCompleted && !isPending && (
+                    {isCompleted && !isVerifying && (
                       <span className="hh-status-badge hh-status-completed">
                         <CheckCircle2 className="h-3 w-3" />
                         On Cooldown
                       </span>
                     )}
 
-                    {isPending && !isEarlyReady && !isClaimReady && (
+                    {isVerifying && !isClaimReady && (
                       <span className="hh-status-badge hh-status-pending">
                         <Clock className="h-3 w-3" />
                         Pending
                       </span>
                     )}
 
-                    {(isClaimReady || isEarlyReady) && !isCompleted && (
+                    {isClaimReady && (
                       <span className="hh-status-badge hh-status-ready">
                         <CheckCircle2 className="h-3 w-3" />
-                        Task Done
+                        Ready to Claim
                       </span>
                     )}
                   </div>
 
                   <button
                     onClick={() => handleTaskClick(task)}
-                    disabled={isCompleted || isProcessing}
-                    className={`hh-task-btn ${
-                      isCompleted
-                        ? "hh-task-btn-completed"
-                        : isClaimReady
-                          ? "hh-task-btn-ready"
-                          : isEarlyReady
-                            ? "hh-task-btn-ready"
-                            : isPending
-                              ? "hh-task-btn-pending"
-                              : isProcessing
-                                ? "hh-task-btn-processing"
-                                : "hh-task-btn-available"
-                    }`}
+                    disabled={buttonDisabled}
+                    className={`hh-task-btn ${buttonClass}`}
                   >
-                    {shortPopupTasks[task.id]
-                      ? "Spend 10s on the task first ⏱️"
-                      : isProcessing
-                        ? "Processing..."
-                        : isClaimReady
-                          ? "Task Done • Claim Reward"
-                          : isEarlyReady
-                            ? "Task Done ✅"
-                            : isPartialReady
-                              ? "Task Done"
-                              : isPending
-                                ? "Verifying..."
-                                : isCompleted
-                                  ? "On Cooldown"
-                                  : "Claim Now"}
+                    {buttonText}
                   </button>
 
-                  {shortPopupTasks[task.id] && (
-                    <div className="hh-short-popup" role="status">
-                      <div className="hh-short-popup-inner">
-                        Please spend at least 10 seconds on the task before
-                        returning.
-                      </div>
-                    </div>
-                  )}
-
-                  {isVerifying && !isEarlyReady && (
+                  {isVerifying && !isClaimReady && (
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-gray-400">Verifying task</span>
@@ -1313,6 +1145,7 @@ export default function TaskPage() {
           overflow: hidden;
           transition: all 0.3s ease;
           animation: hh-card-appear 0.4s ease-out both;
+          position: relative;
         }
 
         .hh-task-card:hover {
@@ -1661,105 +1494,6 @@ export default function TaskPage() {
           [class*="hh-entry-"] {
             animation: none !important;
           }
-        }
-
-        .hh-short-popup {
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          bottom: 18px;
-          z-index: 60;
-          pointer-events: none;
-          animation: hh-popup-fade 2s ease-out forwards;
-        }
-
-        .hh-short-popup-inner {
-          background: rgba(0, 0, 0, 0.85);
-          color: #fff;
-          padding: 10px 16px;
-          border-radius: 12px;
-          font-size: 13px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-          pointer-events: none;
-          white-space: nowrap;
-        }
-
-        @keyframes hh-popup-fade {
-          0% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(6px);
-          }
-          10% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-          85% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-6px);
-          }
-        }
-
-        .hh-modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 220;
-          padding: 24px;
-        }
-
-        .hh-modal {
-          width: 100%;
-          max-width: 440px;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.03),
-            rgba(255, 255, 255, 0.01)
-          );
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
-          padding: 18px;
-          backdrop-filter: blur(8px);
-        }
-
-        .hh-modal-title {
-          font-weight: 800;
-          color: white;
-          margin-bottom: 8px;
-        }
-        .hh-modal-desc {
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 14px;
-          line-height: 1.35;
-        }
-        .hh-modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 14px;
-        }
-        .hh-modal-btn {
-          padding: 10px 14px;
-          border-radius: 10px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-        .hh-modal-cancel {
-          background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          color: white;
-        }
-        .hh-modal-continue {
-          background: linear-gradient(135deg, #10b981, #059669);
-          color: white;
-          border: none;
         }
       `}</style>
     </div>
