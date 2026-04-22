@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -133,17 +133,26 @@ export default function TaskPage() {
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   const [showCoinRain, setShowCoinRain] = useState(false);
 
-  // Unified state for tasks currently being verified (start time in sessionStorage)
-  const [activeVerifications, setActiveVerifications] = useState<string[]>([]);
+  // Tasks where user has clicked "Claim Now" and we're waiting for them to return
+  const [activeTasks, setActiveTasks] = useState<Set<string>>(new Set());
+  // Tasks where they've returned and spent >=10s (or timer completed) → ready to claim
   const [claimReadyTasks, setClaimReadyTasks] = useState<Set<string>>(
     new Set(),
   );
+  // For showing the "Spend 10s" popup temporarily
+  const [shortPopupTasks, setShortPopupTasks] = useState<Set<string>>(
+    new Set(),
+  );
 
-  // Refs for intervals and focus listener
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref to hold cleanup from focus listener
   const focusListenerCleanupRef = useRef<(() => void) | null>(null);
+  // Ref to hold interval for progress updates
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load user data and persisted state
+  // Initialize task timer hook
+  const { attachFocusListener, startTaskTimer } = useTaskTimer();
+
+  // Load user and tasks
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user");
     if (!storedUser) {
@@ -183,9 +192,9 @@ export default function TaskPage() {
       JSON.stringify(activeCooldowns),
     );
 
-    // Restore active verifications from sessionStorage
-    const verificationTasks: string[] = [];
-    const readySet = new Set<string>();
+    // Restore active tasks from sessionStorage (tasks that haven't been claimed yet)
+    const active = new Set<string>();
+    const ready = new Set<string>();
     for (const task of AVAILABLE_TASKS) {
       const startTimeStr = sessionStorage.getItem(`task_start_${task.id}`);
       if (startTimeStr) {
@@ -193,26 +202,27 @@ export default function TaskPage() {
         if (!isNaN(startTime)) {
           const elapsed = (now - startTime) / 1000;
           if (elapsed >= 10) {
-            readySet.add(task.id);
-            // Optionally clear sessionStorage if we're going to claim soon
+            ready.add(task.id);
           } else {
-            verificationTasks.push(task.id);
+            active.add(task.id);
           }
         }
       }
     }
-    setActiveVerifications(verificationTasks);
-    setClaimReadyTasks(readySet);
+    setActiveTasks(active);
+    setClaimReadyTasks(ready);
   }, [router]);
 
-  // Initialize task timer hook
-  const { attachFocusListener, startTaskTimer } = useTaskTimer();
-
-  // Set up focus listener to detect returns and update claimReady
+  // Set up focus listener
   useEffect(() => {
     const handleTaskSuccess = (taskId: string) => {
+      // Called when user returns after >=10s
       setClaimReadyTasks((prev) => new Set(prev).add(taskId));
-      setActiveVerifications((prev) => prev.filter((id) => id !== taskId));
+      setActiveTasks((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
       sessionStorage.removeItem(`task_start_${taskId}`);
       toast({
         title: "Task Done ✅",
@@ -221,7 +231,12 @@ export default function TaskPage() {
     };
 
     const handleTaskIncomplete = (taskId: string, elapsed: number) => {
-      setActiveVerifications((prev) => prev.filter((id) => id !== taskId));
+      // Called when user returns but spent <10s
+      setActiveTasks((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
       sessionStorage.removeItem(`task_start_${taskId}`);
       if (elapsed < 2) {
         toast({
@@ -249,17 +264,12 @@ export default function TaskPage() {
     );
     focusListenerCleanupRef.current = cleanup;
 
-    return () => {
-      cleanup();
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
+    return cleanup;
   }, [attachFocusListener, completedTasks, toast]);
 
-  // Update active verifications UI progress (every second)
+  // Update progress display (visual only) every second
   useEffect(() => {
-    if (activeVerifications.length === 0) {
+    if (activeTasks.size === 0) {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -272,12 +282,11 @@ export default function TaskPage() {
       const newReady = new Set(claimReadyTasks);
       let changed = false;
 
-      for (const taskId of activeVerifications) {
+      for (const taskId of activeTasks) {
         const startTimeStr = sessionStorage.getItem(`task_start_${taskId}`);
         if (!startTimeStr) continue;
         const startTime = parseInt(startTimeStr, 10);
         if (isNaN(startTime)) continue;
-
         const elapsed = (now - startTime) / 1000;
         if (elapsed >= 10) {
           newReady.add(taskId);
@@ -288,16 +297,15 @@ export default function TaskPage() {
 
       if (changed) {
         setClaimReadyTasks(newReady);
-        setActiveVerifications((prev) =>
-          prev.filter((id) => !newReady.has(id)),
-        );
+        setActiveTasks((prev) => {
+          const next = new Set(prev);
+          for (const id of newReady) next.delete(id);
+          return next;
+        });
       }
     };
 
-    // Run immediately
     updateProgress();
-
-    // Set up interval
     progressIntervalRef.current = setInterval(updateProgress, 1000);
 
     return () => {
@@ -306,7 +314,7 @@ export default function TaskPage() {
         progressIntervalRef.current = null;
       }
     };
-  }, [activeVerifications, claimReadyTasks]);
+  }, [activeTasks, claimReadyTasks]);
 
   // Countdown for cooldowns
   useEffect(() => {
@@ -335,7 +343,6 @@ export default function TaskPage() {
             "tivexx-completed-tasks",
             JSON.stringify(nextCompleted),
           );
-          // Notify user that tasks are available again
           toast({
             title: "Tasks Refreshed 🔄",
             description: "Some tasks are now available again!",
@@ -350,14 +357,18 @@ export default function TaskPage() {
     const task = AVAILABLE_TASKS.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Remove from claimReady
+    // Remove from ready and active sets
     setClaimReadyTasks((prev) => {
       const next = new Set(prev);
       next.delete(taskId);
       return next;
     });
+    setActiveTasks((prev) => {
+      const next = new Set(prev);
+      next.delete(taskId);
+      return next;
+    });
 
-    // Update balance
     const newBalance = balance + task.reward;
     setBalance(newBalance);
 
@@ -402,13 +413,13 @@ export default function TaskPage() {
   };
 
   const handleTaskClick = (task: Task) => {
-    // If claim ready, complete verification
+    // 1. If claim ready → complete immediately
     if (claimReadyTasks.has(task.id)) {
       completeVerification(task.id);
       return;
     }
 
-    // If already completed and on cooldown
+    // 2. If already completed (on cooldown)
     if (completedTasks.includes(task.id)) {
       toast({
         title: "Task Already Completed",
@@ -418,7 +429,7 @@ export default function TaskPage() {
       return;
     }
 
-    // If on cooldown
+    // 3. If on cooldown
     if (cooldowns[task.id] && cooldowns[task.id] > Date.now()) {
       toast({
         title: "Task on Cooldown",
@@ -428,33 +439,44 @@ export default function TaskPage() {
       return;
     }
 
-    // If no link
-    if (!task.link) {
-      toast({
-        title: "No link set",
-        description:
-          "This task doesn't have a link yet. Please add one before attempting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // If already verifying, show progress toast
-    if (activeVerifications.includes(task.id)) {
+    // 4. If task is active (button says "Task Done ✅") → check elapsed time
+    if (activeTasks.has(task.id)) {
       const startTimeStr = sessionStorage.getItem(`task_start_${task.id}`);
       if (startTimeStr) {
         const startTime = parseInt(startTimeStr, 10);
         const elapsed = (Date.now() - startTime) / 1000;
-        const remaining = Math.max(0, 10 - elapsed);
-        toast({
-          title: "Verification in progress ⏳",
-          description: `You've spent ${Math.round(elapsed)}s. Stay on the external page for ${Math.ceil(remaining)} more seconds.`,
+
+        if (elapsed >= 10) {
+          // Should have been caught by claimReady, but just in case
+          completeVerification(task.id);
+        } else {
+          // Show popup indicating not enough time
+          setShortPopupTasks((prev) => new Set(prev).add(task.id));
+          setTimeout(() => {
+            setShortPopupTasks((prev) => {
+              const next = new Set(prev);
+              next.delete(task.id);
+              return next;
+            });
+          }, 2000);
+          toast({
+            title: "Spend 10s on the task first ⏱️",
+            description: `You've only spent ${Math.round(elapsed)} seconds. Stay on the external page for at least 10 seconds before claiming.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        // No start time found, clean up state
+        setActiveTasks((prev) => {
+          const next = new Set(prev);
+          next.delete(task.id);
+          return next;
         });
       }
       return;
     }
 
-    // Start new task
+    // 5. Start new task
     confirmStartTask(task);
   };
 
@@ -468,9 +490,8 @@ export default function TaskPage() {
 
     const now = Date.now();
     sessionStorage.setItem(`task_start_${task.id}`, now.toString());
-    setActiveVerifications((prev) => [...prev, task.id]);
+    setActiveTasks((prev) => new Set(prev).add(task.id));
 
-    // Notify the task timer hook
     try {
       startTaskTimer(task.id);
     } catch (e) {
@@ -490,7 +511,7 @@ export default function TaskPage() {
     return `${hours > 0 ? hours + "h " : ""}${minutes}m ${seconds}s`;
   };
 
-  // Helper to get progress for a task
+  // Helper to get progress percentage for display
   const getTaskProgress = (taskId: string): number => {
     if (claimReadyTasks.has(taskId)) return 100;
     const startTimeStr = sessionStorage.getItem(`task_start_${taskId}`);
@@ -589,13 +610,18 @@ export default function TaskPage() {
         <div className="space-y-4">
           {AVAILABLE_TASKS.map((task, index) => {
             const isClaimReady = claimReadyTasks.has(task.id);
-            const isVerifying = activeVerifications.includes(task.id);
+            const isActive = activeTasks.has(task.id);
             const isCompleted = completedTasks.includes(task.id);
             const cooldown = cooldowns[task.id];
             const timeLeft = cooldown ? cooldown - Date.now() : 0;
-            const progress = isVerifying ? getTaskProgress(task.id) : 0;
+            const progress = isActive
+              ? getTaskProgress(task.id)
+              : isClaimReady
+                ? 100
+                : 0;
+            const showShortPopup = shortPopupTasks.has(task.id);
 
-            // Determine button state
+            // Button text and style exactly as original
             let buttonText = "Claim Now";
             let buttonDisabled = false;
             let buttonClass = "hh-task-btn-available";
@@ -607,8 +633,8 @@ export default function TaskPage() {
             } else if (isClaimReady) {
               buttonText = "Task Done ✅ • Claim Reward";
               buttonClass = "hh-task-btn-ready";
-            } else if (isVerifying) {
-              buttonText = `Verifying... ${Math.floor(progress)}%`;
+            } else if (isActive) {
+              buttonText = "Task Done ✅";
               buttonClass = "hh-task-btn-pending";
             }
 
@@ -640,14 +666,14 @@ export default function TaskPage() {
                       <span className="text-xs text-gray-500">reward</span>
                     </div>
 
-                    {isCompleted && !isVerifying && (
+                    {isCompleted && (
                       <span className="hh-status-badge hh-status-completed">
                         <CheckCircle2 className="h-3 w-3" />
                         On Cooldown
                       </span>
                     )}
 
-                    {isVerifying && !isClaimReady && (
+                    {isActive && !isClaimReady && (
                       <span className="hh-status-badge hh-status-pending">
                         <Clock className="h-3 w-3" />
                         Pending
@@ -667,10 +693,21 @@ export default function TaskPage() {
                     disabled={buttonDisabled}
                     className={`hh-task-btn ${buttonClass}`}
                   >
-                    {buttonText}
+                    {showShortPopup
+                      ? "Spend 10s on the task first ⏱️"
+                      : buttonText}
                   </button>
 
-                  {isVerifying && !isClaimReady && (
+                  {showShortPopup && (
+                    <div className="hh-short-popup" role="status">
+                      <div className="hh-short-popup-inner">
+                        Please spend at least 10 seconds on the task before
+                        returning.
+                      </div>
+                    </div>
+                  )}
+
+                  {isActive && !isClaimReady && (
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-gray-400">Verifying task</span>
@@ -1345,6 +1382,47 @@ export default function TaskPage() {
           font-size: 11px;
           line-height: 1.45;
           color: rgba(255, 255, 255, 0.78);
+        }
+
+        .hh-short-popup {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: 18px;
+          z-index: 60;
+          pointer-events: none;
+          animation: hh-popup-fade 2s ease-out forwards;
+        }
+
+        .hh-short-popup-inner {
+          background: rgba(0, 0, 0, 0.85);
+          color: #fff;
+          padding: 10px 16px;
+          border-radius: 12px;
+          font-size: 13px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+          pointer-events: none;
+          white-space: nowrap;
+        }
+
+        @keyframes hh-popup-fade {
+          0% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(6px);
+          }
+          10% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+          85% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-6px);
+          }
         }
 
         .hh-tip-card {
