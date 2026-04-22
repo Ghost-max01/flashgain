@@ -123,6 +123,7 @@ export default function TaskPage() {
   const [claimReadyTasks, setClaimReadyTasks] = useState<Record<string, boolean>>({})
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({})
   const [shortPopupTasks, setShortPopupTasks] = useState<Record<string, boolean>>({})
+  const [partialReadyTasks, setPartialReadyTasks] = useState<Record<string, boolean>>({})
   const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({})
   const [showCoinRain, setShowCoinRain] = useState(false)
 
