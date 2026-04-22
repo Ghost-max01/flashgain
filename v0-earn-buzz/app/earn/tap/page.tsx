@@ -19,6 +19,10 @@ interface TapParticle {
 const TAP_EMOJIS = ["💰", "⚡", "✨", "💎", "🔥"]
 
 const loadState = () => {
+  if (typeof window === "undefined") {
+    return { energy: MAX_ENERGY, earned: 0, lastTime: Date.now(), initialBalance: 0 }
+  }
+  
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const storedUser = localStorage.getItem("tivexx-user")
@@ -48,7 +52,7 @@ const loadState = () => {
 
 export default function TapAndEarnPage() {
   const router = useRouter()
-  const [state, setState] = useState(loadState)
+  const [state, setState] = useState({ energy: MAX_ENERGY, earned: 0, lastTime: Date.now(), initialBalance: 0 })
   const [particles, setParticles] = useState<TapParticle[]>([])
   const [tapping, setTapping] = useState(false)
   const [tapCount, setTapCount] = useState(0)
@@ -60,6 +64,7 @@ export default function TapAndEarnPage() {
 
   useEffect(() => {
     setMounted(true)
+    setState(loadState())
   }, [])
 
   useEffect(() => {
