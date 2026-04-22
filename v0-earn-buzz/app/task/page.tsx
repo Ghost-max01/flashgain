@@ -169,10 +169,8 @@ export default function TaskPage() {
   // Set up focus listener on mount
   useEffect(() => {
     const detach = attachFocusListener(
-      // onTaskSuccess callback
+      // onTaskSuccess callback (>=10s)
       (taskId: string) => {
-        // After successful interaction, mark task as ready to claim.
-        // Reward is credited only when user taps the claim button.
         if (!completedTasks.includes(taskId)) {
           setClaimReadyTasks((prev) => ({ ...prev, [taskId]: true }))
 
@@ -187,29 +185,48 @@ export default function TaskPage() {
             delete progressIntervals.current[taskId]
           }
 
+          // Clear any partial state
+          setPartialReadyTasks(prev => {
+            const next = { ...prev }
+            delete next[taskId]
+            return next
+          })
+
           toast({
             title: "Task Done ✅",
             description: "Tap the button to claim your reward.",
           })
         }
       },
-      // onTaskIncomplete callback
+      // onTaskIncomplete callback (<10s)
       (taskId: string, elapsed: number) => {
-        // Clear verifying state when task is incomplete
+        // Clear verifying state
         setVerifyingTasks(prev => {
           const newState = { ...prev }
           delete newState[taskId]
           return newState
         })
-        
+
         // Clear interval
         if (progressIntervals.current[taskId]) {
           clearInterval(progressIntervals.current[taskId])
           delete progressIntervals.current[taskId]
         }
-        
-        // Show clear message that they didn't interact long enough
+
         const timeSpent = Math.round(elapsed)
+
+        // If user spent at least 2 seconds, show partial-ready UI (Task Done button)
+        if (elapsed >= 2) {
+          setPartialReadyTasks(prev => ({ ...prev, [taskId]: true }))
+          // Informational toast (not destructive)
+          toast({
+            title: "Almost there ⏱️",
+            description: `You spent ${timeSpent}s — tap 'Task Done' to attempt claim. You need 10s for a successful reward.`,
+          })
+          return
+        }
+
+        // Otherwise show clear message that they didn't interact long enough
         toast({
           title: "You didn't interact with the task ❌",
           description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least 10 seconds before coming back.`,
@@ -344,6 +361,13 @@ export default function TaskPage() {
       delete next[taskId]
       return next
     })
+
+    // Clear any partial-ready state
+    setPartialReadyTasks(prev => {
+      const next = { ...prev }
+      delete next[taskId]
+      return next
+    })
     
     // Clear interval
     if (progressIntervals.current[taskId]) {
@@ -369,6 +393,24 @@ export default function TaskPage() {
         return next
       })
       completeVerification(task.id)
+      return
+    }
+
+    // If the task is only partially ready (spent >=2s but <10s), show 2s popup and revert
+    if (partialReadyTasks[task.id]) {
+      setShortPopupTasks(prev => ({ ...prev, [task.id]: true }))
+      setTimeout(() => {
+        setShortPopupTasks(prev => {
+          const next = { ...prev }
+          delete next[task.id]
+          return next
+        })
+        setPartialReadyTasks(prev => {
+          const next = { ...prev }
+          delete next[task.id]
+          return next
+        })
+      }, 2000)
       return
     }
 
@@ -548,6 +590,7 @@ export default function TaskPage() {
             const isVerifying = verifyingTasks[task.id] !== undefined
             const progress = isVerifying ? verifyingTasks[task.id].progress : 0
             const isClaimReady = claimReadyTasks[task.id] === true
+            const isPartialReady = partialReadyTasks[task.id] === true
             const cooldown = cooldowns[task.id]
             const isCompleted = completedTasks.includes(task.id)
             const isPending = verifyingTasks[task.id] !== undefined
@@ -620,8 +663,10 @@ export default function TaskPage() {
                     }`}
                   >
                     {shortPopupTasks[task.id] ? 'Please stay 10s to qualify' :
+                    {shortPopupTasks[task.id] ? 'Please stay 10s to qualify' :
                     isProcessing ? 'Processing...' : 
                      isClaimReady ? 'Task Done • Claim Reward' :
+                     isPartialReady ? 'Task Done' :
                      isPending ? 'Verifying...' : 
                     isCompleted ? 'On Cooldown' : 
                      'Claim Now'}
