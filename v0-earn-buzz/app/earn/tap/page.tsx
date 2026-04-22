@@ -41,7 +41,6 @@ export default function TapAndEarnPage() {
   const [showPrompt, setShowPrompt] = useState(false)
   const particleId = useRef(0)
   const syncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSync = useRef(0)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -62,17 +61,20 @@ export default function TapAndEarnPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const syncToDb = useCallback((amount: number) => {
+  const syncToDb = useCallback((earnedAmount: number) => {
     if (syncTimeout.current) clearTimeout(syncTimeout.current)
     syncTimeout.current = setTimeout(() => {
       try {
-        const user = JSON.parse(localStorage.getItem("tivexx-user") || "{}")
-        if (user.id) {
-          const currentUser = JSON.parse(localStorage.getItem("tivexx-user") || "{}")
-          currentUser.balance = (currentUser.balance || 0) + amount
-          localStorage.setItem("tivexx-user", JSON.stringify(currentUser))
+        const storedUser = localStorage.getItem("tivexx-user")
+        if (storedUser) {
+          const currentUser = JSON.parse(storedUser)
+          if (currentUser.id) {
+            // Add the earned amount to balance
+            currentUser.balance = (currentUser.balance || 0) + earnedAmount
+            localStorage.setItem("tivexx-user", JSON.stringify(currentUser))
+            console.log(`[Tap Earn] Synced ₦${earnedAmount} to balance. New balance: ₦${currentUser.balance}`)
+          }
         }
-        pendingSync.current = 0
       } catch (error) {
         console.error("Sync error:", error)
       }
@@ -111,8 +113,8 @@ export default function TapAndEarnPage() {
         earned: prev.earned + EARN_PER_TAP,
       }))
 
-      pendingSync.current += EARN_PER_TAP
-      syncToDb(pendingSync.current)
+      // Sync the earned amount immediately to user balance
+      syncToDb(EARN_PER_TAP)
     },
     [state.energy, syncToDb]
   )
