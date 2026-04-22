@@ -80,10 +80,21 @@ export default function TapAndEarnPage() {
           const storedUser = localStorage.getItem("tivexx-user")
           if (storedUser) {
             const currentUser = JSON.parse(storedUser)
-            if (currentUser.id) {
+            const uid = currentUser.id || currentUser.userId
+            if (uid) {
               currentUser.balance = (currentUser.balance || 0) + accumulatedEarned.current
               localStorage.setItem("tivexx-user", JSON.stringify(currentUser))
               console.log(`[Tap Earn] Unmount sync: ₦${accumulatedEarned.current} to balance. Final: ₦${currentUser.balance}`)
+              // best-effort server persist
+              try {
+                void fetch('/api/user-balance', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: uid, balance: currentUser.balance })
+                })
+              } catch (err) {
+                console.error('[Tap Earn] Unmount server sync failed:', err)
+              }
               accumulatedEarned.current = 0
             }
           }
@@ -116,12 +127,23 @@ export default function TapAndEarnPage() {
         const storedUser = localStorage.getItem("tivexx-user")
         if (storedUser) {
           const currentUser = JSON.parse(storedUser)
-          if (currentUser.id) {
-            currentUser.balance = (currentUser.balance || 0) + totalEarned
-            localStorage.setItem("tivexx-user", JSON.stringify(currentUser))
-            console.log(`[Tap Earn] Synced ₦${totalEarned} to balance. New balance: ₦${currentUser.balance}`)
-            accumulatedEarned.current = 0
-          }
+            const uid = currentUser.id || currentUser.userId
+            if (uid) {
+              currentUser.balance = (currentUser.balance || 0) + totalEarned
+              localStorage.setItem("tivexx-user", JSON.stringify(currentUser))
+              console.log(`[Tap Earn] Synced ₦${totalEarned} to balance. New balance: ₦${currentUser.balance}`)
+              // Persist to server so balance isn't lost if user never returns to dashboard
+              try {
+                void fetch('/api/user-balance', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: uid, balance: currentUser.balance })
+                })
+              } catch (err) {
+                console.error('[Tap Earn] Server sync failed:', err)
+              }
+              accumulatedEarned.current = 0
+            }
         }
       } catch (error) {
         console.error("Sync error:", error)
@@ -145,10 +167,23 @@ export default function TapAndEarnPage() {
         const storedUser = localStorage.getItem("tivexx-user")
         if (storedUser) {
           const currentUser = JSON.parse(storedUser)
-          if (currentUser.id) {
+          const uid = currentUser.id || currentUser.userId
+          if (uid) {
             currentUser.balance = (currentUser.balance || 0) + totalEarned
             localStorage.setItem("tivexx-user", JSON.stringify(currentUser))
             console.log(`[Tap Earn] Force synced ₦${totalEarned} to balance. New balance: ₦${currentUser.balance}`)
+            // Try to persist to server
+            (async () => {
+              try {
+                await fetch('/api/user-balance', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: uid, balance: currentUser.balance })
+                })
+              } catch (err) {
+                console.error('[Tap Earn] Force server sync failed:', err)
+              }
+            })()
             accumulatedEarned.current = 0
             resolve(true)
             return
