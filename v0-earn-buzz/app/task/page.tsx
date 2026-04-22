@@ -298,6 +298,7 @@ export default function TaskPage() {
       [taskId]: { progress: 0, startTime },
     }));
 
+    // Update more frequently for an accurate 10s countdown (every 100ms)
     const interval = setInterval(() => {
       setVerifyingTasks((prev) => {
         if (!prev[taskId]) return prev;
@@ -305,9 +306,28 @@ export default function TaskPage() {
         const elapsed = (Date.now() - prev[taskId].startTime) / 1000;
         const newProgress = Math.min((elapsed / 10) * 100, 100);
 
+        // When progress reaches 100% (exactly 10s), mark claim-ready and clear the interval
         if (newProgress >= 100) {
-          clearInterval(progressIntervals.current[taskId]);
-          delete progressIntervals.current[taskId];
+          if (progressIntervals.current[taskId]) {
+            clearInterval(progressIntervals.current[taskId]);
+            delete progressIntervals.current[taskId];
+          }
+
+          // set final progress then mark claim-ready so user can tap to claim immediately
+          const next = { ...prev } as typeof prev;
+          if (next[taskId]) next[taskId] = { ...next[taskId], progress: 100 };
+
+          // mark as ready
+          setClaimReadyTasks((cprev) => ({ ...cprev, [taskId]: true }));
+
+          // small toast to inform user their timer completed
+          try {
+            // Using toast if available in this closure
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (toast as any)?.({ title: "Ready to claim ✅", description: "You can now claim this task." });
+          } catch (e) {}
+
+          return next;
         }
 
         return {
@@ -315,7 +335,7 @@ export default function TaskPage() {
           [taskId]: { ...prev[taskId], progress: newProgress },
         };
       });
-    }, 1000);
+    }, 100);
 
     progressIntervals.current[taskId] = interval;
   };
