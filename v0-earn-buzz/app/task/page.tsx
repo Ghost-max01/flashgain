@@ -398,6 +398,14 @@ export default function TaskPage() {
       JSON.stringify(newCompleted),
     );
 
+    // Notify same-tab listeners that user/completed tasks updated
+    try {
+      const detail = { user: storedUser ? JSON.parse(storedUser) : null, completedTasks: newCompleted };
+      window.dispatchEvent(new CustomEvent("tivexx:update", { detail }));
+    } catch (e) {
+      // ignore
+    }
+
     const cooldownExpiry = Date.now() + TASK_COOLDOWN_MS;
     const newCooldowns = { ...cooldowns, [task.id]: cooldownExpiry };
     setCooldowns(newCooldowns);

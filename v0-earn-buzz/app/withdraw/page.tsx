@@ -90,23 +90,50 @@ export default function WithdrawPage() {
       }
     }
 
+    const updateUserFromStorage = () => {
+      try {
+        const storedUser = localStorage.getItem("tivexx-user")
+        if (!storedUser) return
+        const user = JSON.parse(storedUser)
+        setUserData(user)
+        setBalance(user.balance || 0)
+        // refresh referral count if user id changed
+        if (user.id || user.userId) fetchReferralCount(user.id || user.userId)
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
+
     // Update immediately on mount
     updateCompleted()
+    updateUserFromStorage()
 
     const onStorage = (e: StorageEvent) => {
       if (e.key === "tivexx-completed-tasks") updateCompleted()
+      if (e.key === "tivexx-user") updateUserFromStorage()
     }
 
-    const onFocus = () => updateCompleted()
+    const onCustomUpdate = (e: Event) => {
+      // custom event dispatched from other pages/components in same tab
+      updateCompleted()
+      updateUserFromStorage()
+    }
+
+    const onFocus = () => {
+      updateCompleted()
+      updateUserFromStorage()
+    }
 
     window.addEventListener("storage", onStorage)
     window.addEventListener("focus", onFocus)
     document.addEventListener("visibilitychange", onFocus)
+    window.addEventListener("tivexx:update", onCustomUpdate as EventListener)
 
     return () => {
       window.removeEventListener("storage", onStorage)
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onFocus)
+      window.removeEventListener("tivexx:update", onCustomUpdate as EventListener)
     }
   }, [])
 
