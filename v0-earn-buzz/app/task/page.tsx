@@ -662,14 +662,20 @@ export default function TaskPage() {
                         : 'hh-task-btn-available'
                     }`}
                   >
-                    {shortPopupTasks[task.id] ? 'Please stay 10s to qualify' :
-                    {shortPopupTasks[task.id] ? 'Please stay 10s to qualify' :
-                    isProcessing ? 'Processing...' : 
-                     isClaimReady ? 'Task Done • Claim Reward' :
-                     isPartialReady ? 'Task Done' :
-                     isPending ? 'Verifying...' : 
-                    isCompleted ? 'On Cooldown' : 
-                     'Claim Now'}
+                    {shortPopupTasks[task.id]
+                      ? 'Please stay 10s to qualify'
+                      : isProcessing
+                      ? 'Processing...'
+                      : isClaimReady
+                      ? 'Task Done • Claim Reward'
+                      : isPartialReady
+                      ? 'Task Done'
+                      : isPending
+                      ? 'Verifying...'
+                      : isCompleted
+                      ? 'On Cooldown'
+                      : 'Claim Now'
+                    }
                   </button>
 
                   {shortPopupTasks[task.id] && (
