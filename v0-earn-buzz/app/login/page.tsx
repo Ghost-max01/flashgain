@@ -226,7 +226,7 @@ export default function LoginPage() {
                 </Link>
               </p>
               <p className="text-center text-xs text-white/40 mt-3">
-                Get ₦20,000 signup bonus + earn ₦5,000 per referral
+                Get ₦20,000 signup bonus + earn ₦2,000 per referral
               </p>
             </div>
           </div>

@@ -286,7 +286,7 @@ export default function RegisterPage() {
                 </Link>
               </p>
               <p className="text-center text-xs text-white/40 mt-3">
-                Get instant ₦20,000 bonus + earn ₦5,000 per referral
+                Get instant ₦20,000 bonus + earn ₦2,000 per referral
               </p>
             </div>
           </div>

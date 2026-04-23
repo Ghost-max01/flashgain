@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
           stats = await sendNotificationToUser({
             uid: userId,
             title: "Claim Ready!",
-            body: "Your timer is 00:00. Claim your ₦5,000 now.",
+            body: "Your timer is 00:00. Claim your ₦2,000 now.",
           })
         } catch (notifyErr) {
           console.error("[timer/check] Error sending notification:", notifyErr)

@@ -77,7 +77,7 @@ export default function DashboardPage() {
     console.log("[dashboard] Showing claim-ready toast + notification")
     toast({
       title: "Claim Ready!",
-      description: "Your timer is 00:00. Claim your ₦5,000 now.",
+      description: "Your timer is 00:00. Claim your ₦2,000 now.",
     })
 
     if ("Notification" in window && Notification.permission === "default") {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
     }
 
     showLocalNotification("Claim Ready!", {
-      body: "Your timer is 00:00. Claim your ₦5,000 now.",
+      body: "Your timer is 00:00. Claim your ₦2,000 now.",
       data: { url: "/dashboard" },
     })
 
@@ -336,7 +336,7 @@ export default function DashboardPage() {
 
     if (canClaim) {
       const newClaimCount = claimCount + 1
-      const newBalance = balance + 5000
+      const newBalance = balance + 2000
 
       setBalance(newBalance)
       setClaimCount(newClaimCount)
@@ -351,7 +351,7 @@ export default function DashboardPage() {
 
       setShowClaimSuccess(true)
       setTimeout(() => setShowClaimSuccess(false), 3000)
-      void notifyClaimSuccess(5000, newBalance)
+      void notifyClaimSuccess(2000, newBalance)
 
       if (newClaimCount >= 50) {
         const fiveHoursLater = Date.now() + 5 * 60 * 60 * 1000
@@ -392,7 +392,7 @@ export default function DashboardPage() {
         id: Date.now(),
         type: "credit",
         description: "Daily Claim Reward",
-        amount: 5000,
+        amount: 2000,
         date: new Date().toISOString(),
       })
       localStorage.setItem("tivexx-transactions", JSON.stringify(transactions))
@@ -957,7 +957,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <div className="text-sm font-bold text-white">Daily Reward</div>
-                    <div className="text-xs text-gray-400">Click to claim ₦5,000</div>
+                    <div className="text-xs text-gray-400">Click to claim ₦2,000</div>
                   </div>
                 </div>
                 <div className="hh-timer-badge">
@@ -979,7 +979,7 @@ export default function DashboardPage() {
                     {pauseEndTime
                       ? `Wait ${formatPauseTime()}`
                       : canClaim
-                        ? 'Claim ₦5,000 Now'
+                        ? 'Claim ₦2,000 Now'
                         : `Next claim in ${formatTime(timeRemaining)}`
                     }
                   </span>
@@ -995,7 +995,7 @@ export default function DashboardPage() {
                   <div className="hh-confetti-dot hh-confetti-4"></div>
                   <div className="hh-confetti-dot hh-confetti-5"></div>
                   <div className="text-2xl mb-1">🎉</div>
-                  <div className="font-black text-white text-lg">₦5,000 Added!</div>
+                  <div className="font-black text-white text-lg">₦2,000 Added!</div>
                   <div className="text-xs text-emerald-300 mt-0.5">Balance updated</div>
                   <div className="hh-success-bar">
                     <div className="hh-success-bar-fill"></div>
@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
             <div className="hh-stats-row mt-4">
               <div className="hh-stat-item">
                 <div className="hh-stat-label">Today's income</div>
-                <div className="hh-stat-value text-emerald-400">+₦{(claimCount * 5000).toLocaleString()}</div>
+                <div className="hh-stat-value text-emerald-400">+₦{(claimCount * 2000).toLocaleString()}</div>
               </div>
               <div className="hh-stat-divider"></div>
               <div className="hh-stat-item">

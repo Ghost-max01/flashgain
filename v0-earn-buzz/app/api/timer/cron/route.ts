@@ -56,7 +56,7 @@ async function runCron(req: NextRequest) {
         const stats = await sendNotificationToUser({
           uid: timer.user_id,
           title: "⏰ Claim Ready!",
-          body: "Your timer hit 00:00. Open FlashGain 9ja to claim your ₦5,000 now!",
+          body: "Your timer hit 00:00. Open FlashGain 9ja to claim your ₦2,000 now!",
           clickUrl: "/dashboard",
         })
 

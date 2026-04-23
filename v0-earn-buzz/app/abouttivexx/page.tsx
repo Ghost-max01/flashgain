@@ -200,12 +200,12 @@ export default function AboutPage() {
               <ul className="space-y-3 text-sm text-white/85">
                 <li className="hh-list-item">
                   <span className="hh-list-bullet"></span>
-                  Earn ₦5,000 every 1 minute by claiming through the daily
+                  Earn ₦2,000 every 1 minute by claiming through the daily
                   earnings button.
                 </li>
                 <li className="hh-list-item">
                   <span className="hh-list-bullet"></span>
-                  Earn ₦5,000 per verified referral with no limits. Some users
+                  Earn ₦2,000 per verified referral with no limits. Some users
                   earn from 50 to 300 referrals.
                 </li>
                 <li className="hh-list-item">
