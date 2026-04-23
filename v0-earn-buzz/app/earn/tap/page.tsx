@@ -108,6 +108,19 @@ export default function TapAndEarnPage() {
   }, []);
   // ───────────────────────────────────────────────────────────────────────
 
+  // ─── LLVPN ad script ───────────────────────────────────────────────────
+  useEffect(() => {
+    // Prevent duplicate injection
+    // if (document.querySelector('script[src*="llvpn.com"]')) return;
+
+    const script = document.createElement("script");
+    script.src = "https://llvpn.com/tag.min.js";
+    script.setAttribute("data-zone", "10297781");
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+  // ───────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     setMounted(true);
     setState(loadState());
