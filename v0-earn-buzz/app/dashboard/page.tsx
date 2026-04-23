@@ -979,7 +979,7 @@ export default function DashboardPage() {
                     {pauseEndTime
                       ? `Wait ${formatPauseTime()}`
                       : canClaim
-                        ? 'Claim ₦1,000 Now'
+                        ? 'Claim ₦5,000 Now'
                         : `Next claim in ${formatTime(timeRemaining)}`
                     }
                   </span>
@@ -995,7 +995,7 @@ export default function DashboardPage() {
                   <div className="hh-confetti-dot hh-confetti-4"></div>
                   <div className="hh-confetti-dot hh-confetti-5"></div>
                   <div className="text-2xl mb-1">🎉</div>
-                  <div className="font-black text-white text-lg">₦1,000 Added!</div>
+                  <div className="font-black text-white text-lg">₦5,000 Added!</div>
                   <div className="text-xs text-emerald-300 mt-0.5">Balance updated</div>
                   <div className="hh-success-bar">
                     <div className="hh-success-bar-fill"></div>

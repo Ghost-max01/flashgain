@@ -221,6 +221,27 @@ export default function TaskPage() {
     }
     setActiveTasks(active);
     setClaimReadyTasks(ready);
+
+    // Auto-register ready tasks that were started before (e.g., before code update)
+    if (ready.size > 0) {
+      try {
+        const stored = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+        const storedArr: string[] = Array.isArray(stored) ? stored : [];
+        let updated = false;
+        for (const taskId of ready) {
+          if (!storedArr.includes(taskId)) {
+            storedArr.push(taskId);
+            updated = true;
+          }
+        }
+        if (updated) {
+          localStorage.setItem("tivexx-completed-tasks", JSON.stringify(storedArr));
+          setCompletedTasks(storedArr);
+        }
+      } catch (e) {
+        console.error("Error auto-registering ready tasks on init:", e);
+      }
+    }
   }, [router]);
 
   // Set up focus listener
@@ -324,6 +345,30 @@ export default function TaskPage() {
           for (const id of newReady) next.delete(id);
           return next;
         });
+
+        // Auto-register all newly-ready tasks as completed in storage
+        try {
+          const stored = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+          const storedArr: string[] = Array.isArray(stored) ? stored : [];
+          let updated = false;
+          for (const taskId of newReady) {
+            if (!storedArr.includes(taskId)) {
+              storedArr.push(taskId);
+              updated = true;
+            }
+          }
+          if (updated) {
+            setCompletedTasks(storedArr);
+            localStorage.setItem("tivexx-completed-tasks", JSON.stringify(storedArr));
+            // Notify same-tab listeners about new completed tasks
+            const latestUserRaw = localStorage.getItem("tivexx-user");
+            const latestUser = latestUserRaw ? JSON.parse(latestUserRaw) : null;
+            const detail = { user: latestUser, completedTasks: storedArr };
+            window.dispatchEvent(new CustomEvent("tivexx:update", { detail }));
+          }
+        } catch (e) {
+          console.error("Error auto-registering ready tasks:", e);
+        }
       }
     };
 
