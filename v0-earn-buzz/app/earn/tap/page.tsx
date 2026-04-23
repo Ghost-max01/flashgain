@@ -553,8 +553,19 @@ export default function TapAndEarnPage() {
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 te-fadeIn flex items-center justify-center p-4"
             onClick={() => setShowPrompt(false)}
           />
-          {/* Modal container – now fully centered and scrollable */}
-          <div className="fixed z-50 w-full max-w-[420px] max-h-[90vh] overflow-y-auto te-slideUp">
+          {/* Modal container – centered both horizontally and vertically */}
+          <div 
+            className="fixed z-50 te-slideUp"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'calc(100% - 32px)',
+              maxWidth: '420px',
+              maxHeight: '85vh',
+              overflow: 'auto'
+            }}
+          >
             <div className="hh-modal">
               {/* Glow accent */}
               <div className="te-modal-glow"></div>
