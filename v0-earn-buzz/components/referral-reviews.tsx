@@ -17,26 +17,45 @@ const getColor = (i: number) => {
   return colors[i % colors.length]
 }
 
-const ReviewCardSmall = ({ review, index }: { review: typeof reviews[0]; index: number }) => (
+const ReviewCardSmall = ({
+  review,
+  index,
+}: {
+  review: (typeof reviews)[0];
+  index: number;
+}) => (
   <div
-    onClick={() => window.open("https://flashgain.online", "_blank")}
+    onClick={() =>
+      window.open("https://flashgain-nigeria-hub-gpsz.vercel.app", "_blank")
+    }
     className="min-w-[240px] max-w-[260px] bg-gradient-to-br from-white/8 to-white/4 border border-white/10 rounded-lg p-3 flex-shrink-0 cursor-pointer hover:bg-gradient-to-br hover:from-white/12 hover:to-white/6 transition-all duration-300 hover:border-emerald-400/30"
   >
     <div className="flex gap-2.5">
-      <div className={`w-8 h-8 rounded-full ${getColor(index)} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
+      <div
+        className={`w-8 h-8 rounded-full ${getColor(index)} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}
+      >
         {getInitials(review.name)}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1.5">
-          <h4 className="font-semibold text-xs text-white truncate">{review.name}</h4>
-          <span className="text-xs text-gray-400 flex-shrink-0">{review.time}</span>
+          <h4 className="font-semibold text-xs text-white truncate">
+            {review.name}
+          </h4>
+          <span className="text-xs text-gray-400 flex-shrink-0">
+            {review.time}
+          </span>
         </div>
         <div className="flex gap-0.5 my-1">
           {[...Array(5)].map((_, i) => (
-            <Star key={i} className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+            <Star
+              key={i}
+              className="w-2.5 h-2.5 fill-amber-400 text-amber-400"
+            />
           ))}
         </div>
-        <p className="text-xs text-gray-300 leading-snug line-clamp-3">{review.text}</p>
+        <p className="text-xs text-gray-300 leading-snug line-clamp-3">
+          {review.text}
+        </p>
         <div className="flex gap-2.5 mt-2 pt-2 border-t border-white/5">
           <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-400 transition-colors">
             <ThumbsUp className="w-3 h-3" />
@@ -50,7 +69,7 @@ const ReviewCardSmall = ({ review, index }: { review: typeof reviews[0]; index: 
       </div>
     </div>
   </div>
-)
+);
 
 export function ReferralReviews() {
   const doubled = [...reviews, ...reviews]
