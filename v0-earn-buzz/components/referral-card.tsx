@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Copy, Gift, Check, Users, Sparkles, Link as LinkIcon } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { ReferralReviews } from "./referral-reviews"
 
 interface ReferralCardProps {
   userId: string
@@ -19,7 +20,6 @@ interface UserData {
 export function ReferralCard({ userId }: ReferralCardProps) {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isCopied, setIsCopied] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -42,36 +42,6 @@ export function ReferralCard({ userId }: ReferralCardProps) {
       console.error("[v0] Error fetching user data:", error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const copyReferralCode = () => {
-    if (userData?.referral_code) {
-      navigator.clipboard.writeText(userData.referral_code)
-      toast({
-        title: "Copied!",
-        description: "Referral code copied to clipboard",
-      })
-    }
-  }
-
-  const copyReferralLink = () => {
-    if (userData?.referral_code && typeof window !== 'undefined') {
-      const link = `${window.location.origin}/register?ref=${userData.referral_code}`
-      navigator.clipboard.writeText(link)
-      
-      // Set copied state and show animation
-      setIsCopied(true)
-      
-      // Reset after 2 seconds
-      setTimeout(() => {
-        setIsCopied(false)
-      }, 2000)
-      
-      toast({
-        title: "Copied!",
-        description: "Referral link copied to clipboard",
-      })
     }
   }
 
@@ -121,44 +91,8 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           </div>
         </div>
 
-        {/* Referral Code Display */}
-        <div className="hh-code-container">
-          <div className="hh-code-label">
-            <LinkIcon className="h-3 w-3" />
-            <span>Your referral code</span>
-          </div>
-          <div className="hh-code-value">{userData?.referral_code || 'N/A'}</div>
-        </div>
-
-        {/* Large Copy Button */}
-        <button 
-          onClick={copyReferralLink} 
-          className={`hh-copy-button ${isCopied ? 'hh-copied' : ''}`}
-          disabled={isCopied}
-        >
-          {isCopied ? (
-            <>
-              <span className="hh-button-shimmer"></span>
-              <Check className="h-5 w-5" />
-              <span>Copied!</span>
-            </>
-          ) : (
-            <>
-              <span className="hh-button-shimmer"></span>
-              <Copy className="h-5 w-5" />
-              <span>Copy Referral Link</span>
-              <Sparkles className="h-4 w-4 text-amber-300 animate-pulse" />
-            </>
-          )}
-        </button>
-
-        {/* Success Message (appears when copied) */}
-        {isCopied && (
-          <div className="hh-success-message">
-            <div className="hh-success-dot"></div>
-            <span>Link copied to clipboard!</span>
-          </div>
-        )}
+        {/* Reviews Section */}
+        <ReferralReviews />
       </div>
 
       <style jsx>{`
@@ -309,124 +243,6 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           font-family: 'JetBrains Mono', monospace;
         }
 
-        .hh-code-container {
-          background: rgba(0,0,0,0.3);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 14px;
-          padding: 12px;
-          margin-bottom: 16px;
-        }
-
-        .hh-code-label {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 11px;
-          color: #10b981;
-          margin-bottom: 6px;
-        }
-
-        .hh-code-value {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 18px;
-          font-weight: 700;
-          color: #fbbf24;
-          letter-spacing: 1px;
-          background: rgba(255,255,255,0.03);
-          padding: 8px;
-          border-radius: 8px;
-          text-align: center;
-          border: 1px solid rgba(16,185,129,0.2);
-        }
-
-        .hh-copy-button {
-          width: 100%;
-          padding: 16px;
-          border-radius: 16px;
-          font-weight: 700;
-          font-size: 16px;
-          border: none;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          position: relative;
-          overflow: hidden;
-          background: linear-gradient(135deg, #7c3aed, #5b21b6);
-          color: white;
-          box-shadow: 0 4px 20px rgba(124,58,237,0.3);
-        }
-
-        .hh-copy-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(124,58,237,0.5);
-        }
-
-        .hh-copy-button:active {
-          transform: scale(0.98);
-        }
-
-        .hh-copied {
-          background: linear-gradient(135deg, #10b981, #059669);
-          box-shadow: 0 4px 20px rgba(16,185,129,0.3);
-          animation: copy-success 0.3s ease;
-        }
-
-        @keyframes copy-success {
-          0% { transform: scale(1); }
-          50% { transform: scale(0.95); }
-          100% { transform: scale(1); }
-        }
-
-        .hh-button-shimmer {
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          animation: shimmer 2.5s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-          0% { left: -100%; }
-          100% { left: 200%; }
-        }
-
-        .hh-success-message {
-          margin-top: 12px;
-          padding: 10px;
-          background: rgba(16,185,129,0.1);
-          border: 1px solid rgba(16,185,129,0.3);
-          border-radius: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          animation: slide-up 0.3s ease;
-        }
-
-        .hh-success-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #10b981;
-          box-shadow: 0 0 6px #10b981;
-          animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
 
         .hh-entry {
           animation: entry 0.5s ease-out;
