@@ -957,7 +957,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <div className="text-sm font-bold text-white">Daily Reward</div>
-                    <div className="text-xs text-gray-400">Click to claim ₦1,000</div>
+                    <div className="text-xs text-gray-400">Click to claim ₦5,000</div>
                   </div>
                 </div>
                 <div className="hh-timer-badge">
