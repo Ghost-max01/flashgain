@@ -336,7 +336,7 @@ export default function DashboardPage() {
 
     if (canClaim) {
       const newClaimCount = claimCount + 1
-      const newBalance = balance + 1000
+      const newBalance = balance + 5000
 
       setBalance(newBalance)
       setClaimCount(newClaimCount)
@@ -351,7 +351,7 @@ export default function DashboardPage() {
 
       setShowClaimSuccess(true)
       setTimeout(() => setShowClaimSuccess(false), 3000)
-      void notifyClaimSuccess(1000, newBalance)
+      void notifyClaimSuccess(5000, newBalance)
 
       if (newClaimCount >= 50) {
         const fiveHoursLater = Date.now() + 5 * 60 * 60 * 1000
@@ -392,7 +392,7 @@ export default function DashboardPage() {
         id: Date.now(),
         type: "credit",
         description: "Daily Claim Reward",
-        amount: 1000,
+        amount: 5000,
         date: new Date().toISOString(),
       })
       localStorage.setItem("tivexx-transactions", JSON.stringify(transactions))
@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
             <div className="hh-stats-row mt-4">
               <div className="hh-stat-item">
                 <div className="hh-stat-label">Today's income</div>
-                <div className="hh-stat-value text-emerald-400">+₦{(claimCount * 1000).toLocaleString()}</div>
+                <div className="hh-stat-value text-emerald-400">+₦{(claimCount * 5000).toLocaleString()}</div>
               </div>
               <div className="hh-stat-divider"></div>
               <div className="hh-stat-item">

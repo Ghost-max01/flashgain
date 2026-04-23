@@ -166,6 +166,17 @@ export default function TaskPage() {
     const user = JSON.parse(storedUser);
     setBalance(user.balance || 0);
 
+    // Check if a new day has started and reset tasks if needed
+    const lastResetDate = localStorage.getItem("tivexx-last-reset-date")
+    const today = new Date().toDateString()
+    
+    if (lastResetDate !== today) {
+      // Reset completed tasks for the new day
+      localStorage.setItem("tivexx-completed-tasks", "[]")
+      localStorage.setItem("tivexx-task-cooldowns", "{}")
+      localStorage.setItem("tivexx-last-reset-date", today)
+    }
+
     const completed = JSON.parse(
       localStorage.getItem("tivexx-completed-tasks") || "[]",
     );
@@ -180,16 +191,12 @@ export default function TaskPage() {
       ),
     ) as Record<string, number>;
 
-    const activeCompleted = completed.filter(
-      (taskId: string) => activeCooldowns[taskId],
-    );
-
-    setCompletedTasks(activeCompleted);
+    // DON'T filter and rewrite completed-tasks; use it as-is from storage
+    // Only clean up expired cooldowns
+    setCompletedTasks(completed);
     setCooldowns(activeCooldowns);
-    localStorage.setItem(
-      "tivexx-completed-tasks",
-      JSON.stringify(activeCompleted),
-    );
+    
+    // Only rewrite cooldowns if they changed; never rewrite completed-tasks on init
     localStorage.setItem(
       "tivexx-task-cooldowns",
       JSON.stringify(activeCooldowns),
