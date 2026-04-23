@@ -19,7 +19,7 @@ const REPLIES = {
     has_image: true,
   },
   "2": {
-    text: "If you have created an account on helpinghands you can use the claim button on the site dashboard to claim 1000 every 1 minutes👇👇👇",
+    text: "If you have created an account on helpinghands you can use the claim button on the site dashboard to claim 5,000 every 1 minutes👇👇👇",
     link: "https://flashgain9ja.money/dashboard",
     linkLabel: "Open Dashboard",
     image: "/chatbot-img/image2.png",
