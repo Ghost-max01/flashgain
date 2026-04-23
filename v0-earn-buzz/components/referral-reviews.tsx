@@ -255,7 +255,7 @@ export function ReferralReviews() {
         .referral-reviews-track {
           display: flex;
           gap: 12px;
-          animation: scroll-left-slow 60s linear infinite;
+          animation: scroll-left-slow 120s linear infinite;
         }
 
         .referral-reviews-track:hover {
