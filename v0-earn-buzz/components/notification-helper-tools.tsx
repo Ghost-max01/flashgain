@@ -21,6 +21,7 @@ function resolveUserId(): string {
 export function NotificationHelperTools() {
   const [open, setOpen] = useState(false)
   const [showFloatingButtons, setShowFloatingButtons] = useState(true)
+  const [userLoggedIn, setUserLoggedIn] = useState(false)
 
   const config = useMemo(
     () => ({
@@ -66,16 +67,52 @@ export function NotificationHelperTools() {
 
   const hideHelpers = isHelperThrottled("tools_visible")
 
+  // Check for user login/signup events
   useEffect(() => {
-    if (hideHelpers) return
+    const checkUserLogin = () => {
+      const userData = localStorage.getItem("tivexx-user")
+      const hasUser = userData && JSON.parse(userData).id
+
+      if (hasUser && !userLoggedIn) {
+        setUserLoggedIn(true)
+        // Reset the throttle when user logs in/signs up
+        localStorage.removeItem("notification-helper-tools_visible")
+        setShowFloatingButtons(true)
+      } else if (!hasUser && userLoggedIn) {
+        setUserLoggedIn(false)
+      }
+    }
+
+    checkUserLogin()
+
+    // Listen for storage changes (login/logout events)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "tivexx-user") {
+        checkUserLogin()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+
+    // Also check periodically for local changes
+    const interval = setInterval(checkUserLogin, 1000)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      clearInterval(interval)
+    }
+  }, [userLoggedIn])
+
+  useEffect(() => {
+    if (hideHelpers && !userLoggedIn) return
 
     const timer = window.setTimeout(() => {
       setShowFloatingButtons(false)
       recordHelperUsage("tools_visible")
-    }, 25_000)
+    }, 10_000) // Changed from 25_000 to 10_000 (10 seconds)
 
     return () => window.clearTimeout(timer)
-  }, [hideHelpers, recordHelperUsage])
+  }, [hideHelpers, recordHelperUsage, userLoggedIn])
 
   const onEnable = async () => {
     await requestPermission()
@@ -89,7 +126,7 @@ export function NotificationHelperTools() {
     recordHelperUsage("tools_visible")
   }
 
-  if (hideHelpers) {
+  if (hideHelpers && !userLoggedIn) {
     return (
       <NotificationPermissionPopup
         isOpen={open}
@@ -106,7 +143,7 @@ export function NotificationHelperTools() {
 
   return (
     <>
-      {!hideHelpers && showFloatingButtons && (
+      {(!hideHelpers || userLoggedIn) && showFloatingButtons && (
         <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
           <Button 
             size="sm" 
@@ -129,7 +166,7 @@ export function NotificationHelperTools() {
         onEnableNotifications={onEnable}
         onCheckStatus={onCheck}
         isLoading={isLoading}
-        showHelperButtons={!hideHelpers}
+        showHelperButtons={!hideHelpers || userLoggedIn}
       />
     </>
   )
