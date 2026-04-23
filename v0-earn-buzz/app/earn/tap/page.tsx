@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   ArrowLeft,
   Zap,
@@ -80,6 +80,7 @@ const loadState = () => {
 
 export default function TapAndEarnPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [state, setState] = useState({
     energy: MAX_ENERGY,
     earned: 0,
@@ -102,10 +103,12 @@ export default function TapAndEarnPage() {
     // Cleanup function to remove any stray ad elements from other pages
     const cleanupAds = () => {
       // Remove any ad scripts that don't belong to this page
-      const allAdScripts = document.querySelectorAll('script[src*="5gvci.com"], script[src*="llvpn.com"]');
-      allAdScripts.forEach(script => {
-        const dataPage = script.getAttribute('data-page');
-        if (!dataPage || !dataPage.startsWith('tap-earn')) {
+      const allAdScripts = document.querySelectorAll(
+        'script[src*="5gvci.com"], script[src*="llvpn.com"]',
+      );
+      allAdScripts.forEach((script) => {
+        const dataPage = script.getAttribute("data-page");
+        if (!dataPage || !dataPage.startsWith("tap-earn")) {
           if (script.parentNode) {
             script.parentNode.removeChild(script);
           }
@@ -113,8 +116,10 @@ export default function TapAndEarnPage() {
       });
 
       // Remove any ad containers that might have been left behind
-      const adContainers = document.querySelectorAll('[id*="monetag"], [id*="llvpn"], [class*="monetag"], [class*="llvpn"]');
-      adContainers.forEach(container => {
+      const adContainers = document.querySelectorAll(
+        '[id*="monetag"], [id*="llvpn"], [class*="monetag"], [class*="llvpn"]',
+      );
+      adContainers.forEach((container) => {
         if (container && container.parentNode) {
           container.parentNode.removeChild(container);
         }
@@ -133,14 +138,18 @@ export default function TapAndEarnPage() {
 
   // ─── Monetag ad script (strictly contained to tap page only) ────────────────────────────
   useEffect(() => {
-    // Multiple strict checks to ensure we're ONLY on the tap page
-    if (typeof window === 'undefined') return;
-    if (window.location.pathname !== '/earn/tap') return;
-    if (!window.location.pathname.endsWith('/earn/tap')) return;
+    // STRICT CONTAINMENT: only allow on /earn/tap, using Next.js pathname
+    if (typeof window === "undefined") return;
+    if (pathname !== "/earn/tap") return;
+    if (!window.location.pathname.endsWith("/earn/tap")) return;
 
     // Double-check we're not on any other page
     const currentPath = window.location.pathname;
-    if (!currentPath.includes('/earn/tap') || currentPath.includes('/earn/tap/')) return;
+    if (
+      !currentPath.includes("/earn/tap") ||
+      currentPath.includes("/earn/tap/")
+    )
+      return;
 
     // Prevent duplicate injection with stricter check
     if (document.querySelector('script[data-page="tap-earn-monetag"]')) return;
@@ -154,7 +163,7 @@ export default function TapAndEarnPage() {
 
     // Add error handling to prevent any issues
     script.onerror = () => {
-      console.warn('[Tap Ads] Monetag script failed to load');
+      console.warn("[Tap Ads] Monetag script failed to load");
     };
 
     document.body.appendChild(script);
@@ -162,14 +171,18 @@ export default function TapAndEarnPage() {
     // Aggressive cleanup when leaving page
     return () => {
       // Remove the script
-      const existingScript = document.querySelector('script[data-page="tap-earn-monetag"]');
+      const existingScript = document.querySelector(
+        'script[data-page="tap-earn-monetag"]',
+      );
       if (existingScript) {
         document.body.removeChild(existingScript);
       }
 
       // Remove any ad containers or elements that might have been created
-      const adElements = document.querySelectorAll('[id*="monetag"], [class*="monetag"], [data-monetag]');
-      adElements.forEach(el => {
+      const adElements = document.querySelectorAll(
+        '[id*="monetag"], [class*="monetag"], [data-monetag]',
+      );
+      adElements.forEach((el) => {
         if (el && el.parentNode) {
           el.parentNode.removeChild(el);
         }
@@ -177,8 +190,8 @@ export default function TapAndEarnPage() {
 
       // Clear any monetag-related localStorage/cookies if they exist
       try {
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('monetag') || key.includes('5gvci')) {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.includes("monetag") || key.includes("5gvci")) {
             localStorage.removeItem(key);
           }
         });
@@ -186,19 +199,23 @@ export default function TapAndEarnPage() {
         // Ignore localStorage errors
       }
     };
-  }, []);
+  }, [pathname]); // Re-run only if pathname changes (safety)
   // ───────────────────────────────────────────────────────────────────────
 
   // ─── LLVPN ad script (strictly contained to tap page only) ───────────────────────────────────────────────────
   useEffect(() => {
-    // Multiple strict checks to ensure we're ONLY on the tap page
-    if (typeof window === 'undefined') return;
-    if (window.location.pathname !== '/earn/tap') return;
-    if (!window.location.pathname.endsWith('/earn/tap')) return;
+    // STRICT CONTAINMENT: only allow on /earn/tap, using Next.js pathname
+    if (typeof window === "undefined") return;
+    if (pathname !== "/earn/tap") return;
+    if (!window.location.pathname.endsWith("/earn/tap")) return;
 
     // Double-check we're not on any other page
     const currentPath = window.location.pathname;
-    if (!currentPath.includes('/earn/tap') || currentPath.includes('/earn/tap/')) return;
+    if (
+      !currentPath.includes("/earn/tap") ||
+      currentPath.includes("/earn/tap/")
+    )
+      return;
 
     // Prevent duplicate injection with stricter check
     if (document.querySelector('script[data-page="tap-earn-llvpn"]')) return;
@@ -212,7 +229,7 @@ export default function TapAndEarnPage() {
 
     // Add error handling to prevent any issues
     script.onerror = () => {
-      console.warn('[Tap Ads] LLVPN script failed to load');
+      console.warn("[Tap Ads] LLVPN script failed to load");
     };
 
     document.body.appendChild(script);
@@ -220,14 +237,18 @@ export default function TapAndEarnPage() {
     // Aggressive cleanup when leaving page
     return () => {
       // Remove the script
-      const existingScript = document.querySelector('script[data-page="tap-earn-llvpn"]');
+      const existingScript = document.querySelector(
+        'script[data-page="tap-earn-llvpn"]',
+      );
       if (existingScript) {
         document.body.removeChild(existingScript);
       }
 
       // Remove any ad containers or elements that might have been created
-      const adElements = document.querySelectorAll('[id*="llvpn"], [class*="llvpn"], [data-llvpn]');
-      adElements.forEach(el => {
+      const adElements = document.querySelectorAll(
+        '[id*="llvpn"], [class*="llvpn"], [data-llvpn]',
+      );
+      adElements.forEach((el) => {
         if (el && el.parentNode) {
           el.parentNode.removeChild(el);
         }
@@ -235,8 +256,8 @@ export default function TapAndEarnPage() {
 
       // Clear any llvpn-related localStorage/cookies if they exist
       try {
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('llvpn')) {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.includes("llvpn")) {
             localStorage.removeItem(key);
           }
         });
@@ -244,7 +265,7 @@ export default function TapAndEarnPage() {
         // Ignore localStorage errors
       }
     };
-  }, []);
+  }, [pathname]); // Re-run only if pathname changes (safety)
   // ───────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
