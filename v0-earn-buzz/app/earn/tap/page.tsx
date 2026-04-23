@@ -97,6 +97,9 @@ export default function TapAndEarnPage() {
 
   // ─── Monetag ad script (standard placement) ────────────────────────────
   useEffect(() => {
+    // Only load on tap page
+    if (typeof window === 'undefined' || !window.location.pathname.includes('/earn/tap')) return;
+
     // Prevent duplicate injection
     if (document.querySelector('script[src*="5gvci.com"]')) return;
 
@@ -104,12 +107,24 @@ export default function TapAndEarnPage() {
     script.src = "https://5gvci.com/act/files/tag.min.js?z=10297783";
     script.setAttribute("data-cfasync", "false");
     script.async = true;
+    script.setAttribute("data-page", "tap-earn"); // Mark as tap page specific
     document.body.appendChild(script);
+
+    // Cleanup when leaving page
+    return () => {
+      const existingScript = document.querySelector('script[src*="5gvci.com"][data-page="tap-earn"]');
+      if (existingScript) {
+        document.body.removeChild(existingScript);
+      }
+    };
   }, []);
   // ───────────────────────────────────────────────────────────────────────
 
   // ─── LLVPN ad script ───────────────────────────────────────────────────
   useEffect(() => {
+    // Only load on tap page
+    if (typeof window === 'undefined' || !window.location.pathname.includes('/earn/tap')) return;
+
     // Prevent duplicate injection
     if (document.querySelector('script[src*="llvpn.com"]')) return;
 
@@ -117,7 +132,16 @@ export default function TapAndEarnPage() {
     script.src = "https://llvpn.com/tag.min.js";
     script.setAttribute("data-zone", "10297781");
     script.async = true;
+    script.setAttribute("data-page", "tap-earn"); // Mark as tap page specific
     document.body.appendChild(script);
+
+    // Cleanup when leaving page
+    return () => {
+      const existingScript = document.querySelector('script[src*="llvpn.com"][data-page="tap-earn"]');
+      if (existingScript) {
+        document.body.removeChild(existingScript);
+      }
+    };
   }, []);
   // ───────────────────────────────────────────────────────────────────────
 
