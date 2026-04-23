@@ -409,21 +409,22 @@ export default function TaskPage() {
       }
     }
 
-    const newCompleted = [...completedTasks, task.id];
-    setCompletedTasks(newCompleted);
-    localStorage.setItem(
-      "tivexx-completed-tasks",
-      JSON.stringify(newCompleted),
-    );
-
-    // Notify same-tab listeners that user/completed tasks updated
+    // Use localStorage as the source of truth to avoid stale React state
     try {
+      const stored = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+      const storedArr: string[] = Array.isArray(stored) ? stored : []
+      if (!storedArr.includes(task.id)) storedArr.push(task.id)
+
+      setCompletedTasks(storedArr)
+      localStorage.setItem("tivexx-completed-tasks", JSON.stringify(storedArr))
+
+      // Notify same-tab listeners that user/completed tasks updated
       const latestUserRaw = localStorage.getItem("tivexx-user")
       const latestUser = latestUserRaw ? JSON.parse(latestUserRaw) : null
-      const detail = { user: latestUser, completedTasks: newCompleted }
+      const detail = { user: latestUser, completedTasks: storedArr }
       window.dispatchEvent(new CustomEvent("tivexx:update", { detail }))
     } catch (e) {
-      // ignore
+      console.error("Error updating completed tasks storage:", e)
     }
 
     const cooldownExpiry = Date.now() + TASK_COOLDOWN_MS;
