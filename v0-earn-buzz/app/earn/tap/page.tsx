@@ -94,11 +94,22 @@ export default function TapAndEarnPage() {
   const particleId = useRef(0);
   const syncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accumulatedEarned = useRef(0);
-  const [mounted, setMounted] = useState(false);
+  const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [completedTasksCount, setCompletedTasksCount] = useState(0);
+  const [hasShownTaskPopup, setHasShownTaskPopup] = useState(false);
 
   // ─── Global cleanup of stray ad elements (just in case) ──────────────
   useEffect(() => {
     setMounted(true);
+
+    // Check task completion status
+    const checkTaskCompletion = () => {
+      const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+      setCompletedTasksCount(completedTasks.length);
+    };
+
+    checkTaskCompletion();
+
     const cleanupAds = () => {
       const allAdScripts = document.querySelectorAll(
         'script[src*="5gvci.com"], script[src*="llvpn.com"]',
@@ -119,6 +130,25 @@ export default function TapAndEarnPage() {
     };
     cleanupAds();
     return () => cleanupAds();
+  }, []);
+
+  // ─── Watch for task completion changes ──────────────
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+      setCompletedTasksCount(completedTasks.length);
+    };
+
+    // Listen for storage changes (when tasks are completed on other pages)
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also check periodically in case tasks are completed in the same tab
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
   // ─── STRICT CONTAINMENT: sandboxed iframe, only on /earn/tap ─────────
@@ -313,6 +343,13 @@ export default function TapAndEarnPage() {
         | React.MouseEvent<HTMLButtonElement>
         | React.TouchEvent<HTMLButtonElement>,
     ) => {
+      // Check if user has completed all tasks (10 tasks required)
+      if (completedTasksCount < 10 && !hasShownTaskPopup) {
+        setShowTaskPopup(true);
+        setHasShownTaskPopup(true);
+        return;
+      }
+
       if (state.energy <= 0) {
         setShowPrompt(true);
         return;
@@ -646,6 +683,76 @@ export default function TapAndEarnPage() {
                     title="Close this dialog"
                   >
                     Come Back Later
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Task Completion Required Modal ── */}
+      {showTaskPopup && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 te-fadeIn flex items-center justify-center p-4"
+          onClick={() => setShowTaskPopup(false)}
+        >
+          <div
+            className="te-slideUp w-full max-w-[420px] h-auto max-h-[85vh] overflow-auto z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="hh-modal">
+              <div className="te-modal-glow"></div>
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="hh-icon-ring">
+                    <Star
+                      className="w-4 h-4 text-emerald-300"
+                      fill="currentColor"
+                    />
+                  </div>
+                  <h2 className="hh-modal-title text-lg">Complete Tasks First!</h2>
+                </div>
+
+                <p className="hh-modal-desc mb-4">
+                  You need to complete all tasks before you can start tapping to earn rewards.
+                </p>
+
+                {/* Progress Bar */}
+                <div className="mb-5">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-300">Progress</span>
+                    <span className="text-sm text-emerald-400 font-medium">
+                      {completedTasksCount}/10 tasks
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(completedTasksCount / 10) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setShowTaskPopup(false);
+                      router.push("/task");
+                    }}
+                    className="te-modal-primary-btn"
+                    title="Go to tasks page"
+                  >
+                    <Star className="w-4 h-4" />
+                    Go to Tasks
+                  </button>
+                  <button
+                    onClick={() => setShowTaskPopup(false)}
+                    className="te-modal-secondary-btn"
+                    title="Close this dialog"
+                  >
+                    Close
                   </button>
                 </div>
               </div>
