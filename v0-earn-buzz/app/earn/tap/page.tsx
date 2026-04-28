@@ -100,38 +100,38 @@ export default function TapAndEarnPage() {
   const [mounted, setMounted] = useState(false);
 
   // ─── Global cleanup of stray ad elements (just in case) ──────────────
-  useEffect(() => {
-    setMounted(true);
+  // useEffect(() => {
+  //   setMounted(true);
 
-    // Check task completion status
-    const checkTaskCompletion = () => {
-      const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
-      setCompletedTasksCount(completedTasks.length);
-    };
+  //   // Check task completion status
+  //   const checkTaskCompletion = () => {
+  //     const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+  //     setCompletedTasksCount(completedTasks.length);
+  //   };
 
-    checkTaskCompletion();
+  //   checkTaskCompletion();
 
-    const cleanupAds = () => {
-      const allAdScripts = document.querySelectorAll(
-        'script[src*="5gvci.com"], script[src*="llvpn.com"]',
-      );
-      allAdScripts.forEach((script) => {
-        const dataPage = script.getAttribute("data-page");
-        if (!dataPage || !dataPage.startsWith("tap-earn")) {
-          if (script.parentNode) script.parentNode.removeChild(script);
-        }
-      });
-      const adContainers = document.querySelectorAll(
-        '[id*="monetag"], [id*="llvpn"], [class*="monetag"], [class*="llvpn"]',
-      );
-      adContainers.forEach((container) => {
-        if (container && container.parentNode)
-          container.parentNode.removeChild(container);
-      });
-    };
-    cleanupAds();
-    return () => cleanupAds();
-  }, []);
+  //   const cleanupAds = () => {
+  //     const allAdScripts = document.querySelectorAll(
+  //       'script[src*="5gvci.com"], script[src*="llvpn.com"]',
+  //     );
+  //     allAdScripts.forEach((script) => {
+  //       const dataPage = script.getAttribute("data-page");
+  //       if (!dataPage || !dataPage.startsWith("tap-earn")) {
+  //         if (script.parentNode) script.parentNode.removeChild(script);
+  //       }
+  //     });
+  //     const adContainers = document.querySelectorAll(
+  //       '[id*="monetag"], [id*="llvpn"], [class*="monetag"], [class*="llvpn"]',
+  //     );
+  //     adContainers.forEach((container) => {
+  //       if (container && container.parentNode)
+  //         container.parentNode.removeChild(container);
+  //     });
+  //   };
+  //   cleanupAds();
+  //   return () => cleanupAds();
+  // }, []);
 
   // ─── Watch for task completion changes ──────────────
   useEffect(() => {
