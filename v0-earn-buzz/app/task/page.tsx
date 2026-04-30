@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer } from "@/hooks/useTaskTimer"
+import { supabase } from "@/lib/supabase/client"
 
 interface Task {
   id: string
@@ -121,6 +122,8 @@ export default function TaskPage() {
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({})
   const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({})
   const [showCoinRain, setShowCoinRain] = useState(false)
+  const [todayStats, setTodayStats] = useState({ tasksCompleted: 0, totalLogins: 0, totalEarned: 0 })
+  const [userId, setUserId] = useState<string>("")
 
 
   // Load user and tasks
@@ -133,6 +136,7 @@ export default function TaskPage() {
 
     const user = JSON.parse(storedUser)
     setBalance(user.balance || 0)
+    setUserId(user.id || user.userId || user.user_id || "")
 
     const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
     setCompletedTasks(completed)
@@ -140,6 +144,57 @@ export default function TaskPage() {
     const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
     setCooldowns(savedCooldowns)
   }, [router])
+
+  // Load and track today's stats from Supabase
+  useEffect(() => {
+    if (!userId) return
+
+    const loadTodayStats = async () => {
+      try {
+        if (supabase) {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+
+          // Fetch all users to calculate today's totals
+          const { data: usersData, error } = await supabase
+            .from("users")
+            .select("tasksCompleted, balance, lastLogin")
+            .limit(1000)
+
+          if (!error && usersData) {
+            let tasksCompletedTotal = 0
+            let loginsToday = 0
+            let earningsToday = 0
+
+            usersData.forEach((user: any) => {
+              tasksCompletedTotal += Number(user.tasksCompleted) || 0
+              
+              const lastLogin = new Date(user.lastLogin || "")
+              if (lastLogin >= today) {
+                loginsToday++
+              }
+              
+              earningsToday += Number(user.balance) || 0
+            })
+
+            setTodayStats({
+              tasksCompleted: tasksCompletedTotal,
+              totalLogins: loginsToday,
+              totalEarned: earningsToday,
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error loading today stats:", error)
+      }
+    }
+
+    loadTodayStats()
+
+    // Poll for updates every 5 seconds
+    const interval = setInterval(loadTodayStats, 5000)
+    return () => clearInterval(interval)
+  }, [userId])
 
   // Initialize task timer hook
   const { attachFocusListener, startTaskTimer } = useTaskTimer()
