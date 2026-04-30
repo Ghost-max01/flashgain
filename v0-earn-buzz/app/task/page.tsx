@@ -138,22 +138,7 @@ export default function TaskPage() {
     setCompletedTasks(completed)
 
     const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
-    
-    // Check if tasks should reset (daily reset at midnight)
-    const lastResetDate = localStorage.getItem("tivexx-last-reset-date")
-    const today = new Date().toDateString()
-    
-    if (lastResetDate !== today) {
-      // Reset all tasks for the new day
-      setCompletedTasks([])
-      setCooldowns({})
-      setVerifyingTasks({})
-      localStorage.setItem("tivexx-completed-tasks", "[]")
-      localStorage.setItem("tivexx-task-cooldowns", "{}")
-      localStorage.setItem("tivexx-last-reset-date", today)
-    } else {
-      setCooldowns(savedCooldowns)
-    }
+    setCooldowns(savedCooldowns)
   }, [router])
 
   // Initialize task timer hook
@@ -316,12 +301,12 @@ export default function TaskPage() {
     setCompletedTasks(newCompleted)
     localStorage.setItem("tivexx-completed-tasks", JSON.stringify(newCompleted))
 
-    // Calculate time until midnight
+    // Calculate time for 12 hour cooldown
     const now = new Date()
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-    const timeUntilMidnight = tomorrow.getTime() - now.getTime()
+    const twelvHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000)
+    const timeUntilCooldownExpires = twelvHoursLater.getTime() - now.getTime()
     
-    const newCooldowns = { ...cooldowns, [task.id]: now.getTime() + timeUntilMidnight }
+    const newCooldowns = { ...cooldowns, [task.id]: now.getTime() + timeUntilCooldownExpires }
     setCooldowns(newCooldowns)
     localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(newCooldowns))
 
@@ -406,7 +391,11 @@ export default function TaskPage() {
     const hours = Math.floor(totalSeconds / 3600)
     const minutes = Math.floor((totalSeconds % 3600) / 60)
     const seconds = totalSeconds % 60
-    return `${hours > 0 ? hours + "h " : ""}${minutes}m ${seconds}s`
+    
+    // Convert to 12-hour format (cap at 12 hours)
+    const displayHours = hours % 12 || (hours > 0 ? 12 : 0)
+    
+    return `${displayHours > 0 ? displayHours + "h " : ""}${minutes}m ${seconds}s`
   }
 
 
@@ -588,7 +577,7 @@ export default function TaskPage() {
                   )}
                 </div>
 
-                {task.link && task.id.includes('ad') && (
+                {task.link && (
                   <div className="hh-task-warning">
                     <span className="text-amber-400 font-bold mr-1">⚠️</span>
                     <span>Allow the page to load completely before closing</span>
@@ -606,9 +595,9 @@ export default function TaskPage() {
               <Sparkles className="h-5 w-5 text-amber-300" />
             </div>
             <div>
-              <h4 className="font-bold text-white mb-1">Daily Reset</h4>
+              <h4 className="font-bold text-white mb-1">Reset Schedule</h4>
               <p className="text-sm text-emerald-200/80">
-                Tasks reset every day at midnight. Check back tomorrow for more rewards!
+                Tasks reset every 12 hours. Check back for more rewards!
               </p>
             </div>
           </div>
