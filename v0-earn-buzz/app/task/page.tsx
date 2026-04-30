@@ -20,7 +20,7 @@ interface Task {
 
 const AVAILABLE_TASKS: Task[] = [
   {
-    id: "Monetage-our-most-earned-spin-to-win-ad.",
+    id: "Monetage-our-most-earned-spin-to-win-ad..",
     platform: "Monetage Spin-to-Win Ad",
     description: "Tap our premium ad link for extra rewards.",
     category: "Ads",
