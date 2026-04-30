@@ -25,7 +25,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards.",
     category: "Ads",
     reward: 5000,
-    link: "https://spin-to-win-hub-6676aed7-seven.vercel.app/",
+    link: "spinwin-iota.vercel.app",
     icon: "📢",
   },
   {
@@ -34,7 +34,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards",
     category: "Tasks",
     reward: 5000,
-    link: "https://spin-to-win-hub-6676aed7-seven.vercel.app/",
+    link: "spinwin-iota.vercel.app",
     icon: "💬",
   },
   {
@@ -79,12 +79,12 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Join Nova Cash",
     category: "Tasks",
     reward: 5000,
-    link: "https://spin-to-win-hub-6676aed7-seven.vercel.app/",
+    link: "spinwin-iota.vercel.app",
     icon: "🎵",
   },
   {
     id: "Telegram Channel Task 02",
-    platform: "COMMUNITY TELEGRAM CHANNEL 1",
+    platform: "Sponsored ads 1",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
     reward: 5000,
@@ -93,7 +93,7 @@ const AVAILABLE_TASKS: Task[] = [
   },
   {
     id: "facebook page",
-    platform: "COMMUNITY TELEGRAM CHANNEL 2",
+    platform: "Sponsored ads 2",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
     reward: 5000,
@@ -103,7 +103,7 @@ const AVAILABLE_TASKS: Task[] = [
 
   {
     id: "Task 03",
-    platform: "COMMUNITY TELEGRAM CHANNEL 3",
+    platform: "Sponsored ads 3",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
     reward: 5000,
