@@ -273,6 +273,17 @@ export default function TaskPage() {
     return () => clearInterval(timer)
   }, [cooldowns])
 
+  const getNextResetBoundary = (date: Date) => {
+    const boundary = new Date(date)
+    const hour = boundary.getHours()
+    if (hour < 12) {
+      boundary.setHours(12, 0, 0, 0)
+    } else {
+      boundary.setHours(24, 0, 0, 0)
+    }
+    return boundary
+  }
+
   const completeVerification = async (taskId: string) => {
     const task = AVAILABLE_TASKS.find((t) => t.id === taskId)
     if (!task) return
@@ -301,12 +312,9 @@ export default function TaskPage() {
     setCompletedTasks(newCompleted)
     localStorage.setItem("tivexx-completed-tasks", JSON.stringify(newCompleted))
 
-    // Calculate time for 12 hour cooldown
     const now = new Date()
-    const twelvHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000)
-    const timeUntilCooldownExpires = twelvHoursLater.getTime() - now.getTime()
-    
-    const newCooldowns = { ...cooldowns, [task.id]: now.getTime() + timeUntilCooldownExpires }
+    const nextReset = getNextResetBoundary(now).getTime()
+    const newCooldowns = { ...cooldowns, [task.id]: nextReset }
     setCooldowns(newCooldowns)
     localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(newCooldowns))
 
@@ -346,7 +354,7 @@ export default function TaskPage() {
     if (cooldowns[task.id] && cooldowns[task.id] > Date.now()) {
       toast({
         title: "Task on Cooldown",
-        description: "You can only do this task once every 24 hours.",
+        description: "This task resets at the next 12-hour interval.",
         variant: "destructive",
       })
       return
@@ -580,7 +588,7 @@ export default function TaskPage() {
                 {task.link && (
                   <div className="hh-task-warning">
                     <span className="text-amber-400 font-bold mr-1">⚠️</span>
-                    <span>Allow the page to load completely before closing</span>
+                    <span>Interact with the task for up to 10 seconds before you can claim the reward.</span>
                   </div>
                 )}
               </div>
@@ -597,7 +605,7 @@ export default function TaskPage() {
             <div>
               <h4 className="font-bold text-white mb-1">Reset Schedule</h4>
               <p className="text-sm text-emerald-200/80">
-                Tasks reset every 12 hours. Check back for more rewards!
+                Tasks reset at 12:00 AM and 12:00 PM every day. Check back after the next interval for more rewards!
               </p>
             </div>
           </div>
