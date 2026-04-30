@@ -87,14 +87,14 @@ export default function AdminAnalytics() {
     setLoading(false)
   }
 
-  const totalLogins = data.reduce((sum, d) => sum + d.activeUsers, 0)
+  const totalLoginsChart = data.reduce((sum, d) => sum + d.activeUsers, 0)
   const totalTasksChart = data.reduce((sum, d) => sum + d.totalTasks, 0)
   const totalRewardsChart = data.reduce((sum, d) => sum + d.totalRewards, 0)
-  const avgTasksPerDay = (totalTasksChart / data.length).toFixed(1)
+  const avgTasksPerDay = data.length > 0 ? (totalTasksChart / data.length).toFixed(1) : "0.0"
 
   const pieData = [
     { name: "Tasks Completed", value: totalTasksChart, fill: "#3b82f6" },
-    { name: "Active Users", value: totalLogins, fill: "#10b981" },
+    { name: "Active Users", value: totalLoginsChart, fill: "#10b981" },
   ]
 
   return (
