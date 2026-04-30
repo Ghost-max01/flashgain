@@ -54,6 +54,21 @@ export default function AdminLogin() {
       })
       localStorage.setItem("admin-logs", JSON.stringify(logs))
 
+      // Track session in database
+      try {
+        await fetch("/api/track-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: ADMIN_EMAIL,
+            action: "admin_login",
+            adminSession: true,
+          }),
+        })
+      } catch (err) {
+        console.error("Failed to track session:", err)
+      }
+
       router.push("/f")
     } else {
       setError("Invalid email or password")

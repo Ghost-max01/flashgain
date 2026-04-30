@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Users, Settings, LogOut, ArrowLeft, Search, Ban, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase/client"
 
 interface User {
   id: string
@@ -12,6 +13,7 @@ interface User {
   tasksCompleted: number
   lastLogin: string
   status: "active" | "inactive" | "banned"
+  referral_balance?: number
 }
 
 export default function AdminUsers() {
@@ -27,56 +29,41 @@ export default function AdminUsers() {
   const loadUsers = async () => {
     setLoading(true)
 
-    // Generate mock user data
-    const mockUsers: User[] = [
-      {
-        id: "user-001",
-        email: "john@example.com",
-        name: "John Doe",
-        balance: 50000,
-        tasksCompleted: 15,
-        lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        status: "active",
-      },
-      {
-        id: "user-002",
-        email: "jane@example.com",
-        name: "Jane Smith",
-        balance: 75000,
-        tasksCompleted: 25,
-        lastLogin: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        status: "active",
-      },
-      {
-        id: "user-003",
-        email: "bob@example.com",
-        name: "Bob Wilson",
-        balance: 100000,
-        tasksCompleted: 40,
-        lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        status: "active",
-      },
-      {
-        id: "user-004",
-        email: "alice@example.com",
-        name: "Alice Brown",
-        balance: 0,
-        tasksCompleted: 0,
-        lastLogin: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "inactive",
-      },
-      {
-        id: "user-005",
-        email: "fraud@example.com",
-        name: "Fraud User",
-        balance: 0,
-        tasksCompleted: 0,
-        lastLogin: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "banned",
-      },
-    ]
+    try {
+      if (supabase) {
+        const { data: usersData, error } = await supabase
+          .from("users")
+          .select("*")
+          .limit(1000)
 
-    setUsers(mockUsers)
+        if (!error && usersData) {
+          const processedUsers: User[] = usersData.map((user: any) => {
+            // Determine status based on last login and activity
+            const lastLoginDate = new Date(user.lastLogin || user.created_at || "")
+            const daysSinceLogin = (Date.now() - lastLoginDate.getTime()) / (1000 * 60 * 60 * 24)
+            
+            let status: "active" | "inactive" | "banned" = "active"
+            if (user.status === "banned") status = "banned"
+            else if (daysSinceLogin > 30) status = "inactive"
+
+            return {
+              id: user.id || user.userId,
+              email: user.email,
+              name: user.name || "User",
+              balance: Number(user.balance || 0),
+              tasksCompleted: Number(user.tasksCompleted || 0),
+              lastLogin: user.lastLogin || user.created_at || new Date().toISOString(),
+              status,
+              referral_balance: Number(user.referral_balance || 0),
+            }
+          })
+
+          setUsers(processedUsers)
+        }
+      }
+    } catch (error) {
+      console.error("Error loading users:", error)
+    }
     setLoading(false)
   }
 

@@ -107,6 +107,21 @@ export default function LoginPage() {
         referral_count: Number(fullUser?.referral_count || 0),
       });
 
+      // Track user session in database
+      try {
+        await fetch("/api/track-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: stableUserId,
+            email: fullUser?.email,
+            action: "user_login",
+          }),
+        })
+      } catch (err) {
+        console.error("Failed to track session:", err)
+      }
+
       router.push("/dashboard");
     } catch (err) {
       setError("Login failed");

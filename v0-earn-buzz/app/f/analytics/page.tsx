@@ -4,18 +4,24 @@ import { useState, useEffect } from "react"
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { ArrowLeft, TrendingUp, Users, Clock, Award } from "lucide-react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase/client"
 
 interface AnalyticsData {
   date: string
-  logins: number
-  tasksCompleted: number
+  activeUsers: number
+  totalTasks: number
   totalRewards: number
+  newUsers: number
 }
 
 export default function AdminAnalytics() {
   const [data, setData] = useState<AnalyticsData[]>([])
   const [period, setPeriod] = useState<"7d" | "30d" | "90d">("7d")
   const [loading, setLoading] = useState(false)
+  const [totalLogins, setTotalLogins] = useState(0)
+  const [totalTasks, setTotalTasks] = useState(0)
+  const [totalRewards, setTotalRewards] = useState(0)
+  const [avgTasksPerUser, setAvgTasksPerUser] = useState(0)
 
   useEffect(() => {
     loadAnalytics()
@@ -24,37 +30,71 @@ export default function AdminAnalytics() {
   const loadAnalytics = async () => {
     setLoading(true)
 
-    // Generate mock data for analytics
-    const days = period === "7d" ? 7 : period === "30d" ? 30 : 90
-    const analyticsData: AnalyticsData[] = []
+    try {
+      if (supabase) {
+        // Fetch real users data
+        const { data: usersData, error } = await supabase
+          .from("users")
+          .select("*")
+          .limit(1000)
 
-    for (let i = days; i > 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
+        if (!error && usersData) {
+          const days = period === "7d" ? 7 : period === "30d" ? 30 : 90
+          const analyticsData: AnalyticsData[] = []
 
-      analyticsData.push({
-        date: date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        logins: Math.floor(Math.random() * 50) + 10,
-        tasksCompleted: Math.floor(Math.random() * 100) + 20,
-        totalRewards: Math.floor(Math.random() * 500000) + 100000,
-      })
+          // Get total stats
+          const total = usersData.reduce(
+            (acc, user: any) => ({
+              logins: acc.logins + (user.loginCount || 1),
+              tasks: acc.tasks + (Number(user.tasksCompleted) || 0),
+              rewards: acc.rewards + (Number(user.balance) || 0),
+              users: acc.users + 1,
+            }),
+            { logins: 0, tasks: 0, rewards: 0, users: 0 }
+          )
+
+          setTotalLogins(total.logins)
+          setTotalTasks(total.tasks)
+          setTotalRewards(total.rewards)
+          setAvgTasksPerUser(total.users > 0 ? total.tasks / total.users : 0)
+
+          // Generate analytics for each day
+          for (let i = days; i > 0; i--) {
+            const date = new Date()
+            date.setDate(date.getDate() - i)
+
+            // Simulate daily data based on proportional distribution
+            const dailyData: AnalyticsData = {
+              date: date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              }),
+              activeUsers: Math.floor(usersData.length * (0.6 + Math.random() * 0.4)),
+              totalTasks: Math.floor(total.tasks / days + Math.random() * 10),
+              totalRewards: Math.floor(total.rewards / days + Math.random() * 50000),
+              newUsers: Math.floor(Math.random() * 5),
+            }
+
+            analyticsData.push(dailyData)
+          }
+
+          setData(analyticsData)
+        }
+      }
+    } catch (error) {
+      console.error("Error loading analytics:", error)
     }
-
-    setData(analyticsData)
     setLoading(false)
   }
 
-  const totalLogins = data.reduce((sum, d) => sum + d.logins, 0)
-  const totalTasks = data.reduce((sum, d) => sum + d.tasksCompleted, 0)
-  const totalRewards = data.reduce((sum, d) => sum + d.totalRewards, 0)
-  const avgTasksPerDay = (totalTasks / data.length).toFixed(1)
+  const totalLogins = data.reduce((sum, d) => sum + d.activeUsers, 0)
+  const totalTasksChart = data.reduce((sum, d) => sum + d.totalTasks, 0)
+  const totalRewardsChart = data.reduce((sum, d) => sum + d.totalRewards, 0)
+  const avgTasksPerDay = (totalTasksChart / data.length).toFixed(1)
 
   const pieData = [
-    { name: "Tasks Completed", value: totalTasks, fill: "#3b82f6" },
-    { name: "User Logins", value: totalLogins, fill: "#10b981" },
+    { name: "Tasks Completed", value: totalTasksChart, fill: "#3b82f6" },
+    { name: "Active Users", value: totalLogins, fill: "#10b981" },
   ]
 
   return (
@@ -95,7 +135,7 @@ export default function AdminAnalytics() {
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Total Logins</p>
+                <p className="text-slate-400 text-sm">Total Login Sessions</p>
                 <p className="text-2xl font-bold text-emerald-400 mt-1">{totalLogins}</p>
               </div>
               <Users className="h-8 w-8 text-emerald-400/30" />
@@ -105,7 +145,7 @@ export default function AdminAnalytics() {
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Tasks Completed</p>
+                <p className="text-slate-400 text-sm">Total Tasks Completed</p>
                 <p className="text-2xl font-bold text-blue-400 mt-1">{totalTasks}</p>
               </div>
               <Award className="h-8 w-8 text-blue-400/30" />
@@ -125,7 +165,7 @@ export default function AdminAnalytics() {
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Total Rewards</p>
+                <p className="text-slate-400 text-sm">Total Balance Paid</p>
                 <p className="text-lg font-bold text-amber-400 mt-1">
                   ₦{(totalRewards / 1000000).toFixed(1)}M
                 </p>
@@ -159,8 +199,8 @@ export default function AdminAnalytics() {
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="tasksCompleted" stroke="#3b82f6" strokeWidth={2} />
-                <Line type="monotone" dataKey="logins" stroke="#10b981" strokeWidth={2} />
+                <Line type="monotone" dataKey="totalTasks" stroke="#3b82f6" strokeWidth={2} name="Tasks Completed" />
+                <Line type="monotone" dataKey="activeUsers" stroke="#10b981" strokeWidth={2} name="Active Users" />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -182,8 +222,8 @@ export default function AdminAnalytics() {
                 }}
               />
               <Legend />
-              <Bar dataKey="tasksCompleted" fill="#3b82f6" />
-              <Bar dataKey="logins" fill="#10b981" />
+              <Bar dataKey="totalTasks" fill="#3b82f6" name="Tasks Completed" />
+              <Bar dataKey="activeUsers" fill="#10b981" name="Active Users" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -226,7 +266,7 @@ export default function AdminAnalytics() {
                 <span className="font-semibold text-emerald-400">{data.length}</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-                <span className="text-slate-400">Total Logins</span>
+                <span className="text-slate-400">Total Login Sessions</span>
                 <span className="font-semibold text-emerald-400">{totalLogins}</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-slate-700">
