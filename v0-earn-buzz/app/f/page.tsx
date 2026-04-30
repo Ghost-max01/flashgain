@@ -173,8 +173,8 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        {/* Overall Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Overall Stats - Minimal, link to Users page for details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -188,30 +188,10 @@ export default function AdminDashboard() {
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm mb-1">Users Logged In</p>
+                <p className="text-slate-400 text-sm mb-1">Active Users</p>
                 <p className="text-3xl font-bold text-blue-400">{uniqueLogins}</p>
               </div>
               <Users className="h-12 w-12 text-blue-400/30" />
-            </div>
-          </div>
-
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm mb-1">Total Tasks Completed</p>
-                <p className="text-3xl font-bold text-purple-400">{totalTasks}</p>
-              </div>
-              <CheckCircle2 className="h-12 w-12 text-purple-400/30" />
-            </div>
-          </div>
-
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm mb-1">Total Balance</p>
-                <p className="text-2xl font-bold text-amber-400">{formatCurrency(totalBalance)}</p>
-              </div>
-              <DollarSign className="h-12 w-12 text-amber-400/30" />
             </div>
           </div>
         </div>
@@ -330,7 +310,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Overall Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -344,24 +324,16 @@ export default function AdminDashboard() {
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm mb-1">Total Tasks Completed</p>
-                <p className="text-3xl font-bold text-blue-400">{totalTasks}</p>
+                <p className="text-slate-400 text-sm mb-1">Active Users</p>
+                <p className="text-3xl font-bold text-blue-400">{uniqueLogins}</p>
               </div>
-              <CheckCircle2 className="h-12 w-12 text-blue-400/30" />
+              <Users className="h-12 w-12 text-blue-400/30" />
             </div>
           </div>
-
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm mb-1">Avg Tasks/User</p>
-                <p className="text-3xl font-bold text-amber-400">
-                  {totalUsers > 0 ? (totalTasks / totalUsers).toFixed(2) : 0}
-                </p>
-              </div>
-              <TrendingUp className="h-12 w-12 text-amber-400/30" />
-            </div>
-          </div>
+        </div>
+        
+        <div className="text-sm text-slate-400 mb-8 p-4 bg-slate-700/30 rounded-lg">
+          ℹ️ For detailed user stats, new registrations, tasks, and balance information, visit <Link href="/f/users" className="text-emerald-400 hover:underline">User Management</Link>
         </div>
       </div>
 

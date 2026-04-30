@@ -12,6 +12,7 @@ interface User {
   balance: number
   tasksCompleted: number
   lastLogin: string
+  created_at?: string
   status: "active" | "inactive" | "banned"
   referral_balance?: number
 }
@@ -21,6 +22,10 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "banned">("all")
   const [loading, setLoading] = useState(false)
+  const [newUsersThisWeek, setNewUsersThisWeek] = useState(0)
+  const [totalActiveUsers, setTotalActiveUsers] = useState(0)
+  const [totalTasks, setTotalTasks] = useState(0)
+  const [totalBalance, setTotalBalance] = useState(0)
 
   useEffect(() => {
     loadUsers()
@@ -53,12 +58,28 @@ export default function AdminUsers() {
               balance: Number(user.balance || 0),
               tasksCompleted: Number(user.tasksCompleted || 0),
               lastLogin: user.lastLogin || user.created_at || new Date().toISOString(),
+              created_at: user.created_at || new Date().toISOString(),
               status,
               referral_balance: Number(user.referral_balance || 0),
             }
           })
 
           setUsers(processedUsers)
+
+          // Calculate stats
+          const activeCount = processedUsers.filter(u => u.status === "active").length
+          setTotalActiveUsers(activeCount)
+          setTotalTasks(processedUsers.reduce((sum, u) => sum + u.tasksCompleted, 0))
+          setTotalBalance(processedUsers.reduce((sum, u) => sum + u.balance, 0))
+
+          // Count new users from past 7 days
+          const sevenDaysAgo = new Date()
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+          const newUsersCount = processedUsers.filter(u => {
+            const createdDate = new Date(u.created_at || 0)
+            return createdDate >= sevenDaysAgo
+          }).length
+          setNewUsersThisWeek(newUsersCount)
         }
       }
     } catch (error) {
@@ -124,27 +145,27 @@ export default function AdminUsers() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
             <p className="text-slate-400 text-sm">Total Users</p>
             <p className="text-2xl font-bold text-blue-400 mt-1">{users.length}</p>
           </div>
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
             <p className="text-slate-400 text-sm">Active Users</p>
-            <p className="text-2xl font-bold text-emerald-400 mt-1">
-              {users.filter((u) => u.status === "active").length}
-            </p>
+            <p className="text-2xl font-bold text-emerald-400 mt-1">{totalActiveUsers}</p>
           </div>
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
-            <p className="text-slate-400 text-sm">Inactive Users</p>
-            <p className="text-2xl font-bold text-amber-400 mt-1">
-              {users.filter((u) => u.status === "inactive").length}
-            </p>
+            <p className="text-slate-400 text-sm">New Users (7 days)</p>
+            <p className="text-2xl font-bold text-amber-400 mt-1">{newUsersThisWeek}</p>
           </div>
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
-            <p className="text-slate-400 text-sm">Banned Users</p>
-            <p className="text-2xl font-bold text-red-400 mt-1">
-              {users.filter((u) => u.status === "banned").length}
+            <p className="text-slate-400 text-sm">Total Tasks</p>
+            <p className="text-2xl font-bold text-purple-400 mt-1">{totalTasks}</p>
+          </div>
+          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-4">
+            <p className="text-slate-400 text-sm">Total Balance</p>
+            <p className="text-xl font-bold text-amber-400 mt-1">
+              ₦{(totalBalance / 1000000).toFixed(1)}M
             </p>
           </div>
         </div>
