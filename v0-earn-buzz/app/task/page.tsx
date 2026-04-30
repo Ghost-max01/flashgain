@@ -394,6 +394,44 @@ export default function TaskPage() {
     // Trigger coin rain animation
     setShowCoinRain(true)
     setTimeout(() => setShowCoinRain(false), 3000)
+
+    // Refresh today's stats immediately
+    try {
+      if (supabase && userId) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("tasksCompleted, balance, lastLogin")
+          .limit(1000)
+
+        if (usersData) {
+          let tasksCompletedTotal = 0
+          let loginsToday = 0
+          let earningsToday = 0
+
+          usersData.forEach((user: any) => {
+            tasksCompletedTotal += Number(user.tasksCompleted) || 0
+            
+            const lastLogin = new Date(user.lastLogin || "")
+            if (lastLogin >= today) {
+              loginsToday++
+            }
+            
+            earningsToday += Number(user.balance) || 0
+          })
+
+          setTodayStats({
+            tasksCompleted: tasksCompletedTotal,
+            totalLogins: loginsToday,
+            totalEarned: earningsToday,
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing today stats:", error)
+    }
   }
 
   const handleTaskClick = (task: Task) => {
@@ -544,7 +582,32 @@ export default function TaskPage() {
           </div>
         </div>
 
-        {/* Tasks List */}
+        {/* Today's Stats Card - Real-time Updates */}
+        <div className="hh-card hh-entry-2 relative overflow-hidden border border-emerald-500/30 bg-gradient-to-br from-emerald-900/20 to-transparent">
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Today's Activity</span>
+            </div>
+            
+            <div className="hh-stats-row">
+              <div className="hh-stat-item">
+                <div className="hh-stat-label text-xs">Tasks Today</div>
+                <div className="hh-stat-value text-emerald-400">{todayStats.tasksCompleted}</div>
+              </div>
+              <div className="hh-stat-divider"></div>
+              <div className="hh-stat-item">
+                <div className="hh-stat-label text-xs">Logins</div>
+                <div className="hh-stat-value text-blue-400">{todayStats.totalLogins}</div>
+              </div>
+              <div className="hh-stat-divider"></div>
+              <div className="hh-stat-item">
+                <div className="hh-stat-label text-xs">Total Earned</div>
+                <div className="hh-stat-value text-amber-300">₦{(todayStats.totalEarned / 1000000).toFixed(1)}M</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="space-y-4">
           {AVAILABLE_TASKS.map((task, index) => {
             const isVerifying = verifyingTasks[task.id] !== undefined
