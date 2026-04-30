@@ -61,7 +61,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
     reward: 5000,
-    link: "https://spin-to-win-hub-6676aed7-seven.vercel.app/",
+    link: "https://spinwin-iota.vercel.app",
     icon: "🎡",
   },
   {
