@@ -407,8 +407,8 @@ export default function TaskPage() {
       console.error("Failed to start task timer:", e)
     }
 
-    // Open link in a new tab
-    window.open(task.link, '_blank')
+    // Navigate to the task link in the same window so users can press back to return
+    window.location.href = task.link
   }
 
   const formatTime = (ms: number) => {
