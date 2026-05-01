@@ -32,54 +32,98 @@ export default function AdminAnalytics() {
 
     try {
       if (supabase) {
-        // Fetch real users data
-        const { data: usersData, error } = await supabase
-          .from("users")
-          .select("*")
-          .limit(1000)
+        const days = period === "7d" ? 7 : period === "30d" ? 30 : 90
+        const endDate = new Date()
+        const startDate = new Date()
+        startDate.setDate(endDate.getDate() - days)
 
-        if (!error && usersData) {
-          const days = period === "7d" ? 7 : period === "30d" ? 30 : 90
-          const analyticsData: AnalyticsData[] = []
+        // Fetch real session data
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('user_sessions')
+          .select('*')
+          .gte('date', startDate.toISOString().split('T')[0])
+          .lte('date', endDate.toISOString().split('T')[0])
+          .order('date', { ascending: true })
 
-          // Get total stats
-          const total = usersData.reduce(
-            (acc, user: any) => ({
-              logins: acc.logins + (user.loginCount || 1),
-              tasks: acc.tasks + (Number(user.tasksCompleted) || 0),
-              rewards: acc.rewards + (Number(user.balance) || 0),
-              users: acc.users + 1,
-            }),
-            { logins: 0, tasks: 0, rewards: 0, users: 0 }
-          )
+        // Fetch users data for additional metrics
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
 
-          setTotalLogins(total.logins)
-          setTotalTasks(total.tasks)
-          setTotalRewards(total.rewards)
-          setAvgTasksPerUser(total.users > 0 ? total.tasks / total.users : 0)
+        if (sessionError) {
+          console.error('Session data error:', sessionError)
+        }
 
-          // Generate analytics for each day
-          for (let i = days; i > 0; i--) {
-            const date = new Date()
-            date.setDate(date.getDate() - i)
+        if (usersError) {
+          console.error('Users data error:', usersError)
+        }
 
-            // Simulate daily data based on proportional distribution
-            const dailyData: AnalyticsData = {
-              date: date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              }),
-              activeUsers: Math.floor(usersData.length * (0.6 + Math.random() * 0.4)),
-              totalTasks: Math.floor(total.tasks / days + Math.random() * 10),
-              totalRewards: Math.floor(total.rewards / days + Math.random() * 50000),
-              newUsers: Math.floor(Math.random() * 5),
+        const analyticsData: AnalyticsData[] = []
+
+        // Calculate total stats from real data
+        let totalLoginsCount = 0
+        let totalTasksCount = 0
+        let totalRewardsCount = 0
+        let totalUsersCount = usersData?.length || 0
+
+        if (usersData) {
+          totalTasksCount = usersData.reduce((sum: number, user: any) => sum + (Number(user.tasksCompleted) || 0), 0)
+          totalRewardsCount = usersData.reduce((sum: number, user: any) => sum + (Number(user.balance) || 0), 0)
+        }
+
+        // Group sessions by date
+        const dailySessions = (sessionData || []).reduce((acc: any, session: any) => {
+          const date = session.date
+          if (!acc[date]) {
+            acc[date] = {
+              logins: 0,
+              uniqueUsers: new Set(),
+              date
             }
+          }
+          acc[date].logins++
+          acc[date].uniqueUsers.add(session.user_id)
+          return acc
+        }, {})
 
-            analyticsData.push(dailyData)
+        // Generate data for each day in the period
+        for (let i = days - 1; i >= 0; i--) {
+          const date = new Date()
+          date.setDate(date.getDate() - i)
+          const dateStr = date.toISOString().split('T')[0]
+          const displayDate = date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+
+          const dayData = dailySessions[dateStr] || { logins: 0, uniqueUsers: new Set() }
+
+          // Get tasks and rewards for this day (approximate distribution)
+          const dailyTasks = Math.floor(totalTasksCount / days)
+          const dailyRewards = Math.floor(totalRewardsCount / days)
+
+          // Count new users for this day (users created on this date)
+          const newUsersCount = usersData?.filter((user: any) =>
+            user.created_at?.startsWith(dateStr)
+          ).length || 0
+
+          const dailyData: AnalyticsData = {
+            date: displayDate,
+            activeUsers: dayData.uniqueUsers.size,
+            totalTasks: dailyTasks,
+            totalRewards: dailyRewards,
+            newUsers: newUsersCount,
           }
 
-          setData(analyticsData)
+          analyticsData.push(dailyData)
+          totalLoginsCount += dayData.logins
         }
+
+        setData(analyticsData)
+        setTotalLogins(totalLoginsCount)
+        setTotalTasks(totalTasksCount)
+        setTotalRewards(totalRewardsCount)
+        setAvgTasksPerUser(totalUsersCount > 0 ? totalTasksCount / totalUsersCount : 0)
       }
     } catch (error) {
       console.error("Error loading analytics:", error)
