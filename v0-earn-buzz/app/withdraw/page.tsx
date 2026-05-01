@@ -147,7 +147,24 @@ export default function WithdrawPage() {
     document.addEventListener("visibilitychange", onFocus)
     window.addEventListener("tivexx:update", onCustomUpdate as EventListener)
 
+    // Poll completed tasks every second to catch updates from same tab
+    const pollInterval = setInterval(() => {
+      try {
+        const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+        const count = Array.isArray(completed) ? completed.length : 0
+        setCompletedTasksCount(prevCount => {
+          if (prevCount !== count) {
+            return count
+          }
+          return prevCount
+        })
+      } catch (e) {
+        // ignore parse errors
+      }
+    }, 1000)
+
     return () => {
+      clearInterval(pollInterval)
       window.removeEventListener("storage", onStorage)
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onFocus)

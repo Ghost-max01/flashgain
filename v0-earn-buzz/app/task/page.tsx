@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, CheckCircle2, Clock, Gift, Sparkles, TrendingUp, Home, Gamepad2, User, Award, Zap } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Clock, Gift, Sparkles, Home, Gamepad2, User, Award, Zap } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer } from "@/hooks/useTaskTimer"
-import { supabase } from "@/lib/supabase/client"
 
 interface Task {
   id: string
@@ -122,7 +121,6 @@ export default function TaskPage() {
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({})
   const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({})
   const [showCoinRain, setShowCoinRain] = useState(false)
-  const [todayStats, setTodayStats] = useState({ tasksCompleted: 0, totalLogins: 0, totalEarned: 0 })
   const [userId, setUserId] = useState<string>("")
 
 
@@ -144,57 +142,6 @@ export default function TaskPage() {
     const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
     setCooldowns(savedCooldowns)
   }, [router])
-
-  // Load and track today's stats from Supabase
-  useEffect(() => {
-    if (!userId) return
-
-    const loadTodayStats = async () => {
-      try {
-        if (supabase) {
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-
-          // Fetch all users to calculate today's totals
-          const { data: usersData, error } = await supabase
-            .from("users")
-            .select("tasksCompleted, balance, lastLogin")
-            .limit(1000)
-
-          if (!error && usersData) {
-            let tasksCompletedTotal = 0
-            let loginsToday = 0
-            let earningsToday = 0
-
-            usersData.forEach((user: any) => {
-              tasksCompletedTotal += Number(user.tasksCompleted) || 0
-              
-              const lastLogin = new Date(user.lastLogin || "")
-              if (lastLogin >= today) {
-                loginsToday++
-              }
-              
-              earningsToday += Number(user.balance) || 0
-            })
-
-            setTodayStats({
-              tasksCompleted: tasksCompletedTotal,
-              totalLogins: loginsToday,
-              totalEarned: earningsToday,
-            })
-          }
-        }
-      } catch (error) {
-        console.error("Error loading today stats:", error)
-      }
-    }
-
-    loadTodayStats()
-
-    // Poll for updates every 5 seconds
-    const interval = setInterval(loadTodayStats, 5000)
-    return () => clearInterval(interval)
-  }, [userId])
 
   // Initialize task timer hook
   const { attachFocusListener, startTaskTimer } = useTaskTimer()
@@ -394,44 +341,6 @@ export default function TaskPage() {
     // Trigger coin rain animation
     setShowCoinRain(true)
     setTimeout(() => setShowCoinRain(false), 3000)
-
-    // Refresh today's stats immediately
-    try {
-      if (supabase && userId) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-
-        const { data: usersData } = await supabase
-          .from("users")
-          .select("tasksCompleted, balance, lastLogin")
-          .limit(1000)
-
-        if (usersData) {
-          let tasksCompletedTotal = 0
-          let loginsToday = 0
-          let earningsToday = 0
-
-          usersData.forEach((user: any) => {
-            tasksCompletedTotal += Number(user.tasksCompleted) || 0
-            
-            const lastLogin = new Date(user.lastLogin || "")
-            if (lastLogin >= today) {
-              loginsToday++
-            }
-            
-            earningsToday += Number(user.balance) || 0
-          })
-
-          setTodayStats({
-            tasksCompleted: tasksCompletedTotal,
-            totalLogins: loginsToday,
-            totalEarned: earningsToday,
-          })
-        }
-      }
-    } catch (error) {
-      console.error("Error refreshing today stats:", error)
-    }
   }
 
   const handleTaskClick = (task: Task) => {
@@ -582,32 +491,6 @@ export default function TaskPage() {
           </div>
         </div>
 
-        {/* Today's Stats Card - Real-time Updates */}
-        <div className="hh-card hh-entry-2 relative overflow-hidden border border-emerald-500/30 bg-gradient-to-br from-emerald-900/20 to-transparent">
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Today's Activity</span>
-            </div>
-            
-            <div className="hh-stats-row">
-              <div className="hh-stat-item">
-                <div className="hh-stat-label text-xs">Tasks Today</div>
-                <div className="hh-stat-value text-emerald-400">{todayStats.tasksCompleted}</div>
-              </div>
-              <div className="hh-stat-divider"></div>
-              <div className="hh-stat-item">
-                <div className="hh-stat-label text-xs">Logins</div>
-                <div className="hh-stat-value text-blue-400">{todayStats.totalLogins}</div>
-              </div>
-              <div className="hh-stat-divider"></div>
-              <div className="hh-stat-item">
-                <div className="hh-stat-label text-xs">Total Earned</div>
-                <div className="hh-stat-value text-amber-300">₦{(todayStats.totalEarned / 1000000).toFixed(1)}M</div>
-              </div>
-            </div>
-          </div>
-        </div>
         <div className="space-y-4">
           {AVAILABLE_TASKS.map((task, index) => {
             const isVerifying = verifyingTasks[task.id] !== undefined
