@@ -308,6 +308,22 @@ export default function TaskPage() {
       } catch (err) {
         console.error("Failed to sync user balance to server:", err)
       }
+
+      // Track task completion for analytics
+      try {
+        await fetch(`/api/track-task`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.id || user.user_id || user.userId,
+            taskId: task.id,
+            taskName: task.platform,
+            reward: task.reward,
+          }),
+        })
+      } catch (err) {
+        console.error("Failed to track task completion:", err)
+      }
     }
 
     const newCompleted = [...completedTasks, task.id]
