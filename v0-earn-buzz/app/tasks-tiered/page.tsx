@@ -19,34 +19,59 @@ interface Task {
   tier: 'silver' | 'gold' | 'diamond'
 }
 
-// Generate 50 tasks with compounding rewards
-const generateTieredTasks = (): Task[] => {
-  const icons = ['📢', '💬', '🎯', '🎁', '🎡', '💸💲', '🎵', '🤖', '🌐', '📱', '🎬', '🎮', '🎪', '🎨', '🎭', '🎯', '🎲', '🎰', '🏆', '⭐']
-  const platforms = ['Monetage', 'Telegram', 'EffectiveGate', 'Spin-to-Win', 'Winners Hub', 'Nova Cash', 'Survey Task', 'CPM Ad', 'Promo Link', 'Click Task']
-  const descriptions = ['Tap our premium ad link', 'Join our community', 'Complete offer', 'View promotion', 'Earn extra bonus']
-  
-  const tasks: Task[] = []
-  
-  for (let i = 1; i <= 50; i++) {
-    // Compounding reward: base 5000 + increase of 100 per task
-    const baseReward = 5000 + (i - 1) * 100
-    
-    tasks.push({
-      id: `tiered-task-${i}`,
-      platform: `${platforms[i % platforms.length]} Task ${i}`,
-      description: descriptions[i % descriptions.length],
-      category: ['Ads', 'Tasks', 'Social Media', 'Survey'][i % 4],
-      reward: baseReward,
-      link: "https://spinwin-iota.vercel.app",
-      icon: icons[i % icons.length],
-      tier: 'silver'
-    })
-  }
-  
-  return tasks
-}
-
-const AVAILABLE_TASKS = generateTieredTasks()
+// 50 Individual Tasks with compounding rewards
+const AVAILABLE_TASKS: Task[] = [
+  { id: "tiered-task-1", platform: "Monetage Spin-to-Win", description: "Tap our premium ad link for rewards", category: "Ads", reward: 5000, link: "https://spinwin-iota.vercel.app", icon: "📢", tier: "silver" },
+  { id: "tiered-task-2", platform: "Telegram Channel", description: "Join our community for bonus", category: "Social Media", reward: 5100, link: "https://spinwin-iota.vercel.app", icon: "💬", tier: "silver" },
+  { id: "tiered-task-3", platform: "EffectiveGate CPM Ad", description: "Click ad link to earn extra money", category: "Advertisement", reward: 5200, link: "https://otieu.com/4/10575212", icon: "🎯", tier: "silver" },
+  { id: "tiered-task-4", platform: "Spin-to-Win Hub", description: "Tap our premium ad for rewards", category: "Advertisement", reward: 5300, link: "https://spinwin-iota.vercel.app", icon: "🎡", tier: "silver" },
+  { id: "tiered-task-5", platform: "Winners Hub Promo", description: "Click promotional link", category: "Advertisement", reward: 5400, link: "https://omg10.com/4/10676426", icon: "💸", tier: "silver" },
+  { id: "tiered-task-6", platform: "Nova Cash Survey", description: "Complete quick survey task", category: "Tasks", reward: 5500, link: "https://spinwin-iota.vercel.app", icon: "🎵", tier: "silver" },
+  { id: "tiered-task-7", platform: "Sponsored Ads 1", description: "Tap premium ad link here", category: "Social Media", reward: 5600, link: "https://otieu.com/4/10575212", icon: "🤖", tier: "silver" },
+  { id: "tiered-task-8", platform: "Sponsored Ads 2", description: "View and click promotion", category: "Social Media", reward: 5700, link: "https://creditbuzz.online", icon: "🌐", tier: "silver" },
+  { id: "tiered-task-9", platform: "Sponsored Ads 3", description: "Complete sponsored offer", category: "Social Media", reward: 5800, link: "https://omg10.com/4/10676426", icon: "📱", tier: "silver" },
+  { id: "tiered-task-10", platform: "Ad Network Task", description: "Click and interact with ad", category: "Ads", reward: 5900, link: "https://spinwin-iota.vercel.app", icon: "🎬", tier: "silver" },
+  { id: "tiered-task-11", platform: "Promo Link 1", description: "Tap promotional link here", category: "Advertisement", reward: 6000, link: "https://otieu.com/4/10575212", icon: "🎮", tier: "silver" },
+  { id: "tiered-task-12", platform: "Promo Link 2", description: "Click promo for bonus", category: "Advertisement", reward: 6100, link: "https://omg10.com/4/10676426", icon: "🎪", tier: "silver" },
+  { id: "tiered-task-13", platform: "Community Join", description: "Join our online community", category: "Social Media", reward: 6200, link: "https://spinwin-iota.vercel.app", icon: "🎨", tier: "silver" },
+  { id: "tiered-task-14", platform: "Survey Platform", description: "Complete survey for rewards", category: "Tasks", reward: 6300, link: "https://otieu.com/4/10575212", icon: "🎭", tier: "silver" },
+  { id: "tiered-task-15", platform: "Click Campaign", description: "Click campaign link", category: "Ads", reward: 6400, link: "https://creditbuzz.online", icon: "🎯", tier: "silver" },
+  { id: "tiered-task-16", platform: "Offer Wall Task", description: "Complete offer wall task", category: "Tasks", reward: 6500, link: "https://spinwin-iota.vercel.app", icon: "🎲", tier: "silver" },
+  { id: "tiered-task-17", platform: "Mobile Ad Click", description: "Tap mobile advertisement", category: "Ads", reward: 6600, link: "https://omg10.com/4/10676426", icon: "🎰", tier: "silver" },
+  { id: "tiered-task-18", platform: "Reward Program", description: "Join reward program and earn", category: "Tasks", reward: 6700, link: "https://otieu.com/4/10575212", icon: "🏆", tier: "silver" },
+  { id: "tiered-task-19", platform: "Partner Ad", description: "Click partner advertisement", category: "Advertisement", reward: 6800, link: "https://spinwin-iota.vercel.app", icon: "⭐", tier: "silver" },
+  { id: "tiered-task-20", platform: "Earn Extra Income", description: "Complete income boost task", category: "Tasks", reward: 6900, link: "https://creditbuzz.online", icon: "📢", tier: "silver" },
+  { id: "tiered-task-21", platform: "Bonus Click Task", description: "Click bonus link for earn", category: "Ads", reward: 7000, link: "https://omg10.com/4/10676426", icon: "💬", tier: "silver" },
+  { id: "tiered-task-22", platform: "Flash Offer", description: "Tap flash offer link", category: "Advertisement", reward: 7100, link: "https://otieu.com/4/10575212", icon: "🎯", tier: "silver" },
+  { id: "tiered-task-23", platform: "Premium Access", description: "Get premium access via link", category: "Tasks", reward: 7200, link: "https://spinwin-iota.vercel.app", icon: "🎡", tier: "silver" },
+  { id: "tiered-task-24", platform: "Daily Draw", description: "Participate in daily draw", category: "Social Media", reward: 7300, link: "https://creditbuzz.online", icon: "💸", tier: "silver" },
+  { id: "tiered-task-25", platform: "Video View Reward", description: "Watch video and earn bonus", category: "Tasks", reward: 7400, link: "https://omg10.com/4/10676426", icon: "🎵", tier: "silver" },
+  { id: "tiered-task-26", platform: "Shopping Ad", description: "Click shopping promotion", category: "Advertisement", reward: 7500, link: "https://otieu.com/4/10575212", icon: "🤖", tier: "silver" },
+  { id: "tiered-task-27", platform: "Referral Bonus", description: "Earn referral bonus reward", category: "Tasks", reward: 7600, link: "https://spinwin-iota.vercel.app", icon: "🌐", tier: "silver" },
+  { id: "tiered-task-28", platform: "Limited Time Offer", description: "Claim limited time offer", category: "Ads", reward: 7700, link: "https://creditbuzz.online", icon: "📱", tier: "silver" },
+  { id: "tiered-task-29", platform: "Instant Reward", description: "Get instant payout reward", category: "Tasks", reward: 7800, link: "https://omg10.com/4/10676426", icon: "🎬", tier: "silver" },
+  { id: "tiered-task-30", platform: "Member Exclusive", description: "Member exclusive offer here", category: "Advertisement", reward: 7900, link: "https://otieu.com/4/10575212", icon: "🎮", tier: "silver" },
+  { id: "tiered-task-31", platform: "Quick Cash", description: "Quick cash earning task", category: "Tasks", reward: 8000, link: "https://spinwin-iota.vercel.app", icon: "🎪", tier: "silver" },
+  { id: "tiered-task-32", platform: "Brand Partner Ad", description: "Brand partner advertisement", category: "Ads", reward: 8100, link: "https://creditbuzz.online", icon: "🎨", tier: "silver" },
+  { id: "tiered-task-33", platform: "Exclusive Deal", description: "Click exclusive deal link", category: "Advertisement", reward: 8200, link: "https://omg10.com/4/10676426", icon: "🎭", tier: "silver" },
+  { id: "tiered-task-34", platform: "Bonus Multiplier", description: "Unlock bonus multiplier", category: "Tasks", reward: 8300, link: "https://otieu.com/4/10575212", icon: "🎯", tier: "silver" },
+  { id: "tiered-task-35", platform: "Earning Stream", description: "Open earning stream link", category: "Ads", reward: 8400, link: "https://spinwin-iota.vercel.app", icon: "🎲", tier: "silver" },
+  { id: "tiered-task-36", platform: "Fast Payout", description: "Fast payout task reward", category: "Tasks", reward: 8500, link: "https://creditbuzz.online", icon: "🎰", tier: "silver" },
+  { id: "tiered-task-37", platform: "Premium Deal", description: "Premium deal offer here", category: "Advertisement", reward: 8600, link: "https://omg10.com/4/10676426", icon: "🏆", tier: "silver" },
+  { id: "tiered-task-38", platform: "Reward Unlock", description: "Unlock hidden reward", category: "Tasks", reward: 8700, link: "https://otieu.com/4/10575212", icon: "⭐", tier: "silver" },
+  { id: "tiered-task-39", platform: "Instant Cashout", description: "Instant cashout available", category: "Ads", reward: 8800, link: "https://spinwin-iota.vercel.app", icon: "📢", tier: "silver" },
+  { id: "tiered-task-40", platform: "VIP Offer", description: "VIP member offer task", category: "Advertisement", reward: 8900, link: "https://creditbuzz.online", icon: "💬", tier: "silver" },
+  { id: "tiered-task-41", platform: "Mega Bonus", description: "Mega bonus earning click", category: "Tasks", reward: 9000, link: "https://omg10.com/4/10676426", icon: "🎯", tier: "silver" },
+  { id: "tiered-task-42", platform: "Elite Campaign", description: "Elite campaign participation", category: "Ads", reward: 9100, link: "https://otieu.com/4/10575212", icon: "🎡", tier: "silver" },
+  { id: "tiered-task-43", platform: "Pro Membership", description: "Pro membership boost task", category: "Tasks", reward: 9200, link: "https://spinwin-iota.vercel.app", icon: "💸", tier: "silver" },
+  { id: "tiered-task-44", platform: "Super Reward", description: "Super reward task click", category: "Advertisement", reward: 9300, link: "https://creditbuzz.online", icon: "🎵", tier: "silver" },
+  { id: "tiered-task-45", platform: "Final Bonus", description: "Final bonus task reward", category: "Tasks", reward: 9400, link: "https://omg10.com/4/10676426", icon: "🤖", tier: "silver" },
+  { id: "tiered-task-46", platform: "Extra Income", description: "Extra income source here", category: "Ads", reward: 9500, link: "https://otieu.com/4/10575212", icon: "🌐", tier: "silver" },
+  { id: "tiered-task-47", platform: "Ultimate Prize", description: "Ultimate prize earning task", category: "Advertisement", reward: 9600, link: "https://spinwin-iota.vercel.app", icon: "📱", tier: "silver" },
+  { id: "tiered-task-48", platform: "Power Earn", description: "Power earn mode activated", category: "Tasks", reward: 9700, link: "https://creditbuzz.online", icon: "🎬", tier: "silver" },
+  { id: "tiered-task-49", platform: "Maximum Payout", description: "Maximum payout available", category: "Ads", reward: 9800, link: "https://omg10.com/4/10676426", icon: "🎮", tier: "silver" },
+  { id: "tiered-task-50", platform: "Legendary Reward", description: "Legendary reward final task", category: "Advertisement", reward: 9900, link: "https://otieu.com/4/10575212", icon: "🎪", tier: "silver" },
+]
 
 export default function TieredTaskPage() {
   const router = useRouter()
@@ -59,6 +84,7 @@ export default function TieredTaskPage() {
   const progressIntervals = useRef<Record<string, NodeJS.Timeout>>({})
   const [showCoinRain, setShowCoinRain] = useState(false)
   const [userId, setUserId] = useState<string>("")
+  const [showCompleteTasksModal, setShowCompleteTasksModal] = useState(false)
 
   // Tier stats - only shows 50 tasks per day
   const totalCompleted = completedTasks.length
@@ -423,6 +449,36 @@ export default function TieredTaskPage() {
         </div>
       )}
 
+      {/* Complete Tasks Modal */}
+      {showCompleteTasksModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-b from-gray-900 to-gray-950 rounded-2xl border border-red-500/30 p-8 max-w-sm w-full">
+            <div className="text-center">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h2 className="text-2xl font-bold text-white mb-3">Complete All 50 Tasks</h2>
+              <p className="text-gray-300 mb-6">
+                You must complete all 50 tasks today before you can withdraw your earnings. You've completed {totalCompleted}/50 tasks.
+              </p>
+              <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden mb-4">
+                <div 
+                  className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all"
+                  style={{ width: `${(totalCompleted / 50) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-400 mb-6">
+                {50 - totalCompleted} tasks remaining
+              </p>
+              <button
+                onClick={() => setShowCompleteTasksModal(false)}
+                className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-700 hover:to-red-600 transition-all"
+              >
+                Continue Tasks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="sticky top-0 z-10 hh-header">
         <div className="max-w-md mx-auto px-6 pt-8 pb-4">
@@ -514,11 +570,18 @@ export default function TieredTaskPage() {
               </div>
             </div>
 
-            <Link href="/withdraw" className="block mt-4">
-              <button className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all">
-                💵 Withdraw Anytime
-              </button>
-            </Link>
+            <button 
+              onClick={() => {
+                if (totalCompleted < 50) {
+                  setShowCompleteTasksModal(true)
+                } else {
+                  window.location.href = '/withdraw'
+                }
+              }}
+              className="w-full mt-4 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all"
+            >
+              💵 Withdraw Anytime
+            </button>
           </div>
         </div>
 
