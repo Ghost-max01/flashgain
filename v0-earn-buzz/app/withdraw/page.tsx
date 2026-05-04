@@ -345,8 +345,8 @@ export default function WithdrawPage() {
               </div>
             </div>
 
-            {/* Referral Progress - Show when toggle is off */}
-            {!toggleActive && (
+            {/* Referral Progress - Only Show After Tasks Complete */}
+            {completedTasksCount >= TOTAL_DAILY_TASKS && !toggleActive && (
               <div
                 className="cursor-pointer"
                 onClick={() => router.push('/refer')}
