@@ -136,12 +136,11 @@ export default function TaskPage() {
     setBalance(user.balance || 0)
     setUserId(user.id || user.userId || user.user_id || "")
 
-    // Reset all tasks to zero - clear completed tasks and cooldowns
-    setCompletedTasks([])
-    localStorage.setItem("tivexx-completed-tasks", JSON.stringify([]))
-    
-    setCooldowns({})
-    localStorage.setItem("tivexx-task-cooldowns", JSON.stringify({}))
+    const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+    setCompletedTasks(Array.isArray(completed) ? completed : [])
+
+    const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
+    setCooldowns(savedCooldowns)
   }, [router])
 
   // Initialize task timer hook
