@@ -45,8 +45,8 @@ export function useTaskTimer() {
             return
           }
 
-          if (elapsed >= 10000) {
-            // Task qualifies for completion (10+ seconds outside)
+          if (elapsed >= 20000) {
+            // Task qualifies for completion (20+ seconds outside)
             onTaskSuccess(taskId, elapsed / 1000)
             tasksToDelete.push(taskId)
           } else {
