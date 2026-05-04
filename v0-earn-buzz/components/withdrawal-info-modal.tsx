@@ -1,6 +1,7 @@
 "use client"
 
 import { CheckCircle2, X, AlertCircle, Gift, Users } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface WithdrawalInfoModalProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ export function WithdrawalInfoModal({
   onClose,
   onProceed,
 }: WithdrawalInfoModalProps) {
+  const router = useRouter()
   const TOTAL_TASKS = 10
   const REQUIRED_REFERRALS = 5
 
@@ -81,7 +83,7 @@ export function WithdrawalInfoModal({
               <p className="modal-subtitle">Complete all requirements to withdraw</p>
 
               <div className="requirements-list">
-                <div className={`requirement-item ${completedTasksCount >= TOTAL_TASKS ? 'completed' : 'pending'}`}>
+                <div className={`requirement-item ${completedTasksCount >= TOTAL_TASKS ? 'completed' : 'pending'} cursor-pointer`} onClick={() => router.push('/task')}>
                   <div className="requirement-icon">
                     <Gift className="h-5 w-5" />
                   </div>
@@ -96,7 +98,7 @@ export function WithdrawalInfoModal({
                   )}
                 </div>
 
-                <div className={`requirement-item ${referralCount >= REQUIRED_REFERRALS ? 'completed' : 'pending'}`}>
+                <div className={`requirement-item ${referralCount >= REQUIRED_REFERRALS ? 'completed' : 'pending'} cursor-pointer`} onClick={() => router.push('/refer')}>
                   <div className="requirement-icon">
                     <Users className="h-5 w-5" />
                   </div>
@@ -343,6 +345,7 @@ export function WithdrawalInfoModal({
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
           transition: all 0.2s ease;
+          cursor: pointer;
         }
 
         .requirement-item.completed {
