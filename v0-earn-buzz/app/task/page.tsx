@@ -79,7 +79,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Join Nova Cash",
     category: "Tasks",
     reward: 5000,
-    link: "spinwin-iota.vercel.app",
+    link: "https://spinwin-iota.vercel.app",
     icon: "🎵",
   },
   {
@@ -139,8 +139,9 @@ export default function TaskPage() {
     const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
     setCompletedTasks(completed)
 
-    const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
-    setCooldowns(savedCooldowns)
+    // Reset all task cooldowns to 0 for fresh start
+    setCooldowns({})
+    localStorage.setItem("tivexx-task-cooldowns", JSON.stringify({}))
   }, [router])
 
   // Initialize task timer hook
