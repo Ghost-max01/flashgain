@@ -179,13 +179,14 @@ export default function WithdrawPage() {
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
   const handleCashout = () => {
-    // Check if requirements are NOT met
-    const needsReferralCheck = !toggleActive
-    const meetsRequirements = toggleActive
-      ? (balance >= 200000 && completedTasksCount >= TOTAL_DAILY_TASKS)
-      : (balance >= 200000 && referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS)
+    const missingBalance = balance < 200000
+    const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
 
-    // Show the modal - it will display appropriate content based on isEligible
+    if (toggleActive && missingTasks) {
+      setShowRequirementsModal(true)
+      return
+    }
+
     setShowWithdrawalInfoModal(true)
   }
 
@@ -376,7 +377,7 @@ export default function WithdrawPage() {
                   onClick={handleCashout}
                   className={`hh-withdraw-btn ${meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-blurred'}`}
                 >
-                  {meetsRequirements ? '✨ Withdraw Now' : 'Withdraw Now'}
+                  {toggleActive ? 'Instant Withdraw' : (meetsRequirements ? '✨ Withdraw Now' : 'Withdraw Now')}
                 </button>
 
                 {/* If referrals are the missing piece and the user hasn't toggled withdraw-without-referral, show refer CTA */}
@@ -401,7 +402,12 @@ export default function WithdrawPage() {
                 <AlertTriangle className="h-8 w-8 text-amber-400" />
                 <h2 className="text-xl font-bold text-white">Missing Requirements</h2>
               </div>
-              
+              <p className="text-sm text-gray-400 mb-4">
+                {toggleActive && completedTasksCount < TOTAL_DAILY_TASKS
+                  ? `Instant Withdraw requires all ${TOTAL_DAILY_TASKS} daily tasks complete. Tap the task item to finish them.`
+                  : 'Complete the requirements below before withdrawing.'}
+              </p>
+
               <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
                 {/* Balance requirement */}
                 <div className={`hh-req-detail-item ${balance >= 200000 ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
@@ -422,7 +428,12 @@ export default function WithdrawPage() {
 
                 {/* Referral requirement (hidden if toggle is on) */}
                 {!toggleActive && (
-                  <div className={`hh-req-detail-item ${referralCount >= 5 ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
+                  <div
+                    className={`hh-req-detail-item ${referralCount >= 5 ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
+                    onClick={() => router.push('/refer')}
+                    role="button"
+                    tabIndex={0}
+                  >
                     <div className="flex items-center gap-3">
                       <div className={`hh-req-detail-icon ${referralCount >= 5 ? 'text-emerald-400' : 'text-amber-400'}`}>
                         <Users className="h-5 w-5" />
@@ -440,7 +451,12 @@ export default function WithdrawPage() {
                 )}
 
                 {/* Daily tasks requirement */}
-                <div className={`hh-req-detail-item ${completedTasksCount >= TOTAL_DAILY_TASKS ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
+                <div
+                  className={`hh-req-detail-item ${completedTasksCount >= TOTAL_DAILY_TASKS ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
+                  onClick={() => router.push('/task')}
+                  role="button"
+                  tabIndex={0}
+                >
                   <div className="flex items-center gap-3">
                     <div className={`hh-req-detail-icon ${completedTasksCount >= TOTAL_DAILY_TASKS ? 'text-emerald-400' : 'text-amber-400'}`}>
                       <Gift className="h-5 w-5" />
