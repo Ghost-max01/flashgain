@@ -276,13 +276,9 @@ export default function TaskPage() {
   }, [cooldowns])
 
   const getNextResetBoundary = (date: Date) => {
+    // Add exactly 12 hours from now
     const boundary = new Date(date)
-    const hour = boundary.getHours()
-    if (hour < 12) {
-      boundary.setHours(12, 0, 0, 0)
-    } else {
-      boundary.setHours(24, 0, 0, 0)
-    }
+    boundary.setHours(boundary.getHours() + 12)
     return boundary
   }
 
