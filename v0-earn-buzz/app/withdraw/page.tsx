@@ -324,7 +324,12 @@ export default function WithdrawPage() {
         <div className="hh-card hh-entry-4">
           <div className="space-y-4">
             {/* Daily Tasks Progress - Always Show */}
-            <div>
+            <div
+              className="cursor-pointer"
+              onClick={() => router.push('/task')}
+              role="button"
+              tabIndex={0}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-amber-400" />
@@ -340,9 +345,14 @@ export default function WithdrawPage() {
               </div>
             </div>
 
-            {/* Referral Progress - Only Show After Tasks Complete */}
-            {completedTasksCount >= TOTAL_DAILY_TASKS && !toggleActive && (
-              <div>
+            {/* Referral Progress - Show when toggle is off */}
+            {!toggleActive && (
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push('/refer')}
+                role="button"
+                tabIndex={0}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-emerald-400" />
