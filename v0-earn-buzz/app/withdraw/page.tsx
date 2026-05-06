@@ -341,55 +341,57 @@ export default function WithdrawPage() {
         </div>
 
         {/* Progress Section */}
-        <div className="hh-card hh-entry-4">
-          <div className="space-y-4">
-            {/* Daily Tasks Progress - Always Show */}
-            <div
-              className="cursor-pointer"
-              onClick={() => router.push('/task')}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-400" />
-                  <span className="text-sm font-medium text-white">Daily Tasks Progress</span>
-                </div>
-                <span className="text-sm font-bold text-amber-300">{completedTasksCount}/{TOTAL_DAILY_TASKS}</span>
-              </div>
-              <div className="hh-progress-track">
-                <div 
-                  className="hh-progress-fill hh-progress-tasks" 
-                  style={{ width: `${Math.min((completedTasksCount / TOTAL_DAILY_TASKS) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Referral Progress - Only Show After Tasks Complete */}
-            {completedTasksCount >= TOTAL_DAILY_TASKS && !toggleActive && (
+        {!toggleActive && (
+          <div className="hh-card hh-entry-4">
+            <div className="space-y-4">
+              {/* Daily Tasks Progress - Show only when toggle is off */}
               <div
                 className="cursor-pointer"
-                onClick={() => router.push('/refer')}
+                onClick={() => router.push('/task')}
                 role="button"
                 tabIndex={0}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-medium text-white">Referral Progress</span>
+                    <Clock className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-medium text-white">Daily Tasks Progress</span>
                   </div>
-                  <span className="text-sm font-bold text-amber-300">{referralCount}/5</span>
+                  <span className="text-sm font-bold text-amber-300">{completedTasksCount}/{TOTAL_DAILY_TASKS}</span>
                 </div>
                 <div className="hh-progress-track">
                   <div 
-                    className="hh-progress-fill" 
-                    style={{ width: progressWidth }}
+                    className="hh-progress-fill hh-progress-tasks" 
+                    style={{ width: `${Math.min((completedTasksCount / TOTAL_DAILY_TASKS) * 100, 100)}%` }}
                   />
                 </div>
               </div>
-            )}
+
+              {/* Referral Progress - Only Show After Tasks Complete */}
+              {completedTasksCount >= TOTAL_DAILY_TASKS && (
+                <div
+                  className="cursor-pointer"
+                  onClick={() => router.push('/refer')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-white">Referral Progress</span>
+                    </div>
+                    <span className="text-sm font-bold text-amber-300">{referralCount}/5</span>
+                  </div>
+                  <div className="hh-progress-track">
+                    <div 
+                      className="hh-progress-fill" 
+                      style={{ width: progressWidth }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Buttons Section */}
         <div className="space-y-3 hh-entry-5">
@@ -548,6 +550,15 @@ export default function WithdrawPage() {
               <p className="text-xs text-gray-500 text-center mb-6">
                 This popup will close automatically in 10 seconds.
               </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push('/tasks-tiered')}
+                  className="hh-popup-btn hh-popup-btn-confirm flex-1"
+                >
+                  Go to Tiered Tasks
+                </button>
+              </div>
             </div>
           </div>
         )}
