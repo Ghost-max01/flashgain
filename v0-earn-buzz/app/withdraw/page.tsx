@@ -21,6 +21,7 @@ export default function WithdrawPage() {
   const [showRequirementsModal, setShowRequirementsModal] = useState(false)
   const [showWithdrawalInfoModal, setShowWithdrawalInfoModal] = useState(false)
   const [showInstantWithdrawBlockedPopup, setShowInstantWithdrawBlockedPopup] = useState(false)
+  const [popupCountdown, setPopupCountdown] = useState(20)
   const TOTAL_DAILY_TASKS = 10
   const TIERED_TOTAL_TASKS = 50
 
@@ -180,15 +181,22 @@ export default function WithdrawPage() {
     setShowCashout(meetsRequirements)
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
-  // Auto-close blocked popup after 10 seconds and reset toggle
+  // Auto-close blocked popup after 20 seconds with countdown and reset toggle
   useEffect(() => {
     if (showInstantWithdrawBlockedPopup) {
-      const timer = setTimeout(() => {
-        setShowInstantWithdrawBlockedPopup(false)
-        setToggleActive(false)
-      }, 10000)
+      setPopupCountdown(20)
+      const timer = setInterval(() => {
+        setPopupCountdown(prev => {
+          if (prev <= 1) {
+            setShowInstantWithdrawBlockedPopup(false)
+            setToggleActive(false)
+            return 20
+          }
+          return prev - 1
+        })
+      }, 1000)
 
-      return () => clearTimeout(timer)
+      return () => clearInterval(timer)
     }
   }, [showInstantWithdrawBlockedPopup])
 
@@ -548,7 +556,7 @@ export default function WithdrawPage() {
               </p>
               
               <p className="text-xs text-gray-500 text-center mb-6">
-                This popup will close automatically in 10 seconds.
+                This popup will close automatically in <span className="font-bold text-amber-400">{popupCountdown}</span> seconds.
               </p>
 
               <div className="flex gap-3">
@@ -982,6 +990,18 @@ export default function WithdrawPage() {
           border: 1px solid rgba(245,158,11,0.2);
           cursor: pointer;
           transition: all 0.2s ease;
+          animation: hh-button-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes hh-button-pulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 20px rgba(245,158,11,0.4);
+          }
+          50% {
+            transform: scale(0.98);
+            box-shadow: 0 0 40px rgba(245,158,11,0.6);
+          }
         }
 
         .hh-withdraw-faded:hover {

@@ -544,46 +544,56 @@ export default function TieredTaskPage() {
           </div>
         </div>
 
-        {/* Stats Card */}
-        <div className="hh-card hh-entry-1 relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="hh-icon-ring">
-                <Zap className="h-5 w-5 text-amber-300" />
+        {/* 49/50 Upgrade CTA (replaces Today's Earnings card) */}
+        {totalCompleted === 49 && (
+          <div className="hh-card hh-entry-1 relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="hh-icon-ring">
+                  <Sparkles className="h-5 w-5 text-amber-300" />
+                </div>
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Almost There</span>
               </div>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Today's Earnings</span>
-            </div>
-            
-            <p className="text-white/80 text-sm mb-4">
-              💰 Earn compounding rewards! Each task increases. Complete all 50 to upgrade, or withdraw anytime with your current balance.
-            </p>
 
-            <div className="hh-stats-row">
-              <div className="hh-stat-item">
-                <div className="hh-stat-label">Tasks Left</div>
-                <div className="hh-stat-value text-emerald-400">{50 - totalCompleted}</div>
+              <p className="text-white/80 text-sm mb-4">
+                🎯 You're one task away from upgrading! Complete the final task to unlock the next tier tomorrow.
+              </p>
+
+              <div className="hh-stats-row mb-3">
+                <div className="hh-stat-item">
+                  <div className="hh-stat-label">Tasks Left</div>
+                  <div className="hh-stat-value text-emerald-400">{50 - totalCompleted}</div>
+                </div>
+                <div className="hh-stat-divider"></div>
+                <div className="hh-stat-item">
+                  <div className="hh-stat-label">Completed</div>
+                  <div className="hh-stat-value text-amber-300">{totalCompleted}</div>
+                </div>
               </div>
-              <div className="hh-stat-divider"></div>
-              <div className="hh-stat-item">
-                <div className="hh-stat-label">Completed</div>
-                <div className="hh-stat-value text-amber-300">{totalCompleted}</div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    // try to scroll to the final task card; fallback to bottom
+                    const el = document.querySelector(`[data-task-id="${AVAILABLE_TASKS[49].id}"]`)
+                    if (el) (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    else window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                  }}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-400 text-white font-bold rounded-lg hover:from-emerald-600 hover:to-emerald-500 transition-all"
+                >
+                  Complete Final Task
+                </button>
+
+                <button
+                  onClick={() => setShowCompleteTasksModal(false)}
+                  className="flex-1 py-2 px-4 bg-gray-800 border border-gray-700 text-gray-200 font-medium rounded-lg hover:bg-gray-700 transition-all"
+                >
+                  Maybe Later
+                </button>
               </div>
             </div>
-
-            <button 
-              onClick={() => {
-                if (totalCompleted < 50) {
-                  setShowCompleteTasksModal(true)
-                } else {
-                  window.location.href = '/withdraw'
-                }
-              }}
-              className="w-full mt-4 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all"
-            >
-              💵 Withdraw Anytime
-            </button>
           </div>
-        </div>
+        )}
 
         {/* Tasks Grid */}
         <div className="space-y-4">
@@ -599,6 +609,7 @@ export default function TieredTaskPage() {
             return (
               <div
                 key={task.id}
+                data-task-id={task.id}
                 className={`hh-task-card hh-entry-${(index % 3) + 2}`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
