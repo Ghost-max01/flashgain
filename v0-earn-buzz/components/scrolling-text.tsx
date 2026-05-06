@@ -168,7 +168,7 @@ export function ScrollingText() {
         }
         .animate-marquee {
           display: inline-block;
-          animation: marquee 15s linear infinite;
+          animation: marquee 10s linear infinite;
         }
       `}</style>
     </div>

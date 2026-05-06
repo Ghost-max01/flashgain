@@ -1133,18 +1133,13 @@ export default function TieredTaskPage() {
         /* ─── BOTTOM NAV ─── */
         .hh-bottom-nav {
           position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
+          bottom: 0; left: 0; right: 0;
           background: linear-gradient(180deg, rgba(5,13,20,0) 0%, rgba(5,13,20,0.95) 50%, rgba(5,13,20,0.98) 100%);
           border-top: 1px solid rgba(255,255,255,0.08);
           display: flex;
           justify-content: space-around;
           align-items: center;
           height: 80px;
-          max-width: 500px;
-          left: 50%;
-          transform: translateX(-50%);
           backdrop-filter: blur(12px);
           z-index: 50;
           padding-bottom: max(16px, env(safe-area-inset-bottom));
