@@ -20,7 +20,9 @@ export default function WithdrawPage() {
   const [completedTasksCount, setCompletedTasksCount] = useState(0)
   const [showRequirementsModal, setShowRequirementsModal] = useState(false)
   const [showWithdrawalInfoModal, setShowWithdrawalInfoModal] = useState(false)
+  const [showInstantWithdrawBlockedPopup, setShowInstantWithdrawBlockedPopup] = useState(false)
   const TOTAL_DAILY_TASKS = 10
+  const TIERED_TOTAL_TASKS = 50
 
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user")
@@ -178,11 +180,29 @@ export default function WithdrawPage() {
     setShowCashout(meetsRequirements)
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
+  // Auto-close blocked popup after 10 seconds and reset toggle
+  useEffect(() => {
+    if (showInstantWithdrawBlockedPopup) {
+      const timer = setTimeout(() => {
+        setShowInstantWithdrawBlockedPopup(false)
+        setToggleActive(false)
+      }, 10000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [showInstantWithdrawBlockedPopup])
+
   const handleCashout = () => {
+    // If toggle is ON, show blocked popup instead of normal flow
+    if (toggleActive) {
+      setShowInstantWithdrawBlockedPopup(true)
+      return
+    }
+
     const missingBalance = balance < 200000
     const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
 
-    if (toggleActive && missingTasks) {
+    if (missingTasks) {
       setShowRequirementsModal(true)
       return
     }
@@ -385,7 +405,7 @@ export default function WithdrawPage() {
               <>
                 <button
                   onClick={handleCashout}
-                  className={`hh-withdraw-btn ${meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-blurred'}`}
+                  className={`hh-withdraw-btn ${toggleActive ? 'hh-withdraw-faded' : (meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-blurred')}`}
                 >
                   {toggleActive ? 'Instant Withdraw' : (meetsRequirements ? '✨ Withdraw Now' : 'Withdraw Now')}
                 </button>
@@ -511,6 +531,26 @@ export default function WithdrawPage() {
           onClose={() => setShowWithdrawalInfoModal(false)}
           onProceed={handleProceedToWithdrawal}
         />
+
+        {/* Instant Withdraw Blocked Popup */}
+        {showInstantWithdrawBlockedPopup && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="hh-popup">
+              <div className="hh-popup-header">
+                <AlertTriangle className="h-8 w-8 text-amber-400" />
+                <h2 className="text-xl font-bold text-white">Premium Feature Locked</h2>
+              </div>
+              
+              <p className="text-gray-300 text-center mb-4">
+                The Instant Withdraw feature requires completing <span className="font-bold text-emerald-400">{TIERED_TOTAL_TASKS} premium tasks</span> from the tiered tasks page.
+              </p>
+              
+              <p className="text-xs text-gray-500 text-center mb-6">
+                This popup will close automatically in 10 seconds.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Upgrade Popup */}
         {showUpgradePopup && (
@@ -923,6 +963,23 @@ export default function WithdrawPage() {
           background: rgba(255,255,255,0.1);
           cursor: not-allowed;
           color: rgba(255,255,255,0.4);
+        }
+
+        .hh-withdraw-faded {
+          background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.15));
+          color: rgba(245,158,11,0.7);
+          border: 1px solid rgba(245,158,11,0.2);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .hh-withdraw-faded:hover {
+          background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(245,158,11,0.2));
+          color: rgba(245,158,11,0.8);
+        }
+
+        .hh-withdraw-faded:active {
+          transform: scale(0.98);
         }
 
         /* ─── REQUIREMENTS MODAL ─── */
