@@ -102,39 +102,9 @@ export default function TieredTaskPage() {
     setBalance(user.balance || 0)
     setUserId(user.id || user.userId || user.user_id || "")
 
-    // Check for daily reset
-    const lastTaskDate = localStorage.getItem("tivexx-tiered-task-date")
-    const today = new Date().toDateString()
-    
-    if (lastTaskDate !== today) {
-      // New day: reset tasks, check if 50 were completed yesterday (auto-upgrade)
-      const previousCompleted = JSON.parse(localStorage.getItem("tivexx-tiered-completed-tasks") || "[]")
-      
-      // If user completed 50 tasks yesterday, upgrade tier
-      if (previousCompleted.length >= 50) {
-        const currentTier = localStorage.getItem("tivexx-tiered-current-tier") || 'silver'
-        let nextTier: 'silver' | 'gold' | 'diamond' = 'silver'
-        if (currentTier === 'silver') nextTier = 'gold'
-        else if (currentTier === 'gold') nextTier = 'diamond'
-        
-        localStorage.setItem("tivexx-tiered-current-tier", nextTier)
-        setCurrentTier(nextTier)
-        
-        toast({
-          title: `⭐ Tier Upgraded to ${nextTier.toUpperCase()}!`,
-          description: "You've completed all 50 tasks! You've advanced to the next tier.",
-        })
-      }
-      
-      // Reset tasks for new day
-      setCompletedTasks([])
-      localStorage.setItem("tivexx-tiered-completed-tasks", JSON.stringify([]))
-      localStorage.setItem("tivexx-tiered-task-date", today)
-    } else {
-      // Same day: load existing progress
-      const completed = JSON.parse(localStorage.getItem("tivexx-tiered-completed-tasks") || "[]")
-      setCompletedTasks(Array.isArray(completed) ? completed : [])
-    }
+    // Load persistent completed tasks (do NOT reset daily)
+    const completed = JSON.parse(localStorage.getItem("tivexx-tiered-completed-tasks") || "[]")
+    setCompletedTasks(Array.isArray(completed) ? completed : [])
 
     const tier = localStorage.getItem("tivexx-tiered-current-tier") || 'silver'
     setCurrentTier(tier as 'silver' | 'gold' | 'diamond')
@@ -309,11 +279,16 @@ export default function TieredTaskPage() {
     setCompletedTasks(newCompleted)
     localStorage.setItem("tivexx-tiered-completed-tasks", JSON.stringify(newCompleted))
 
-    const now = new Date()
-    const nextReset = getNextResetBoundary(now).getTime()
-    const newCooldowns = { ...cooldowns, [task.id]: nextReset }
-    setCooldowns(newCooldowns)
-    localStorage.setItem("tivexx-tiered-cooldowns", JSON.stringify(newCooldowns))
+    // Completed tasks are persistent and removed from the list permanently.
+    // No cooldown is required for permanently completed tasks; ensure cooldown entry is cleared.
+    setCooldowns(prev => {
+      const next = { ...prev }
+      if (next[task.id]) {
+        delete next[task.id]
+        localStorage.setItem("tivexx-tiered-cooldowns", JSON.stringify(next))
+      }
+      return next
+    })
 
     setVerifyingTasks(prev => {
       const newState = { ...prev }
@@ -326,11 +301,19 @@ export default function TieredTaskPage() {
       delete progressIntervals.current[taskId]
     }
 
-    // Check if user completed all 50 tasks for the day
-    if (newCompleted.length === 50) {
+    // Check if user completed all 50 tasks (persistent). Upgrade immediately.
+    if (newCompleted.length >= 50) {
+      const currentStored = localStorage.getItem("tivexx-tiered-current-tier") || 'silver'
+      let nextTier: 'silver' | 'gold' | 'diamond' = 'silver'
+      if (currentStored === 'silver') nextTier = 'gold'
+      else if (currentStored === 'gold') nextTier = 'diamond'
+
+      localStorage.setItem("tivexx-tiered-current-tier", nextTier)
+      setCurrentTier(nextTier)
+
       toast({
-        title: "🎉 All 50 Tasks Complete!",
-        description: "You'll upgrade to the next tier tomorrow!",
+        title: `⭐ Tier Upgraded to ${nextTier.toUpperCase()}!`,
+        description: "You've completed 50 tasks and advanced to the next tier.",
       })
     }
 
@@ -597,7 +580,7 @@ export default function TieredTaskPage() {
 
         {/* Tasks Grid */}
         <div className="space-y-4">
-          {AVAILABLE_TASKS.map((task, index) => {
+          {AVAILABLE_TASKS.filter(t => !completedTasks.includes(t.id)).map((task, index) => {
             const isVerifying = verifyingTasks[task.id] !== undefined
             const progress = isVerifying ? verifyingTasks[task.id].progress : 0
             const cooldown = cooldowns[task.id]
