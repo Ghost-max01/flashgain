@@ -26,7 +26,7 @@ const REPLIES = {
     has_image: true,
   },
   "3": {
-    text: "If you have gotten up to 5 referrals and you have a minimum of 200k on your balance you can withdraw by clicking the withdraw button on the dashboard and following the instructions carefully",
+    text: "If you have gotten up to 10 referrals and you have a minimum of 200k on your balance you can withdraw by clicking the withdraw button on the dashboard and following the instructions carefully",
     link: "https://flashgain9ja.money/withdraw",
     linkLabel: "Withdraw Guide",
     image: "/chatbot-img/image3.png",

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 // ✅ 100+ motivational and referral-only messages
 const messages = [
-  "💰 Refer 5 friends and unlock unlimited earnings!",
+  "💰 Refer 10 friends and unlock unlimited earnings!",
   "🎯 Every referral earns you ₦2,000 instantly!",
   "🚀 Start earning today - it's completely free!",
   "⭐ Your success story starts with one referral!",
@@ -63,8 +63,8 @@ const messages = [
   "⚡ Ifeanyi just claimed his daily bonus!",
   "🌟 Sadiq made ₦310,000 this month!",
   "🔥 Adaora earned ₦390,000 today!",
-  "💰 Ready to withdraw? Refer 5 friends to unlock!",
-  "🎯 Just 5 referrals away from your first payout!",
+  "💰 Ready to withdraw? Refer 10 friends to unlock!",
+  "🎯 Just 10 referrals away from your first payout!",
   "⚡ Fast payouts - money in your account within 24hrs!",
   "💥 FlashGain 9ja - Where referrals pay big!",
   "💰 Earn even while you sleep!",
@@ -93,7 +93,7 @@ const messages = [
   "💸 Ngozi earned ₦500,000 in 2 weeks!",
   "🏦 Minimum withdrawal: ₦200,000 - Start earning now!",
   "🌈 From zero to ₦500,000 – your turn next!",
-  "🎯 You’re 5 friends away from ₦500,000!",
+  "🎯 You’re 10 friends away from ₦500,000!",
   "🎯 Unlock your ₦500,000 goal!",
   "🚀 It’s not luck – it’s FlashGain 9ja!",
 ];

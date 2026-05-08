@@ -22,7 +22,7 @@ export function WithdrawalInfoModal({
 }: WithdrawalInfoModalProps) {
   const router = useRouter()
   const TOTAL_TASKS = 10
-  const REQUIRED_REFERRALS = 5
+  const REQUIRED_REFERRALS = 10
 
   if (!isOpen) return null
 
@@ -58,7 +58,7 @@ export function WithdrawalInfoModal({
                   <Users className="h-5 w-5" />
                   <div>
                     <span className="summary-label">Referrals</span>
-                    <span className="summary-value">{referralCount}/5 Active</span>
+                    <span className="summary-value">{referralCount}/{REQUIRED_REFERRALS} Active</span>
                   </div>
                 </div>
               </div>

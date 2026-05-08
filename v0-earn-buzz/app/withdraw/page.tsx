@@ -24,6 +24,7 @@ export default function WithdrawPage() {
   const [popupCountdown, setPopupCountdown] = useState(20)
   const TOTAL_DAILY_TASKS = 10
   const TIERED_TOTAL_TASKS = 50
+  const REQUIRED_REFERRALS = 10
 
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user")
@@ -78,7 +79,7 @@ export default function WithdrawPage() {
 
   // FIXED: Memoize progress width to avoid reflows on re-renders
   const progressWidth = useMemo(() => 
-    `${Math.min((referralCount / 5) * 100, 100)}%`, 
+    `${Math.min((referralCount / REQUIRED_REFERRALS) * 100, 100)}%`, 
     [referralCount]
   );
 
@@ -176,7 +177,7 @@ export default function WithdrawPage() {
   useEffect(() => {
     const meetsRequirements = toggleActive
       ? (balance >= 200000 && completedTasksCount >= TOTAL_DAILY_TASKS)
-      : (balance >= 200000 && referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS)
+      : (balance >= 200000 && referralCount >= REQUIRED_REFERRALS && completedTasksCount >= TOTAL_DAILY_TASKS)
 
     setShowCashout(meetsRequirements)
   }, [balance, referralCount, completedTasksCount, toggleActive])
@@ -387,7 +388,7 @@ export default function WithdrawPage() {
                       <TrendingUp className="h-4 w-4 text-emerald-400" />
                       <span className="text-sm font-medium text-white">Referral Progress</span>
                     </div>
-                    <span className="text-sm font-bold text-amber-300">{referralCount}/5</span>
+                    <span className="text-sm font-bold text-amber-300">{referralCount}/{REQUIRED_REFERRALS}</span>
                   </div>
                   <div className="hh-progress-track">
                     <div 
@@ -469,21 +470,21 @@ export default function WithdrawPage() {
                 {/* Referral requirement (hidden if toggle is on) */}
                 {!toggleActive && (
                   <div
-                    className={`hh-req-detail-item ${referralCount >= 5 ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
+                    className={`hh-req-detail-item ${referralCount >= REQUIRED_REFERRALS ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
                     onClick={() => router.push('/refer')}
                     role="button"
                     tabIndex={0}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`hh-req-detail-icon ${referralCount >= 5 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      <div className={`hh-req-detail-icon ${referralCount >= REQUIRED_REFERRALS ? 'text-emerald-400' : 'text-amber-400'}`}>
                         <Users className="h-5 w-5" />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-white">Active Referrals</p>
                         <p className="text-xs text-gray-400 mt-1">
-                          {referralCount >= 5 
+                          {referralCount >= REQUIRED_REFERRALS 
                             ? '✓ Completed' 
-                            : `${referralCount}/5 referrals`}
+                            : `${referralCount}/${REQUIRED_REFERRALS} referrals`}
                         </p>
                       </div>
                     </div>
@@ -614,7 +615,7 @@ export default function WithdrawPage() {
                 {toggleActive ? (
                   <>Complete all {TOTAL_DAILY_TASKS} daily tasks and no referral required to unlock withdrawals.</>
                 ) : (
-                  <>Complete all {TOTAL_DAILY_TASKS} daily tasks and get 5 referrals to unlock withdrawals.</>
+                  <>Complete all {TOTAL_DAILY_TASKS} daily tasks and get {REQUIRED_REFERRALS} referrals to unlock withdrawals.</>
                 )}
               </p>
             </div>
