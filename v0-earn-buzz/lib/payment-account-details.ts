@@ -8,18 +8,18 @@ export interface PaymentAccountDetails {
 
 const ACCOUNT_DETAILS_BY_USE_CASE: Record<PaymentAccountUseCase, PaymentAccountDetails> = {
   default: {
-    bankName: "VFD MFB",
-    accountNumber: "1047207121",
+    bankName: "Kuda",
+    accountNumber: "2086258173",
     accountName: "Faith Wali",
   },
   loan: {
-    bankName: "VFD MFB",
-    accountNumber: "1047207121",
+    bankName: "Kuda",
+    accountNumber: "2086258173",
     accountName: "Faith Wali",
   },
   momo: {
-    bankName: "VFD MFB",
-    accountNumber: "1047207121",
+    bankName: "Kuda",
+    accountNumber: "2086258173",
     accountName: "Faith Wali",
   },
 }
