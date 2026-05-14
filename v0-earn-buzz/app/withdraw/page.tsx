@@ -22,7 +22,7 @@ export default function WithdrawPage() {
   const [showWithdrawalInfoModal, setShowWithdrawalInfoModal] = useState(false)
   const [showInstantWithdrawBlockedPopup, setShowInstantWithdrawBlockedPopup] = useState(false)
   const [popupCountdown, setPopupCountdown] = useState(20)
-  const TOTAL_DAILY_TASKS = 10
+  const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 10
 
