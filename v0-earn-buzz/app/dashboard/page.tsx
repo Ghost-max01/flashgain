@@ -1091,6 +1091,11 @@ export default function DashboardPage() {
           {userData && <ReferralCard userId={userData.id || userData.userId} />}
         </div>
 
+        {/* ── USER EMAIL FOOTER ── */}
+        <div className="text-center text-[11px] text-gray-400 pb-24 pt-3">
+          {userData?.email ? `Email: ${userData.email}` : "Email not available"}
+        </div>
+
 
 
       </div>
