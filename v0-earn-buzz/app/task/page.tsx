@@ -612,6 +612,7 @@ export default function TaskPage() {
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="hh-task-header">
+                  <div className="hh-task-number">{index + 1}</div>
                   <div className="flex items-center gap-3">
                     <div className="hh-task-icon">
                       <span className="text-2xl">{task.icon}</span>
@@ -957,7 +958,32 @@ export default function TaskPage() {
 
         .hh-task-header {
           padding: 16px;
+          padding-right: 48px;
           border-bottom: 1px solid rgba(255,255,255,0.05);
+          position: relative;
+        }
+
+        .hh-task-number {
+          position: absolute;
+          top: 14px;
+          right: 16px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          font-weight: 800;
+          color: rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 2px 8px;
+          border-radius: 6px;
+          pointer-events: none;
+          transition: all 0.3s ease;
+        }
+
+        .hh-task-card:hover .hh-task-number {
+          color: #10b981;
+          border-color: rgba(16, 185, 129, 0.3);
+          background: rgba(16, 185, 129, 0.08);
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
         }
 
         .hh-task-icon {
