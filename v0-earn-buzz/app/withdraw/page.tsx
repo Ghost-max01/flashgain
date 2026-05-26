@@ -375,29 +375,27 @@ export default function WithdrawPage() {
                 </div>
               </div>
 
-              {/* Referral Progress - Only Show After Tasks Complete */}
-              {completedTasksCount >= TOTAL_DAILY_TASKS && (
-                <div
-                  className="cursor-pointer"
-                  onClick={() => router.push('/refer')}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-emerald-400" />
-                      <span className="text-sm font-medium text-white">Referral Progress</span>
-                    </div>
-                    <span className="text-sm font-bold text-amber-300">{referralCount}/{REQUIRED_REFERRALS}</span>
+              {/* Referral Progress */}
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push('/refer')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-white">Referral Progress</span>
                   </div>
-                  <div className="hh-progress-track">
-                    <div 
-                      className="hh-progress-fill" 
-                      style={{ width: progressWidth }}
-                    />
-                  </div>
+                  <span className="text-sm font-bold text-amber-300">{referralCount}/{REQUIRED_REFERRALS}</span>
                 </div>
-              )}
+                <div className="hh-progress-track">
+                  <div 
+                    className="hh-progress-fill" 
+                    style={{ width: progressWidth }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
