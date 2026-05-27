@@ -569,7 +569,7 @@ export default function ReferPage() {
               {
                 icon: "⭐",
                 title: "Friends Complete Tasks",
-                desc: "Referral is verified after they complete 2 tasks",
+                desc: "Referral is verified after they complete tasks",
                 color: "amber",
                 highlight: true,
               },

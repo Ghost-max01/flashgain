@@ -19,7 +19,7 @@ export function WithdrawalStagesModal({
   onProceedToWithdrawal,
 }: WithdrawalStagesModalProps) {
   const TOTAL_TASKS = 10
-  const REQUIRED_REFERRALS = 10
+  const REQUIRED_REFERRALS = 5
 
   // Determine current stage
   const stage1Complete = completedTasksCount >= TOTAL_TASKS

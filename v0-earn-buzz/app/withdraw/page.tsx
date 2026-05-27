@@ -24,7 +24,7 @@ export default function WithdrawPage() {
   const [popupCountdown, setPopupCountdown] = useState(20)
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
-  const REQUIRED_REFERRALS = 10
+  const REQUIRED_REFERRALS = 5
 
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user")
