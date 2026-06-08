@@ -25,7 +25,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards.",
     category: "Ads",
     reward: 5000,
-    link: "https://spinwin-iota.vercel.app",
+    link: "https://newadsrewards.vercel.app/",
     icon: "📢",
   },
   {
@@ -34,7 +34,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards",
     category: "Tasks",
     reward: 5000,
-    link: "https://spinwin-iota.vercel.app",
+    link: "https://newadsrewards.vercel.app/",
     icon: "💬",
   },
   {
@@ -61,7 +61,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
     reward: 5000,
-    link: "https://spinwin-iota.vercel.app",
+    link: "https://newadsrewards.vercel.app/",
     icon: "🎡",
   },
   {
@@ -79,7 +79,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Join Nova Cash",
     category: "Tasks",
     reward: 5000,
-    link: "https://spinwin-iota.vercel.app",
+    link: "https://newadsrewards.vercel.app/",
     icon: "🎵",
   },
   {
@@ -153,7 +153,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
     reward: 5000,
-    link: "https://spinwin-iota.vercel.app",
+    link: "https://newadsrewards.vercel.app/",
     icon: "🎡",
   },
   {
