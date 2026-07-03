@@ -6,14 +6,17 @@ export function ServiceWorkerUpdater() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
-    let hasReloaded = false
     let attempts = 0
 
     const handleControllerChange = () => {
-      if (hasReloaded) return
-      hasReloaded = true
-      // small delay to allow DOM settle before reload
-      setTimeout(() => window.location.reload(), 200)
+      // New service worker has taken control. Do a silent background fetch
+      // to warm caches and let the app keep running without a visible reload.
+      try {
+        // fetch current page to allow SW to update its cache via fetch handler
+        void fetch(window.location.href, { cache: 'no-store', credentials: 'same-origin' })
+      } catch (e) {
+        /* ignore */
+      }
     }
 
     const tryUpdate = async () => {
@@ -61,7 +64,7 @@ export function ServiceWorkerUpdater() {
 
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
 
-    // Run initial update and blank check immediately
+    // Run initial update immediately; blank detection still triggers background fetch
     void tryUpdate()
     checkForBlankAndReload()
 
