@@ -85,16 +85,33 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isNavigationRequest(event.request)) {
+    // Stale-while-revalidate: respond with cache if available, update cache in background
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone()
-            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)))
-          }
-          return response
-        })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
+      (async function () {
+        const cache = await caches.open(CACHE_NAME)
+        const cached = await cache.match(event.request)
+
+        const networkFetch = fetch(event.request)
+          .then((response) => {
+            if (response && response.ok) {
+              const clone = response.clone()
+              cache.put(event.request, clone)
+            }
+            return response
+          })
+          .catch(() => null)
+
+        if (cached) {
+          // update cache in background, but return cached immediately
+          event.waitUntil(networkFetch)
+          return cached
+        }
+
+        // No cached entry — wait for network, fallback to root cached page
+        const netRes = await networkFetch
+        if (netRes) return netRes
+        return caches.match("/")
+      })(),
     )
     return
   }
