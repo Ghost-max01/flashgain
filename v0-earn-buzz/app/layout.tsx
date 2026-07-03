@@ -63,6 +63,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ServiceWorkerUpdater />
           <PageShell exclude={["/dashboard"]}>
             <main className="min-h-screen w-full relative overflow-hidden">
               {children}
@@ -70,7 +71,6 @@ export default function RootLayout({
           </PageShell>
           <NotificationHelperTools />
           <PWAInstallPrompt />
-          <ServiceWorkerUpdater />
         </ThemeProvider>
       </body>
     </html>

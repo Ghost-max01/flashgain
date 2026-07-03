@@ -20,7 +20,7 @@ function resolveUserId(): string {
 
 export function NotificationHelperTools() {
   const [open, setOpen] = useState(false)
-  const [showFloatingButtons, setShowFloatingButtons] = useState(true)
+  const [showFloatingButtons, setShowFloatingButtons] = useState(false)
   const [userLoggedIn, setUserLoggedIn] = useState(false)
 
   const config = useMemo(
@@ -106,12 +106,39 @@ export function NotificationHelperTools() {
   useEffect(() => {
     if (hideHelpers && !userLoggedIn) return
 
-    const timer = window.setTimeout(() => {
-      setShowFloatingButtons(false)
-      recordHelperUsage("tools_visible")
-    }, 10_000) // Changed from 25_000 to 10_000 (10 seconds)
+    // Only show floating buttons when DOM is ready and page has visible content
+    const tryShow = () => {
+      try {
+        const bodyText = document.body?.innerText || ''
+        if (bodyText.trim().length < 20) {
+          // don't show on blank pages
+          setShowFloatingButtons(false)
+          return
+        }
+        setShowFloatingButtons(true)
+        const timer = window.setTimeout(() => {
+          setShowFloatingButtons(false)
+          recordHelperUsage("tools_visible")
+        }, 10_000)
 
-    return () => window.clearTimeout(timer)
+        // cleanup timer when effect re-runs
+        return () => window.clearTimeout(timer)
+      } catch {
+        setShowFloatingButtons(false)
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      const cleanup = tryShow()
+      return cleanup
+    }
+
+    const onReady = () => {
+      const cleanup = tryShow()
+      if (cleanup) cleanup()
+    }
+    window.addEventListener('load', onReady)
+    return () => window.removeEventListener('load', onReady)
   }, [hideHelpers, recordHelperUsage, userLoggedIn])
 
   const onEnable = async () => {
