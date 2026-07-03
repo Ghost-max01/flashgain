@@ -1,11 +1,7 @@
-const CACHE_NAME = "earn-buzz-v2"
+const CACHE_NAME = "earn-buzz-v3"
 const urlsToCache = [
   "/",
-  "/dashboard",
-  "/profile",
-  "/airtime",
-  "/data",
-  "/withdraw",
+  "/manifest.webmanifest?v=20260317",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ]
@@ -69,17 +65,38 @@ self.addEventListener("activate", (event) => {
   self.clients.claim()
 })
 
-// Fetch event — skip API, auth, and firebase SW paths; serve rest from cache with network fallback
+function isNavigationRequest(request) {
+  return (
+    request.mode === "navigate" ||
+    (request.method === "GET" && request.headers.get("accept")?.includes("text/html"))
+  )
+}
+
+// Fetch event — network-first for navigation, cache-first for static assets
 self.addEventListener("fetch", (event) => {
   const url = event.request.url
-  // Never intercept API calls, Next.js internals, firebase SW, or cross-origin requests
   if (
     url.includes("/api/") ||
     url.includes("/_next/") ||
     url.includes("/firebase-messaging-sw.js") ||
     !url.startsWith(self.location.origin)
   ) {
-    return // Let browser handle it directly
+    return
+  }
+
+  if (isNavigationRequest(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone()
+            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)))
+          }
+          return response
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
+    )
+    return
   }
 
   event.respondWith(
@@ -162,5 +179,9 @@ self.addEventListener("message", (event) => {
         },
       }),
     )
+  }
+
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting()
   }
 })

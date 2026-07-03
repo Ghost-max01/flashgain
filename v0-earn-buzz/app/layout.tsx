@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import PageShell from "@/components/PageShell"
 import { NotificationHelperTools } from "@/components/notification-helper-tools"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
+import { ServiceWorkerUpdater } from "@/components/service-worker-updater"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -69,6 +70,7 @@ export default function RootLayout({
           </PageShell>
           <NotificationHelperTools />
           <PWAInstallPrompt />
+          <ServiceWorkerUpdater />
         </ThemeProvider>
       </body>
     </html>
