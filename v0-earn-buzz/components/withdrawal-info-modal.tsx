@@ -22,7 +22,7 @@ export function WithdrawalInfoModal({
 }: WithdrawalInfoModalProps) {
   const router = useRouter()
   const TOTAL_TASKS = 10
-  const REQUIRED_REFERRALS = 10
+  const REQUIRED_REFERRALS = 5
 
   if (!isOpen) return null
 

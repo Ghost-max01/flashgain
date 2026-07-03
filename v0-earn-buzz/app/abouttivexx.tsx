@@ -159,7 +159,7 @@ export default function AboutPage() {
               <div>
                 <h3 className="font-bold">Refer & Earn</h3>
                 <p className="text-sm text-white/70 mt-1">
-                  Refer friends — minimum of <strong>10 referrals</strong>{" "}
+                  Refer friends — minimum of <strong>5 referrals</strong>{" "}
                   unlocks withdrawals and higher bonuses. Top referrers get
                   premium access.
                 </p>
@@ -202,7 +202,7 @@ export default function AboutPage() {
                   Pay the one-time verification fee (displayed on the
                   verification page).
                 <li>
-                <strong>Refer & Earn:</strong> Refer 10 or more friends for
+                <strong>Refer & Earn:</strong> Refer 5 or more friends for
                 instant withdrawals and higher bonuses. Top referrers get
                 premium access.
               </li>
