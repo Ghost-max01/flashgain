@@ -4,8 +4,18 @@ import { sendNotificationToUser } from "@/lib/notifications/server.js"
 
 export const runtime = "nodejs"
 
+type ExpiredTimer = {
+  user_id: string
+}
+
+type TimerResult = {
+  userId: string
+  success: boolean
+  attemptedCount: number
+  reason?: string
+}
+
 async function runCron(req: NextRequest) {
-  // Vercel cron passes Authorization: Bearer <CRON_SECRET>
   const authHeader = req.headers.get("authorization")
   const expectedKey = process.env.CRON_SECRET || ""
 
@@ -40,21 +50,23 @@ async function runCron(req: NextRequest) {
       return NextResponse.json({ success: true, processed: 0 }, { status: 200 })
     }
 
-    console.log(`[timer/cron] Found ${expiredTimers?.length || 0} expired timers`)
+    const timers = (expiredTimers || []).filter(
+      (timer): timer is ExpiredTimer => Boolean(timer?.user_id),
+    )
 
-    if (!expiredTimers || expiredTimers.length === 0) {
+    console.log(`[timer/cron] Found ${timers.length} expired timers`)
+
+    if (timers.length === 0) {
       return NextResponse.json({ success: true, processed: 0, message: "No expired timers" })
     }
 
-    let successCount = 0
-    let failureCount = 0
-
-    for (const timer of expiredTimers) {
+    const processTimer = async (timer: ExpiredTimer): Promise<TimerResult> => {
+      const userId = timer.user_id
       try {
-        console.log(`[timer/cron] Sending notification to user: ${timer.user_id}`)
+        console.log(`[timer/cron] Sending notification to user: ${userId}`)
 
         const stats = await sendNotificationToUser({
-          uid: timer.user_id,
+          uid: userId,
           title: "⏰ Claim Ready!",
           body: "Your timer hit 00:00. Open FlashGain 9ja to claim your ₦2,000 now!",
           clickUrl: "/dashboard",
@@ -64,28 +76,52 @@ async function runCron(req: NextRequest) {
         const attemptedCount = (stats?.fcmAttempted || 0) + (stats?.webpushAttempted || 0)
 
         if (sentCount > 0) {
-          await supabase
-            .from("user_timers")
-            .update({ notified: true })
-            .eq("user_id", timer.user_id)
-          successCount++
-        } else {
-          console.warn(
-            `[timer/cron] No push sent for user ${timer.user_id}. Keeping timer pending for retry. attempted=${attemptedCount} reason=${stats?.reason || "unknown"}`,
-          )
-          failureCount++
+          return { userId, success: true, attemptedCount, reason: undefined }
         }
+
+        const reason = stats?.reason || "no notification delivered"
+        console.warn(
+          `[timer/cron] No push sent for user ${userId}. Keeping timer pending for retry. attempted=${attemptedCount} reason=${reason}`,
+        )
+
+        return { userId, success: false, attemptedCount, reason }
       } catch (error) {
-        console.error(`[timer/cron] Error processing timer for user ${timer.user_id}:`, error)
-        failureCount++
+        console.error(`[timer/cron] Error processing timer for user ${userId}:`, error)
+        return { userId, success: false, attemptedCount: 0, reason: String(error) }
+      }
+    }
+
+    const concurrency = 5
+    const results: TimerResult[] = []
+
+    for (let i = 0; i < timers.length; i += concurrency) {
+      const batch = timers.slice(i, i + concurrency)
+      const batchResults = await Promise.all(batch.map(processTimer))
+      results.push(...batchResults)
+    }
+
+    const successIds = results.filter((result) => result.success).map((result) => result.userId)
+    const failureCount = results.filter((result) => !result.success).length
+
+    let updatedCount = 0
+    if (successIds.length > 0) {
+      const { error: updateError } = await supabase
+        .from("user_timers")
+        .update({ notified: true })
+        .in("user_id", successIds)
+
+      if (updateError) {
+        console.error("[timer/cron] Error updating notified timers:", updateError)
+      } else {
+        updatedCount = successIds.length
       }
     }
 
     return NextResponse.json({
       success: true,
-      processed: successCount,
+      processed: updatedCount,
       failed: failureCount,
-      message: `Processed ${successCount} timers, ${failureCount} failed`,
+      message: `Processed ${updatedCount} timers, ${failureCount} failed`,
     })
   } catch (err) {
     console.error("[timer/cron] Database operation failed:", err)
@@ -93,12 +129,10 @@ async function runCron(req: NextRequest) {
   }
 }
 
-// Vercel Cron calls GET — must be exported
 export async function GET(req: NextRequest) {
   return runCron(req)
 }
 
-// Also support POST for manual triggers
 export async function POST(req: NextRequest) {
   return runCron(req)
 }
