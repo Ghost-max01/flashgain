@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "vercel-build": "cd v0-earn-buzz && pnpm install && pnpm run build"
+  },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
     "@types/jquery": "^3.5.33",
