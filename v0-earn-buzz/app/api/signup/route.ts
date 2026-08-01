@@ -14,10 +14,20 @@ export async function POST(request: NextRequest) {
 
     // 1. Create user in Supabase Auth
     const supabaseClient = await createClient()
+    const redirectUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      ""
+
+    const signUpOptions: any = { data: { name } }
+    if (redirectUrl) {
+      signUpOptions.emailRedirectTo = redirectUrl
+    }
+
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: signUpOptions,
     })
 
     if (authError) {

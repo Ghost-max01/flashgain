@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
+  "outputDirectory": "v0-earn-buzz/.next",
   "headers": [
     {
       "source": "/api/:path*",

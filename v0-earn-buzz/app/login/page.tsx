@@ -35,10 +35,48 @@ export default function LoginPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie();
-    if (storedUser) {
-      router.push("/dashboard");
+    const restoreSession = async () => {
+      const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie();
+      if (storedUser) {
+        router.push("/dashboard")
+        return
+      }
+
+      if (!supabase) {
+        return
+      }
+
+      const url = new URL(window.location.href)
+      const hasAuthParams =
+        url.searchParams.has("access_token") ||
+        url.searchParams.has("refresh_token") ||
+        url.searchParams.has("type")
+
+      if (hasAuthParams) {
+        const { data, error } = await supabase.auth.getSessionFromUrl()
+        if (!error && data?.session?.user) {
+          const { data: userRow, error: userError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", data.session.user.id)
+            .single()
+
+          if (!userError && userRow) {
+            persistUserSession({
+              ...userRow,
+              userId: userRow.userId || userRow.referral_code || userRow.referralCode || userRow.id,
+              balance: Number(userRow?.balance || 0),
+              referral_balance: Number(userRow?.referral_balance || 0),
+              referral_count: Number(userRow?.referral_count || 0),
+            })
+            router.push("/dashboard")
+            return
+          }
+        }
+      }
     }
+
+    restoreSession()
   }, [mounted, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
