@@ -72,46 +72,6 @@ export default function WithdrawPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-NG", {
       style: "currency",
-      currency: "NGN",
-    })
-      .format(amount)
-      .replace("NGN", "₦")
-
-  // FIXED: Memoize progress width to avoid reflows on re-renders
-  const progressWidth = useMemo(() => 
-    `${Math.min((referralCount / REQUIRED_REFERRALS) * 100, 100)}%`, 
-    [referralCount]
-  );
-
-  // Keep completed tasks count in sync across tabs and when the page regains focus
-  useEffect(() => {
-    const updateCompleted = () => {
-      try {
-        const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
-        setCompletedTasksCount(Array.isArray(completed) ? completed.length : 0)
-      } catch {
-        setCompletedTasksCount(0)
-      }
-    }
-
-    const updateUserFromStorage = () => {
-      try {
-        const storedUser = localStorage.getItem("tivexx-user")
-        if (!storedUser) return
-        const user = JSON.parse(storedUser)
-        setUserData(user)
-        setBalance(user.balance || 0)
-        // refresh referral count if user id changed
-        if (user.id || user.userId) fetchReferralCount(user.id || user.userId)
-      } catch (e) {
-        // ignore parse errors
-      }
-    }
-
-    // Update immediately on mount
-    updateCompleted()
-    updateUserFromStorage()
-
     const onStorage = (e: StorageEvent) => {
       if (e.key === "tivexx-completed-tasks") updateCompleted()
       if (e.key === "tivexx-user") updateUserFromStorage()
@@ -261,8 +221,8 @@ export default function WithdrawPage() {
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
 
-        {/* Toggle Section */}
-        <div className="hh-card hh-entry-1">
+        {/* BYPASSED: Toggle Section hidden for testing */}
+        {/* <div className="hh-card hh-entry-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="hh-icon-ring">
@@ -277,7 +237,7 @@ export default function WithdrawPage() {
               <span className={`hh-toggle-dot ${toggleActive ? 'hh-toggle-dot-active' : ''}`} />
             </button>
           </div>
-        </div>
+        </div> */
 
         {/* Balance Card */}
         <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
@@ -300,8 +260,8 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* Requirements Card */}
-        <div className="hh-card hh-entry-3">
+        {/* BYPASSED: Requirements Card hidden for testing */}
+        {/* <div className="hh-card hh-entry-3">
           <div className="hh-section-title mb-4">Withdrawal Requirements</div>
           
           <div className="space-y-3">
@@ -325,13 +285,14 @@ export default function WithdrawPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */
 
-        {/* Progress Section */}
-        {!toggleActive && (
-          <div className="hh-card hh-entry-4">
-            <div className="space-y-4">
-              {/* Daily Tasks Progress - Show only when toggle is off */}
+        {/* BYPASSED: Progress Section hidden for testing */}
+        {/* <div className="hh-card hh-entry-4">
+          <div className="space-y-4">
+            {/* Daily Tasks Progress - Show only when toggle is off */}
+        {/* </div>
+        </div> */}
               <div
                 className="cursor-pointer"
                 onClick={() => router.push('/task')}
@@ -378,34 +339,19 @@ export default function WithdrawPage() {
           </div>
         )}
 
-        {/* Buttons Section */}
+
+          {/* Buttons Section */}
         <div className="space-y-3 hh-entry-5">
           {(() => {
-            const missingBalance = balance < 200000
-            const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
-            const missingReferrals = referralCount < 5
-            const meetsRequirements = toggleActive
-              ? (!missingBalance && !missingTasks)
-              : (!missingBalance && !missingTasks && !missingReferrals)
-
+            // BYPASSED: All requirements checks removed - always allow withdrawal
             return (
               <>
                 <button
                   onClick={handleCashout}
-                  className={`hh-withdraw-btn ${toggleActive ? 'hh-withdraw-faded' : (meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-blurred')}`}
+                  className="hh-withdraw-btn hh-withdraw-ready"
                 >
-                  {toggleActive ? 'Instant Withdraw' : (meetsRequirements ? '✨ Withdraw Now' : 'Withdraw Now')}
+                  ✨ Withdraw Now
                 </button>
-
-                {/* If referrals are the missing piece and the user hasn't toggled withdraw-without-referral, show refer CTA */}
-                {!toggleActive && !meetsRequirements && referralCount < 5 && (
-                  <Link href="/refer" className="block">
-                    <button className="hh-refer-btn">
-                      <Share2 className="h-4 w-4" />
-                      Refer Friends to Unlock Withdrawal
-                    </button>
-                  </Link>
-                )}
               </>
             )
           })()}
