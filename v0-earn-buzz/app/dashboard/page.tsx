@@ -1098,9 +1098,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ─── MAIN CONTENT — REDESIGNED TO MATCH REFERENCE ─── */}
+      {/* ─── MAIN CONTENT — NEW LAYOUT (Helping Hands style) ─── */}
       <div className="hh-container max-w-md mx-auto px-4 space-y-4 pt-6 relative z-10">
-        {/* ─── 1. NAVBAR (matches the reference "Helping Hands" header) ─── */}
+        {/* ─── 1. NAVBAR ─── */}
         <nav className="hh-card hh-card-navbar hh-entry-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🤝</span>
@@ -1138,7 +1138,7 @@ export default function DashboardPage() {
 
         {/* ─── 2. TOP GRID: Rewards & Impact + Share & Grow ─── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 hh-entry-2">
-          {/* Rewards & Impact card (green-gold gradient) */}
+          {/* Rewards & Impact card (green-gold gradient) with integrated claim */}
           <div className="hh-card hh-card-balance p-5 relative overflow-hidden">
             <div className="hh-orb hh-orb-1" aria-hidden></div>
             <div className="hh-orb hh-orb-2" aria-hidden></div>
@@ -1168,7 +1168,7 @@ export default function DashboardPage() {
               <span>Impact Score: 98/100</span>
               <span>Pending Rewards: ₦2,000</span>
             </div>
-            {/* Claim button integrated into this card */}
+            {/* Claim button and progress (from original) */}
             <div className="mt-3 relative z-10">
               <button
                 onClick={handleClaim}
@@ -1187,7 +1187,6 @@ export default function DashboardPage() {
                     ? "🎁 Claim ₦2,000 Now"
                     : `⏰ Next claim in ${formatTime(timeRemaining)}`}
               </button>
-              {/* Claim progress inside the card */}
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-black/60">Claims today</span>
                 <div className="flex items-center gap-2">
@@ -1204,9 +1203,29 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            {/* Success popup (if claim successful) */}
+            {showClaimSuccess && (
+              <div className="hh-claim-success-popup">
+                <div className="hh-confetti-dot hh-confetti-1"></div>
+                <div className="hh-confetti-dot hh-confetti-2"></div>
+                <div className="hh-confetti-dot hh-confetti-3"></div>
+                <div className="hh-confetti-dot hh-confetti-4"></div>
+                <div className="hh-confetti-dot hh-confetti-5"></div>
+                <div className="text-2xl mb-1">🎉</div>
+                <div className="font-black text-white text-lg">
+                  ₦2,000 Added!
+                </div>
+                <div className="text-xs text-emerald-300 mt-0.5">
+                  Balance updated
+                </div>
+                <div className="hh-success-bar">
+                  <div className="hh-success-bar-fill"></div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Share & Grow card (glass) */}
+          {/* Share & Grow card */}
           <div className="hh-card flex flex-col justify-between">
             <h3 className="text-lg font-extrabold text-white">
               Share &amp; Grow
@@ -1325,7 +1344,88 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ─── USER EMAIL FOOTER ─── (kept from original) */}
+        {/* ─── 5. TASK & WITHDRAW BUTTONS (from original) ─── */}
+        <div className="flex gap-3 hh-entry-5">
+          <Link href="/task" className="flex-1">
+            <button className="hh-action-btn hh-action-purple w-full">
+              <span className="hh-action-icon">💳</span>
+              <span>Task</span>
+            </button>
+          </Link>
+          <Link href="/withdraw" className="flex-1">
+            <button className="hh-action-btn hh-action-green w-full">
+              <span className="hh-action-icon">💸</span>
+              <span>Withdraw</span>
+            </button>
+          </Link>
+        </div>
+
+        {/* ─── 6. QUICK ACTIONS (grid from original) ─── */}
+        <div className="hh-card hh-entry-6">
+          <div className="hh-section-title">Quick Actions</div>
+          <div className="space-y-3 mt-3">
+            <div className="grid grid-cols-2 gap-3 hh-action-grid">
+              {menuItems.map((item, idx) => {
+                const Icon = item.icon;
+                const key = `qa-${idx}`;
+                const content = (
+                  <div
+                    className="hh-action-card"
+                    style={{ animationDelay: `${idx * 80 + 400}ms` }}
+                  >
+                    <div className="hh-action-card-icon">
+                      {item.emoji ? (
+                        <span className="text-2xl">{item.emoji}</span>
+                      ) : (
+                        Icon && <Icon size={20} className="text-white" />
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold text-white mt-2">
+                      {item.name}
+                    </div>
+                    <div className="hh-action-card-arrow">→</div>
+                  </div>
+                );
+
+                return item.external ? (
+                  <a
+                    key={key}
+                    href={item.link}
+                    className="block focus:outline-none"
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <Link
+                    key={key}
+                    href={item.link || "#"}
+                    className="block focus:outline-none"
+                  >
+                    {content}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Tap & Earn button */}
+            <Link href="/earn/tap" className="block focus:outline-none">
+              <button
+                className="w-full hh-action-btn hh-action-tap"
+                style={{ animationDelay: "660ms" }}
+              >
+                <span className="hh-action-icon">🎮</span>
+                <span>Tap & Earn Game</span>
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* ─── 7. REFERRAL CARD ─── */}
+        <div className="hh-entry-7">
+          {userData && <ReferralCard userId={userData.id || userData.userId} />}
+        </div>
+
+        {/* ─── USER EMAIL FOOTER ─── */}
         <div className="text-center text-[11px] text-white/40 pb-24 pt-3">
           {userData?.email ? `Email: ${userData.email}` : "Email not available"}
         </div>
@@ -1820,6 +1920,198 @@ export default function DashboardPage() {
           transform: scale(0.95);
         }
 
+        /* ─── ACTION BUTTONS (Task / Withdraw / Tap) ─── */
+        .hh-action-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 16px;
+          border-radius: 999px;
+          font-weight: 700;
+          font-size: 15px;
+          font-family: "Syne", sans-serif;
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+          position: relative;
+          overflow: hidden;
+          cursor: pointer;
+          border: none;
+        }
+
+        .hh-action-btn:hover {
+          transform: translateY(-2px) scale(1.02);
+        }
+        .hh-action-btn:active {
+          transform: scale(0.97);
+        }
+
+        .hh-action-purple {
+          background: linear-gradient(90deg, #f5d76e, #e0a838);
+          color: var(--hh-text-dark);
+          box-shadow: 0 0 18px rgba(245, 215, 110, 0.4);
+        }
+
+        .hh-action-green {
+          background: linear-gradient(90deg, #2ecc8f, #22b57d);
+          color: #06150f;
+          box-shadow: 0 0 18px rgba(46, 204, 143, 0.35);
+        }
+
+        .hh-action-tap {
+          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
+          color: var(--hh-text-dark);
+          box-shadow:
+            0 0 20px rgba(245, 215, 110, 0.3),
+            0 0 20px rgba(46, 204, 143, 0.25);
+        }
+
+        .hh-action-icon {
+          font-size: 18px;
+        }
+
+        /* ─── QUICK ACTION CARDS ─── */
+        .hh-action-card {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 16px;
+          padding: 16px;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          animation: hh-card-appear 0.4s ease-out both;
+        }
+
+        @keyframes hh-card-appear {
+          from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .hh-action-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            135deg,
+            rgba(46, 204, 143, 0.08),
+            rgba(245, 215, 110, 0.06)
+          );
+          opacity: 0;
+          transition: opacity 0.25s ease;
+          border-radius: 16px;
+        }
+
+        .hh-action-card:hover {
+          transform: translateY(-4px) scale(1.02);
+          border-color: rgba(46, 204, 143, 0.3);
+          box-shadow:
+            0 12px 30px rgba(0, 0, 0, 0.3),
+            0 0 20px rgba(46, 204, 143, 0.08);
+        }
+
+        .hh-action-card:hover::before {
+          opacity: 1;
+        }
+        .hh-action-card:active {
+          transform: scale(0.97);
+        }
+
+        .hh-action-card-icon {
+          font-size: 22px;
+          line-height: 1;
+          width: 46px;
+          height: 46px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: radial-gradient(
+            circle at 40% 35%,
+            rgba(255, 255, 255, 0.06),
+            rgba(0, 0, 0, 0.25)
+          );
+          border: 1.5px solid var(--hh-green-1);
+          box-shadow:
+            0 0 14px rgba(46, 204, 143, 0.45),
+            inset 0 0 10px rgba(46, 204, 143, 0.2);
+          margin-bottom: 2px;
+        }
+
+        .hh-action-grid > *:nth-child(even) .hh-action-card-icon {
+          border-color: var(--hh-gold-1);
+          box-shadow:
+            0 0 14px rgba(245, 215, 110, 0.45),
+            inset 0 0 10px rgba(245, 215, 110, 0.2);
+        }
+
+        .hh-action-card-arrow {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.25);
+          margin-top: 8px;
+          transition:
+            color 0.2s,
+            transform 0.2s;
+        }
+
+        .hh-action-card:hover .hh-action-card-arrow {
+          color: var(--hh-green-1);
+          transform: translateX(4px);
+        }
+
+        /* ─── SUPPORT BUTTONS ─── */
+        .hh-support-btn {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition:
+            transform 0.2s,
+            box-shadow 0.2s;
+        }
+
+        .hh-support-btn:hover {
+          transform: scale(1.08);
+        }
+        .hh-support-btn:active {
+          transform: scale(0.95);
+        }
+
+        .hh-support-blue {
+          background: linear-gradient(135deg, #e0a838, #b9822a);
+          box-shadow: 0 4px 12px rgba(224, 168, 56, 0.3);
+        }
+        .hh-support-green {
+          background: linear-gradient(135deg, #2ecc8f, #22b57d);
+          box-shadow: 0 4px 12px rgba(46, 204, 143, 0.3);
+        }
+
+        .hh-notif-dot {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 8px;
+          height: 8px;
+          background: #ef4444;
+          border-radius: 50%;
+          border: 2px solid var(--hh-bg-1);
+          animation: hh-live-pulse 1.5s ease-in-out infinite;
+        }
+
         /* ─── FLOATING CHAT ─── */
         .hh-floating-chat-btn {
           position: fixed;
@@ -2092,6 +2384,123 @@ export default function DashboardPage() {
           transform: scale(0.98);
         }
 
+        /* ─── CLAIM SUCCESS POPUP (overlay on balance card) ─── */
+        .hh-claim-success-popup {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: linear-gradient(135deg, #0f2c22, #123726);
+          border: 1px solid rgba(245, 215, 110, 0.35);
+          border-radius: 18px;
+          padding: 16px 24px;
+          text-align: center;
+          box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.5),
+            0 0 30px rgba(46, 204, 143, 0.2);
+          min-width: 160px;
+          animation: hh-popup-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)
+            forwards;
+          z-index: 50;
+        }
+
+        @keyframes hh-popup-bounce {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+          }
+          70% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        .hh-success-bar {
+          height: 3px;
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 3px;
+          overflow: hidden;
+          margin-top: 8px;
+        }
+
+        .hh-success-bar-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
+          border-radius: 3px;
+          animation: hh-bar-drain 3s linear forwards;
+        }
+
+        @keyframes hh-bar-drain {
+          from {
+            width: 100%;
+          }
+          to {
+            width: 0%;
+          }
+        }
+
+        .hh-confetti-dot {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          animation: hh-confetti-fall 0.8s ease-out forwards;
+        }
+
+        .hh-confetti-1 {
+          top: 5px;
+          left: 20%;
+          background: #f5d76e;
+          animation-delay: 0s;
+        }
+        .hh-confetti-2 {
+          top: 5px;
+          left: 40%;
+          background: #2ecc8f;
+          animation-delay: 0.1s;
+        }
+        .hh-confetti-3 {
+          top: 5px;
+          left: 60%;
+          background: #e0a838;
+          animation-delay: 0.05s;
+        }
+        .hh-confetti-4 {
+          top: 5px;
+          left: 75%;
+          background: #34d399;
+          animation-delay: 0.15s;
+        }
+        .hh-confetti-5 {
+          top: 5px;
+          left: 10%;
+          background: #f5d76e;
+          animation-delay: 0.2s;
+        }
+
+        @keyframes hh-confetti-fall {
+          0% {
+            transform: translateY(0) rotate(0);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(50px) rotate(360deg);
+            opacity: 0;
+          }
+        }
+
+        /* ─── SECTION TITLE ─── */
+        .hh-section-title {
+          font-size: 15px;
+          font-weight: 800;
+          color: white;
+          letter-spacing: -0.01em;
+        }
+
         /* ─── ENTRY ANIMATIONS ─── */
         .hh-entry-1 {
           animation: hh-entry 0.5s ease-out 0s both;
@@ -2108,6 +2517,13 @@ export default function DashboardPage() {
         .hh-entry-5 {
           animation: hh-entry 0.5s ease-out 0.4s both;
         }
+        .hh-entry-6 {
+          animation: hh-entry 0.5s ease-out 0.5s both;
+        }
+        .hh-entry-7 {
+          animation: hh-entry 0.5s ease-out 0.6s both;
+        }
+
         @keyframes hh-entry {
           from {
             opacity: 0;
@@ -2128,6 +2544,9 @@ export default function DashboardPage() {
             max-width: 30rem;
             border-radius: 20px 20px 0 0;
           }
+          .hh-card:hover {
+            transform: translateY(-3px);
+          }
         }
 
         /* ─── REDUCED MOTION ─── */
@@ -2136,6 +2555,9 @@ export default function DashboardPage() {
           .hh-orb-1,
           .hh-orb-2,
           .hh-avatar-ring,
+          .hh-live-dot,
+          .hh-claim-ready,
+          .hh-claim-shimmer,
           [class*="hh-entry-"] {
             animation: none !important;
           }
