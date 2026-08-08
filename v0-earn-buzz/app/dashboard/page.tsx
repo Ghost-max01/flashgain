@@ -200,7 +200,7 @@ export default function DashboardPage() {
     },
     [toast, userData],
   );
-
+  // open chat if URL hash is #chat (on mount or when hash changes)
   useEffect(() => {
     const checkHash = () => {
       if (window.location.hash === "#chat") {
@@ -220,6 +220,7 @@ export default function DashboardPage() {
     };
   }, []);
 
+  // tap counter for blog promotion
   useEffect(() => {
     const handleTap = () => {
       setTapCount((prev) => {
@@ -257,6 +258,7 @@ export default function DashboardPage() {
     };
   }, [toast]);
 
+  // Animate balance changes
   useEffect(() => {
     if (balance === animatedBalance) return;
 
@@ -307,6 +309,7 @@ export default function DashboardPage() {
       }
     }
 
+    // Use absolute end time for reliable cross-session timer restore
     const savedTimerEnd = localStorage.getItem("tivexx-timer-end");
 
     if (savedTimerEnd) {
@@ -320,6 +323,7 @@ export default function DashboardPage() {
           setCanClaim(false);
         }
       } else {
+        // Timer already expired while app was closed
         setTimeRemaining(0);
         localStorage.removeItem("tivexx-timer-end");
         if (!pauseEndTime) {
@@ -355,6 +359,7 @@ export default function DashboardPage() {
     if (!isCounting) return;
 
     const timer = setInterval(() => {
+      // Compute remaining from absolute end time — works correctly after app wake
       const timerEnd = Number.parseInt(
         localStorage.getItem("tivexx-timer-end") || "0",
       );
@@ -414,9 +419,11 @@ export default function DashboardPage() {
         setCanClaim(false);
         setTimeRemaining(60);
         setIsCounting(true);
+        // Save single absolute end time — no need to update every tick
         localStorage.setItem("tivexx-timer-end", timerEndMs.toString());
         localStorage.removeItem("tivexx-claim-ready-notified");
 
+        // Notify server so cron can send push if app is closed before timer ends
         try {
           const userId = userData?.id || userData?.userId;
           if (userId) {
@@ -463,7 +470,7 @@ export default function DashboardPage() {
           {[...Array(4)].map((_, i) => (
             <span
               key={i}
-              className="inline-block w-8 h-5 bg-black/10 rounded-md animate-pulse"
+              className="inline-block w-8 h-5 bg-white/15 rounded-md animate-pulse"
               style={{ animationDelay: `${i * 0.15}s` }}
             ></span>
           ))}
@@ -478,9 +485,9 @@ export default function DashboardPage() {
 
     return (
       <span
-        className={`font-mono transition-colors duration-300 ${isBalanceChanging ? "text-emerald-800" : "text-[#12190f]"}`}
+        className={`font-mono transition-colors duration-300 ${isBalanceChanging ? "text-emerald-300" : "text-white"}`}
       >
-        <span className="text-xl align-top opacity-70">₦</span>
+        <span className="text-xl align-top opacity-80">₦</span>
         <span className="text-4xl font-black tracking-tight ml-0.5">
           {formatted.split(".")[0]}
         </span>
@@ -611,6 +618,7 @@ export default function DashboardPage() {
 
     const user = JSON.parse(storedUser);
 
+    // Check if browser check popup was already shown
     const browserCheckShown = localStorage.getItem(
       "tivexx-browser-check-shown",
     );
@@ -655,6 +663,7 @@ export default function DashboardPage() {
           if (stored) {
             const parsed = JSON.parse(stored);
             if (typeof parsed.balance === "number") {
+              // Update local UI if balance changed while away
               console.log(
                 "[dashboard] visibility refresh - stored balance:",
                 parsed.balance,
@@ -685,6 +694,7 @@ export default function DashboardPage() {
       10 * 60 * 1000,
     );
 
+    // Check if timer expired while app was closed
     const checkServerTimer = async () => {
       try {
         const userId = user.id || user.userId;
@@ -716,6 +726,7 @@ export default function DashboardPage() {
         );
         const data = await response.json();
 
+        // Read the latest local storage value (in case it changed while user was away)
         const storedLatestRaw = localStorage.getItem("tivexx-user");
         const storedLatest = storedLatestRaw
           ? JSON.parse(storedLatestRaw)
@@ -771,6 +782,7 @@ export default function DashboardPage() {
         });
       } catch (error) {
         console.error("[Dashboard] Error fetching user balance:", error);
+        // Prefer most recent client-side stored value when network or server fails
         try {
           const storedLatestRaw = localStorage.getItem("tivexx-user");
           const storedLatest = storedLatestRaw
@@ -785,6 +797,7 @@ export default function DashboardPage() {
             setAnimatedBalance(storedLatest.balance);
             setUserData(storedLatest);
           } else {
+            // fallback to previously known user object
             setBalance(user.balance);
             setAnimatedBalance(user.balance);
             setUserData(user);
@@ -816,6 +829,7 @@ export default function DashboardPage() {
 
     showRandomNotification();
 
+    // Also refresh when window/tab gains focus so returned users see updated balance
     const handleFocusRefresh = () => {
       try {
         const stored = localStorage.getItem("tivexx-user");
@@ -870,12 +884,12 @@ export default function DashboardPage() {
 
   if (!userData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0e14]">
+      <div className="min-h-screen flex items-center justify-center bg-[#050d14]">
         <div className="text-center">
           <div className="relative w-16 h-16 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div>
             <div
-              className="absolute inset-2 rounded-full border-2 border-amber-400/40 animate-ping"
+              className="absolute inset-2 rounded-full border-2 border-emerald-400/50 animate-ping"
               style={{ animationDelay: "0.3s" }}
             ></div>
             <div className="absolute inset-4 rounded-full bg-emerald-500/20 animate-pulse"></div>
@@ -900,12 +914,9 @@ export default function DashboardPage() {
       {/* Mesh gradient overlay */}
       <div className="hh-mesh-overlay" aria-hidden="true"></div>
 
-      {/* Diagonal light beam sheen */}
-      <div className="hh-beam-overlay" aria-hidden="true"></div>
-
       <ScrollingText />
 
-      {/* DIALOGS */}
+      {/* DIALOGS - unchanged logic */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
         <DialogContent className="hh-dialog max-w-sm">
           <DialogHeader>
@@ -1017,6 +1028,7 @@ export default function DashboardPage() {
               so you don't lose access to your account.
             </p>
 
+            {/* Secure Link Display */}
             <div className="hh-browser-check-link-container">
               <p className="text-[10px] font-semibold text-emerald-400 mb-1 uppercase tracking-wider">
                 Your Secure Link
@@ -1072,7 +1084,7 @@ export default function DashboardPage() {
 
             <div className="space-y-1 mb-3">
               <p className="text-[11px] font-semibold text-white uppercase tracking-wider">
-                Login with These Credentials:
+                Login with These Credentials:.
               </p>
               <p className="text-[11px] text-gray-400">
                 Email:{" "}
@@ -1098,176 +1110,208 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ─── MAIN CONTENT — NEW LAYOUT (Helping Hands style) ─── */}
-      <div className="hh-container max-w-md mx-auto px-4 space-y-4 pt-6 relative z-10">
-        {/* ─── 1. NAVBAR ─── */}
-        <nav className="hh-card hh-card-navbar hh-entry-1 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🤝</span>
-            <span className="font-extrabold text-lg text-white tracking-tight">
-              Helping Hands
-            </span>
-          </div>
-          <ul className="flex items-center gap-6 text-sm font-medium text-gray-400">
-            <li className="text-white border-b-2 border-emerald-400 pb-1">
-              Dashboard
-            </li>
-            <li>Earnings</li>
-            <li>Network</li>
-            <li>Profile</li>
-          </ul>
-          <div className="flex items-center gap-2">
-            <div className="hh-avatar-ring w-8 h-8">
-              <div className="hh-avatar w-full h-full">
-                {userData?.profilePicture ? (
-                  <img
-                    src={userData.profilePicture}
-                    alt={userData.name}
-                    className="w-full h-full object-cover rounded-full"
+      {/* MAIN CONTENT */}
+      <div className="max-w-md mx-auto px-4 space-y-4 pt-6 relative z-10">
+        {/* ── HEADER / PROFILE CARD ── */}
+        <div className="hh-card hh-card-profile hh-entry-1">
+          {/* Top row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="hh-avatar-ring">
+                <div className="hh-avatar">
+                  {userData?.profilePicture ? (
+                    <img
+                      src={userData.profilePicture || "/placeholder.svg"}
+                      alt={userData.name}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-emerald-400 text-xs">
+                      <span className="text-xl font-black">
+                        {userData?.name.charAt(0)}
+                      </span>
+                      <span className="mt-1">Add photo</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer rounded-full"
+                    aria-label="Upload profile picture"
                   />
-                ) : (
-                  <span className="text-xs font-bold text-white">
-                    {userData?.name.charAt(0)}
-                  </span>
-                )}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-emerald-400 font-semibold uppercase tracking-widest mb-0.5">
+                  Welcome back
+                </div>
+                <div className="text-white font-black text-lg leading-tight">
+                  {displayedName} <span>👋</span>
+                </div>
               </div>
             </div>
-            <span className="text-gray-400 text-xs">▾</span>
+            <div className="text-right flex items-center gap-2">
+              <button
+                onClick={() => setShowLiveChat(true)}
+                className="hh-support-btn hh-support-blue"
+              >
+                <Headphones className="h-5 w-5 text-white" />
+              </button>
+              <Link href="https://t.me/flashgain9janews">
+                <button className="hh-support-btn hh-support-green relative">
+                  <Bell className="h-5 w-5 text-white" />
+                  <span className="hh-notif-dot"></span>
+                </button>
+              </Link>
+            </div>
           </div>
-        </nav>
+        </div>
 
-        {/* ─── 2. TOP GRID: Rewards & Impact + Share & Grow ─── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 hh-entry-2">
-          {/* Rewards & Impact card (green-gold gradient) with integrated claim */}
-          <div className="hh-card hh-card-balance p-5 relative overflow-hidden">
-            <div className="hh-orb hh-orb-1" aria-hidden></div>
-            <div className="hh-orb hh-orb-2" aria-hidden></div>
-            <h3 className="text-lg font-extrabold text-[#12190f] relative z-10">
-              Rewards &amp; Impact
-            </h3>
-            <div className="flex gap-10 mt-2 relative z-10">
-              <div>
-                <div className="text-3xl font-black text-[#12190f]">
-                  {formatCurrency(animatedBalance)}
+        {/* ── BALANCE CARD ── */}
+        <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
+          {/* Decorative glow orbs */}
+          <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
+          <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
+
+          <div className="relative z-10">
+            {/* Balance header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="hh-live-dot"></span>
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                  Available Balance
+                </span>
+              </div>
+              <button
+                className="hh-eye-btn"
+                onClick={() => setShowBalance(!showBalance)}
+                aria-label={showBalance ? "Hide balance" : "Show balance"}
+              >
+                {showBalance ? "👁️" : "🙈"}
+              </button>
+            </div>
+
+            {/* Balance amount */}
+            <div
+              className={`hh-balance-amount ${isBalanceChanging ? "hh-balance-pulse" : ""}`}
+            >
+              {formatCurrency(animatedBalance)}
+            </div>
+
+            {/* Claim reward section */}
+            <div className="hh-claim-section mt-5 relative">
+              {/* Claim header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="hh-reward-icon">
+                    <Gift className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">
+                      Daily Reward
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Click to claim ₦2,000
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs font-medium text-[#20301f] opacity-80">
-                  Total Earned
+                <div className="hh-timer-badge">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    {pauseEndTime
+                      ? formatPauseTime()
+                      : formatTime(timeRemaining)}
+                  </span>
                 </div>
               </div>
-              <div>
-                <div className="text-3xl font-black text-[#12190f]">
-                  {userData?.userId ? "45" : "0"}
-                </div>
-                <div className="text-xs font-medium text-[#20301f] opacity-80">
-                  Friends Invited
-                </div>
-              </div>
-            </div>
-            <div className="h-px bg-black/10 my-3 relative z-10"></div>
-            <div className="flex justify-between text-sm font-semibold text-[#25341f] relative z-10">
-              <span>Impact Score: 98/100</span>
-              <span>Pending Rewards: ₦2,000</span>
-            </div>
-            {/* Claim button and progress (from original) */}
-            <div className="mt-3 relative z-10">
+
+              {/* Claim button */}
               <button
                 onClick={handleClaim}
                 disabled={!canClaim && !pauseEndTime}
-                className={`w-full py-2.5 rounded-full font-bold text-sm transition-all ${
-                  canClaim && !pauseEndTime
-                    ? "bg-[#12190f] text-white hover:scale-105 shadow-lg"
-                    : pauseEndTime
-                      ? "bg-amber-600/30 text-amber-200 cursor-pointer"
-                      : "bg-white/10 text-white/40 cursor-not-allowed"
-                }`}
+                className={`hh-claim-btn ${canClaim && !pauseEndTime ? "hh-claim-ready" : pauseEndTime ? "hh-claim-paused" : "hh-claim-waiting"}`}
               >
-                {pauseEndTime
-                  ? `⏳ Wait ${formatPauseTime()}`
-                  : canClaim
-                    ? "🎁 Claim ₦2,000 Now"
-                    : `⏰ Next claim in ${formatTime(timeRemaining)}`}
+                <span className="hh-claim-shimmer"></span>
+                <span className="flex items-center justify-center gap-2 relative">
+                  <span className="text-lg">
+                    {pauseEndTime ? "⏳" : canClaim ? "🎁" : "⏰"}
+                  </span>
+                  <span>
+                    {pauseEndTime
+                      ? `Wait ${formatPauseTime()}`
+                      : canClaim
+                        ? "Claim ₦2,000 Now"
+                        : `Next claim in ${formatTime(timeRemaining)}`}
+                  </span>
+                </span>
               </button>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-black/60">Claims today</span>
+
+              {/* Claim success notification */}
+              {showClaimSuccess && (
+                <div className="hh-claim-success-popup">
+                  <div className="hh-confetti-dot hh-confetti-1"></div>
+                  <div className="hh-confetti-dot hh-confetti-2"></div>
+                  <div className="hh-confetti-dot hh-confetti-3"></div>
+                  <div className="hh-confetti-dot hh-confetti-4"></div>
+                  <div className="hh-confetti-dot hh-confetti-5"></div>
+                  <div className="text-2xl mb-1">🎉</div>
+                  <div className="font-black text-white text-lg">
+                    ₦2,000 Added!
+                  </div>
+                  <div className="text-xs text-emerald-300 mt-0.5">
+                    Balance updated
+                  </div>
+                  <div className="hh-success-bar">
+                    <div className="hh-success-bar-fill"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Claim progress */}
+              <div className="flex items-center justify-between mt-3">
+                <div className="text-xs text-gray-500">Claims today</div>
                 <div className="flex items-center gap-2">
-                  <div className="hh-progress-track w-20">
+                  <div className="hh-progress-track">
                     <div
                       className="hh-progress-fill"
                       style={{ width: `${(claimCount / 50) * 100}%` }}
                     ></div>
                   </div>
-                  <span className="text-xs font-bold text-black">
+                  <span className="text-xs font-bold text-white">
                     {claimCount}
-                    <span className="text-black/50">/50</span>
+                    <span className="text-gray-500">/50</span>
                   </span>
+                  {claimCount >= 50 && (
+                    <span className="text-xs text-yellow-400 animate-pulse">
+                      🔥 Max
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-            {/* Success popup (if claim successful) */}
-            {showClaimSuccess && (
-              <div className="hh-claim-success-popup">
-                <div className="hh-confetti-dot hh-confetti-1"></div>
-                <div className="hh-confetti-dot hh-confetti-2"></div>
-                <div className="hh-confetti-dot hh-confetti-3"></div>
-                <div className="hh-confetti-dot hh-confetti-4"></div>
-                <div className="hh-confetti-dot hh-confetti-5"></div>
-                <div className="text-2xl mb-1">🎉</div>
-                <div className="font-black text-white text-lg">
-                  ₦2,000 Added!
-                </div>
-                <div className="text-xs text-emerald-300 mt-0.5">
-                  Balance updated
-                </div>
-                <div className="hh-success-bar">
-                  <div className="hh-success-bar-fill"></div>
-                </div>
-              </div>
-            )}
-          </div>
 
-          
-        </div>
-
-        {/* ─── 3. EARNING STEPS ─── */}
-        <div className="hh-card hh-entry-3">
-          <h3 className="text-lg font-extrabold text-white">Earning Steps</h3>
-          <div className="flex items-center justify-between mt-3 gap-2">
-            <div className="flex flex-col items-center text-center flex-1">
-              <div className="w-14 h-14 rounded-full border-2 border-emerald-400 shadow-[0_0_18px_rgba(46,204,143,0.55)] flex items-center justify-center text-2xl bg-black/20">
-                📨
+            {/* Stats row */}
+            <div className="hh-stats-row mt-4">
+              <div className="hh-stat-item">
+                <div className="hh-stat-label">Today's income</div>
+                <div className="hh-stat-value text-emerald-400">
+                  +₦{(claimCount * 2000).toLocaleString()}
+                </div>
               </div>
-              <div className="font-bold text-sm text-white mt-1">
-                Invite Friends
+              <div className="hh-stat-divider"></div>
+              <div className="hh-stat-item">
+                <div className="hh-stat-label">Claims left</div>
+                <div className="hh-stat-value text-blue-400">
+                  {Math.max(0, 50 - claimCount)} remaining
+                </div>
               </div>
-              <div className="text-xs text-emerald-400 font-medium">Step 1</div>
-            </div>
-            <div className="flex-1 h-0.5 bg-gradient-to-r from-emerald-400 to-amber-400"></div>
-            <div className="flex flex-col items-center text-center flex-1">
-              <div className="w-14 h-14 rounded-full border-2 border-amber-400 shadow-[0_0_18px_rgba(245,215,110,0.55)] flex items-center justify-center text-2xl bg-black/20">
-                ✅
-              </div>
-              <div className="font-bold text-sm text-white mt-1">
-                They Complete a Task
-              </div>
-              <div className="text-xs text-gray-400 font-medium">Step 2</div>
-            </div>
-            <div className="flex-1 h-0.5 bg-gradient-to-r from-amber-400 to-amber-600"></div>
-            <div className="flex flex-col items-center text-center flex-1">
-              <div className="w-14 h-14 rounded-full border-2 border-amber-400 shadow-[0_0_18px_rgba(245,215,110,0.55)] flex items-center justify-center text-2xl bg-black/20">
-                💰
-              </div>
-              <div className="font-bold text-sm text-white mt-1">
-                Get Paid $25
-              </div>
-              <div className="text-xs text-gray-400 font-medium">Step 3</div>
             </div>
           </div>
         </div>
 
-        
-
-        {/* ─── 5. TASK & WITHDRAW BUTTONS (from original) ─── */}
-        <div className="flex gap-3 hh-entry-5">
+        {/* ── LOAN & WITHDRAW BUTTONS ── */}
+        <div className="flex gap-3 hh-entry-3">
           <Link href="/task" className="flex-1">
             <button className="hh-action-btn hh-action-purple w-full">
               <span className="hh-action-icon">💳</span>
@@ -1282,11 +1326,12 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* ─── 6. QUICK ACTIONS (grid from original) ─── */}
-        <div className="hh-card hh-entry-6">
+        {/* ── QUICK ACTIONS ── */}
+        <div className="hh-card hh-entry-4">
           <div className="hh-section-title">Quick Actions</div>
           <div className="space-y-3 mt-3">
-            <div className="grid grid-cols-2 gap-3 hh-action-grid">
+            {/* Main 2-column grid for first 4 items */}
+            <div className="grid grid-cols-2 gap-3">
               {menuItems.map((item, idx) => {
                 const Icon = item.icon;
                 const key = `qa-${idx}`;
@@ -1329,10 +1374,10 @@ export default function DashboardPage() {
               })}
             </div>
 
-            {/* Tap & Earn button */}
+            {/* Tap & Earn button - takes full width (2 boxes), slim design */}
             <Link href="/earn/tap" className="block focus:outline-none">
               <button
-                className="w-full hh-action-btn hh-action-tap"
+                className="w-full hh-action-btn hh-action-green"
                 style={{ animationDelay: "660ms" }}
               >
                 <span className="hh-action-icon">🎮</span>
@@ -1342,22 +1387,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ─── 7. REFERRAL CARD (moved to bottom) ─── */}
+        {/* Support card moved below Referral card per request */}
 
-        {/* ─── USER EMAIL FOOTER ─── */}
-        <div className="text-center text-[11px] text-white/40 pb-24 pt-3">
-          {userData?.email ? `Email: ${userData.email}` : "Email not available"}
+        {/* ── REFERRAL CARD ── */}
+        <div className="hh-entry-5">
+          {userData && <ReferralCard userId={userData.id || userData.userId} />}
         </div>
 
-        {/* Share & Grow (Referral) placed at the bottom as requested */}
-        <div className="hh-entry-7 mt-3">
-          {userData && (
-            <ReferralCard userId={userData.id || userData.userId} />
-          )}
+        {/* ── USER EMAIL FOOTER ── */}
+        <div className="text-center text-[11px] text-gray-400 pb-24 pt-3">
+          {userData?.email ? `Email: ${userData.email}` : "Email not available"}
         </div>
       </div>
 
-      {/* ─── FLOATING LIVE CHAT BUTTON ─── */}
+      {/* ── FLOATING LIVE CHAT BUTTON ── */}
       <button
         onClick={() => setShowLiveChat(true)}
         className="hh-floating-chat-btn"
@@ -1366,14 +1409,14 @@ export default function DashboardPage() {
         <MessageCircle className="h-6 w-6" />
       </button>
 
-      {/* ─── LIVE CHAT MODAL ─── */}
+      {/* ── LIVE CHAT MODAL ── */}
       {showLiveChat && (
         <div className="hh-live-chat-modal">
           <LiveChat onClose={() => setShowLiveChat(false)} />
         </div>
       )}
 
-      {/* ─── BOTTOM NAV ─── */}
+      {/* ── BOTTOM NAV ── */}
       <div className="hh-bottom-nav">
         <Link href="/dashboard" className="hh-nav-item hh-nav-active">
           <Home className="h-5 w-5" />
@@ -1393,47 +1436,11 @@ export default function DashboardPage() {
         /* ─── IMPORT FONT ─── */
         @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
-        /* ─── DESIGN TOKENS ─── */
-        :root {
-          --hh-bg-1: #0a0e14;
-          --hh-bg-2: #101a20;
-          --hh-bg-3: #0c1115;
-          --hh-green-1: #2ecc8f;
-          --hh-green-2: #22b57d;
-          --hh-gold-1: #f5d76e;
-          --hh-gold-2: #e0a838;
-          --hh-text-main: #f1f3f5;
-          --hh-text-dim: #9aa4ae;
-          --hh-text-dark: #12190f;
-          --hh-glass-bg: rgba(255, 255, 255, 0.05);
-          --hh-glass-border: rgba(255, 255, 255, 0.1);
-        }
-
         /* ─── ROOT & BACKGROUND ─── */
         .hh-root {
           font-family: "Syne", sans-serif;
-          background:
-            radial-gradient(
-              ellipse 700px 420px at 12% 0%,
-              rgba(46, 204, 143, 0.13),
-              transparent 60%
-            ),
-            radial-gradient(
-              ellipse 700px 420px at 100% 12%,
-              rgba(224, 168, 56, 0.1),
-              transparent 55%
-            ),
-            linear-gradient(
-              160deg,
-              var(--hh-bg-1) 0%,
-              var(--hh-bg-2) 45%,
-              var(--hh-bg-3) 100%
-            );
-          color: var(--hh-text-main);
-        }
-
-        .hh-container {
-          position: relative;
+          background: #050d14;
+          color: white;
         }
 
         /* ─── BUBBLES ─── */
@@ -1458,7 +1465,7 @@ export default function DashboardPage() {
           left: 10%;
           background: radial-gradient(
             circle,
-            rgba(46, 204, 143, 0.6),
+            rgba(16, 185, 129, 0.6),
             transparent
           );
           animation-duration: 8s;
@@ -1470,7 +1477,7 @@ export default function DashboardPage() {
           left: 25%;
           background: radial-gradient(
             circle,
-            rgba(245, 215, 110, 0.5),
+            rgba(59, 130, 246, 0.5),
             transparent
           );
           animation-duration: 11s;
@@ -1482,7 +1489,7 @@ export default function DashboardPage() {
           left: 40%;
           background: radial-gradient(
             circle,
-            rgba(46, 204, 143, 0.7),
+            rgba(16, 185, 129, 0.7),
             transparent
           );
           animation-duration: 9s;
@@ -1494,7 +1501,7 @@ export default function DashboardPage() {
           left: 55%;
           background: radial-gradient(
             circle,
-            rgba(224, 168, 56, 0.4),
+            rgba(139, 92, 246, 0.4),
             transparent
           );
           animation-duration: 13s;
@@ -1506,7 +1513,7 @@ export default function DashboardPage() {
           left: 70%;
           background: radial-gradient(
             circle,
-            rgba(46, 204, 143, 0.5),
+            rgba(16, 185, 129, 0.5),
             transparent
           );
           animation-duration: 10s;
@@ -1530,7 +1537,7 @@ export default function DashboardPage() {
           left: 15%;
           background: radial-gradient(
             circle,
-            rgba(245, 215, 110, 0.4),
+            rgba(59, 130, 246, 0.4),
             transparent
           );
           animation-duration: 12s;
@@ -1542,7 +1549,7 @@ export default function DashboardPage() {
           left: 35%;
           background: radial-gradient(
             circle,
-            rgba(46, 204, 143, 0.6),
+            rgba(16, 185, 129, 0.6),
             transparent
           );
           animation-duration: 9.5s;
@@ -1554,7 +1561,7 @@ export default function DashboardPage() {
           left: 60%;
           background: radial-gradient(
             circle,
-            rgba(46, 204, 143, 0.2),
+            rgba(16, 185, 129, 0.2),
             transparent
           );
           animation-duration: 15s;
@@ -1566,7 +1573,7 @@ export default function DashboardPage() {
           left: 88%;
           background: radial-gradient(
             circle,
-            rgba(224, 168, 56, 0.5),
+            rgba(139, 92, 246, 0.5),
             transparent
           );
           animation-duration: 10.5s;
@@ -1590,7 +1597,7 @@ export default function DashboardPage() {
           left: 48%;
           background: radial-gradient(
             circle,
-            rgba(245, 215, 110, 0.3),
+            rgba(59, 130, 246, 0.3),
             transparent
           );
           animation-duration: 14s;
@@ -1621,51 +1628,36 @@ export default function DashboardPage() {
           background:
             radial-gradient(
               ellipse 60% 40% at 20% 80%,
-              rgba(46, 204, 143, 0.08) 0%,
+              rgba(16, 185, 129, 0.07) 0%,
               transparent 60%
             ),
             radial-gradient(
               ellipse 50% 50% at 80% 20%,
-              rgba(224, 168, 56, 0.07) 0%,
+              rgba(59, 130, 246, 0.06) 0%,
               transparent 60%
             ),
             radial-gradient(
               ellipse 40% 30% at 50% 50%,
-              rgba(46, 204, 143, 0.04) 0%,
+              rgba(139, 92, 246, 0.04) 0%,
               transparent 60%
             );
           pointer-events: none;
           z-index: 0;
         }
 
-        /* ─── DIAGONAL BEAM SHEEN ─── */
-        .hh-beam-overlay {
-          position: fixed;
-          inset: -10% -20%;
-          background: linear-gradient(
-            100deg,
-            transparent 42%,
-            rgba(255, 255, 255, 0.035) 50%,
-            transparent 58%
-          );
-          transform: rotate(6deg);
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        /* ─── GLASS CARD BASE ─── */
+        /* ─── CARDS ─── */
         .hh-card {
-          background: var(--hh-glass-bg);
-          border: 1px solid var(--hh-glass-border);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.06) 0%,
+            rgba(255, 255, 255, 0.02) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 20px;
           padding: 20px;
-          backdrop-filter: blur(18px) saturate(140%);
-          -webkit-backdrop-filter: blur(18px) saturate(140%);
+          backdrop-filter: blur(12px);
           position: relative;
           overflow: hidden;
-          box-shadow:
-            0 8px 30px rgba(0, 0, 0, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.06);
           transition:
             transform 0.25s ease,
             box-shadow 0.25s ease;
@@ -1675,8 +1667,7 @@ export default function DashboardPage() {
           transform: translateY(-2px);
           box-shadow:
             0 20px 60px rgba(0, 0, 0, 0.4),
-            0 0 30px rgba(46, 204, 143, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 30px rgba(16, 185, 129, 0.05);
         }
 
         .hh-card::before {
@@ -1685,48 +1676,37 @@ export default function DashboardPage() {
           top: 0;
           left: 0;
           right: 0;
-          height: 2px;
+          height: 1px;
           background: linear-gradient(
             90deg,
-            var(--hh-green-1),
-            var(--hh-gold-1)
+            transparent,
+            rgba(255, 255, 255, 0.15),
+            transparent
           );
-          opacity: 0.55;
         }
 
-        /* Balance card – green‑gold gradient */
         .hh-card-balance {
           background: linear-gradient(
-            115deg,
-            #33c98f 0%,
-            #46c78f 26%,
-            #9dcf7f 50%,
-            #e3c869 74%,
-            #eec95a 100%
+            135deg,
+            rgba(16, 185, 129, 0.15) 0%,
+            rgba(5, 13, 20, 0.9) 50%,
+            rgba(59, 130, 246, 0.1) 100%
           );
-          border-color: rgba(255, 255, 255, 0.25);
+          border-color: rgba(16, 185, 129, 0.2);
           box-shadow:
-            0 10px 34px rgba(46, 204, 143, 0.18),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        }
-        .hh-card-balance::before {
-          background: linear-gradient(
-            90deg,
-            rgba(18, 25, 15, 0.25),
-            rgba(18, 25, 15, 0.05)
-          );
-          opacity: 1;
-          height: 1px;
+            0 0 40px rgba(16, 185, 129, 0.08),
+            inset 0 0 40px rgba(0, 0, 0, 0.3);
+          /* reduce height by 32% total (20% + 12%) to make box shorter */
+          transform: scaleY(0.58);
+          transform-origin: top;
         }
 
-        /* Navbar card – no top border glow */
-        .hh-card-navbar::before {
-          display: none;
-        }
-        .hh-card-navbar {
-          padding: 12px 20px;
-          background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(255, 255, 255, 0.06);
+        .hh-card-profile {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.07) 0%,
+            rgba(255, 255, 255, 0.02) 100%
+          );
         }
 
         /* ─── ORB DECORATIONS ─── */
@@ -1742,7 +1722,7 @@ export default function DashboardPage() {
           height: 150px;
           background: radial-gradient(
             circle,
-            rgba(255, 255, 255, 0.35),
+            rgba(16, 185, 129, 0.2),
             transparent
           );
           top: -40px;
@@ -1755,7 +1735,7 @@ export default function DashboardPage() {
           height: 100px;
           background: radial-gradient(
             circle,
-            rgba(18, 25, 15, 0.15),
+            rgba(59, 130, 246, 0.15),
             transparent
           );
           bottom: 20px;
@@ -1776,84 +1756,64 @@ export default function DashboardPage() {
           }
         }
 
-        /* ─── AVATAR RING ─── */
+        /* ─── AVATAR ─── */
         .hh-avatar-ring {
           position: relative;
+          width: 52px;
+          height: 52px;
           border-radius: 50%;
           padding: 2px;
-          background: linear-gradient(135deg, #2ecc8f, #f5d76e, #22b57d);
+          background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
           animation: hh-ring-spin 4s linear infinite;
-          display: inline-block;
-        }
-        .hh-avatar-ring.w-8 {
-          width: 32px;
-          height: 32px;
         }
 
         @keyframes hh-ring-spin {
           0% {
-            background: linear-gradient(135deg, #2ecc8f, #f5d76e, #22b57d);
+            background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
           }
-          50% {
-            background: linear-gradient(135deg, #f5d76e, #22b57d, #2ecc8f);
+          33% {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #10b981);
+          }
+          66% {
+            background: linear-gradient(135deg, #8b5cf6, #10b981, #3b82f6);
           }
           100% {
-            background: linear-gradient(135deg, #2ecc8f, #f5d76e, #22b57d);
+            background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
           }
         }
 
         .hh-avatar {
           width: 100%;
           height: 100%;
-          background: var(--hh-bg-1);
+          background: #0a1628;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          position: relative;
         }
 
-        /* ─── PROGRESS TRACK ─── */
-        .hh-progress-track {
-          width: 60px;
-          height: 5px;
-          background: rgba(255, 255, 255, 0.08);
-          border-radius: 10px;
-          overflow: hidden;
-        }
-        .hh-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
-          border-radius: 10px;
-          transition: width 0.5s ease;
-          box-shadow: 0 0 6px rgba(46, 204, 143, 0.5);
+        /* ─── USER ID ─── */
+        .hh-user-id {
+          font-family: "JetBrains Mono", monospace;
+          font-size: 11px;
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.08);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          border-radius: 6px;
+          padding: 2px 8px;
+          letter-spacing: 0.05em;
         }
 
-        /* ─── COPY BUTTON ─── */
-        .hh-copy-btn {
-          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
-          color: var(--hh-text-dark);
-          box-shadow: 0 0 18px rgba(46, 204, 143, 0.3);
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .hh-copy-btn:hover {
-          transform: scale(1.05);
-          box-shadow: 0 0 28px rgba(46, 204, 143, 0.5);
-        }
-        .hh-copy-btn:active {
-          transform: scale(0.95);
-        }
-
-        /* ─── ACTION BUTTONS (Task / Withdraw / Tap) ─── */
+        /* ─── ACTION BUTTONS (Loan / Withdraw) ─── */
         .hh-action-btn {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
           padding: 12px 16px;
-          border-radius: 999px;
+          border-radius: 14px;
           font-weight: 700;
           font-size: 15px;
           font-family: "Syne", sans-serif;
@@ -1864,6 +1824,7 @@ export default function DashboardPage() {
           overflow: hidden;
           cursor: pointer;
           border: none;
+          color: white;
         }
 
         .hh-action-btn:hover {
@@ -1874,30 +1835,379 @@ export default function DashboardPage() {
         }
 
         .hh-action-purple {
-          background: linear-gradient(90deg, #f5d76e, #e0a838);
-          color: var(--hh-text-dark);
-          box-shadow: 0 0 18px rgba(245, 215, 110, 0.4);
+          background: linear-gradient(135deg, #7c3aed, #5b21b6);
+          box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
         }
 
         .hh-action-green {
-          background: linear-gradient(90deg, #2ecc8f, #22b57d);
-          color: #06150f;
-          box-shadow: 0 0 18px rgba(46, 204, 143, 0.35);
-        }
-
-        .hh-action-tap {
-          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
-          color: var(--hh-text-dark);
-          box-shadow:
-            0 0 20px rgba(245, 215, 110, 0.3),
-            0 0 20px rgba(46, 204, 143, 0.25);
+          background: linear-gradient(135deg, #059669, #047857);
+          box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3);
         }
 
         .hh-action-icon {
           font-size: 18px;
         }
 
-        /* ─── QUICK ACTION CARDS ─── */
+        /* ─── LIVE DOT ─── */
+        .hh-live-dot {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #10b981;
+          box-shadow: 0 0 6px #10b981;
+          animation: hh-live-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes hh-live-pulse {
+          0%,
+          100% {
+            box-shadow: 0 0 4px #10b981;
+            transform: scale(1);
+          }
+          50% {
+            box-shadow:
+              0 0 10px #10b981,
+              0 0 20px rgba(16, 185, 129, 0.4);
+            transform: scale(1.15);
+          }
+        }
+
+        /* ─── EYE BTN ─── */
+        .hh-eye-btn {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          padding: 6px 10px;
+          font-size: 16px;
+          cursor: pointer;
+          transition:
+            background 0.2s,
+            transform 0.15s;
+        }
+
+        .hh-eye-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          transform: scale(1.05);
+        }
+        .hh-eye-btn:active {
+          transform: scale(0.95);
+        }
+
+        /* ─── BALANCE ─── */
+        .hh-balance-amount {
+          font-family: "JetBrains Mono", monospace;
+          min-height: 56px;
+          display: flex;
+          align-items: center;
+          transition: all 0.3s ease;
+        }
+
+        .hh-balance-pulse {
+          animation: hh-balance-flash 0.4s ease;
+        }
+
+        @keyframes hh-balance-flash {
+          0% {
+            text-shadow: none;
+          }
+          50% {
+            text-shadow:
+              0 0 20px rgba(52, 211, 153, 0.6),
+              0 0 40px rgba(52, 211, 153, 0.3);
+          }
+          100% {
+            text-shadow: none;
+          }
+        }
+
+        /* ─── CLAIM SECTION ─── */
+        .hh-claim-section {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 16px;
+          padding: 16px;
+        }
+
+        .hh-reward-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #10b981, #3b82f6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .hh-timer-badge {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 12px;
+          font-weight: 700;
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          border-radius: 20px;
+          padding: 4px 10px;
+        }
+
+        /* ─── CLAIM BUTTON ─── */
+        .hh-claim-btn {
+          width: 100%;
+          padding: 15px;
+          border-radius: 14px;
+          font-family: "Syne", sans-serif;
+          font-weight: 800;
+          font-size: 15px;
+          border: none;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+          color: white;
+        }
+
+        .hh-claim-btn:hover {
+          transform: translateY(-2px);
+        }
+        .hh-claim-btn:active {
+          transform: scale(0.98);
+        }
+
+        .hh-claim-ready {
+          background: linear-gradient(135deg, #10b981, #059669, #047857);
+          box-shadow:
+            0 6px 30px rgba(16, 185, 129, 0.4),
+            0 2px 8px rgba(0, 0, 0, 0.3);
+          animation: hh-claim-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes hh-claim-glow {
+          0%,
+          100% {
+            box-shadow:
+              0 6px 30px rgba(16, 185, 129, 0.4),
+              0 2px 8px rgba(0, 0, 0, 0.3);
+          }
+          50% {
+            box-shadow:
+              0 6px 40px rgba(16, 185, 129, 0.6),
+              0 2px 8px rgba(0, 0, 0, 0.3),
+              0 0 60px rgba(16, 185, 129, 0.15);
+          }
+        }
+
+        .hh-claim-waiting {
+          background: rgba(255, 255, 255, 0.07);
+          cursor: not-allowed;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .hh-claim-paused {
+          background: linear-gradient(
+            135deg,
+            rgba(234, 179, 8, 0.3),
+            rgba(202, 138, 4, 0.3)
+          );
+          border: 1px solid rgba(234, 179, 8, 0.3);
+          cursor: pointer;
+        }
+
+        .hh-claim-shimmer {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.15),
+            transparent
+          );
+          animation: hh-shimmer-slide 2.5s ease-in-out infinite;
+        }
+
+        @keyframes hh-shimmer-slide {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 200%;
+          }
+        }
+
+        /* ─── CLAIM SUCCESS POPUP ─── */
+        .hh-claim-success-popup {
+          position: absolute;
+          top: -120px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, #065f46, #047857);
+          border: 1px solid rgba(52, 211, 153, 0.4);
+          border-radius: 18px;
+          padding: 16px 24px;
+          text-align: center;
+          box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.5),
+            0 0 30px rgba(16, 185, 129, 0.2);
+          min-width: 160px;
+          animation: hh-popup-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)
+            forwards;
+          z-index: 50;
+        }
+
+        @keyframes hh-popup-bounce {
+          0% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px) scale(0.9);
+          }
+          70% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-6px) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
+          }
+        }
+
+        .hh-success-bar {
+          height: 3px;
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 3px;
+          overflow: hidden;
+          margin-top: 8px;
+        }
+
+        .hh-success-bar-fill {
+          height: 100%;
+          background: #34d399;
+          border-radius: 3px;
+          animation: hh-bar-drain 3s linear forwards;
+        }
+
+        @keyframes hh-bar-drain {
+          from {
+            width: 100%;
+          }
+          to {
+            width: 0%;
+          }
+        }
+
+        /* ─── CONFETTI ─── */
+        .hh-confetti-dot {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          animation: hh-confetti-fall 0.8s ease-out forwards;
+        }
+
+        .hh-confetti-1 {
+          top: 5px;
+          left: 20%;
+          background: #fbbf24;
+          animation-delay: 0s;
+        }
+        .hh-confetti-2 {
+          top: 5px;
+          left: 40%;
+          background: #f472b6;
+          animation-delay: 0.1s;
+        }
+        .hh-confetti-3 {
+          top: 5px;
+          left: 60%;
+          background: #60a5fa;
+          animation-delay: 0.05s;
+        }
+        .hh-confetti-4 {
+          top: 5px;
+          left: 75%;
+          background: #34d399;
+          animation-delay: 0.15s;
+        }
+        .hh-confetti-5 {
+          top: 5px;
+          left: 10%;
+          background: #a78bfa;
+          animation-delay: 0.2s;
+        }
+
+        @keyframes hh-confetti-fall {
+          0% {
+            transform: translateY(0) rotate(0);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(50px) rotate(360deg);
+            opacity: 0;
+          }
+        }
+
+        /* ─── PROGRESS ─── */
+        .hh-progress-track {
+          width: 80px;
+          height: 5px;
+          background: rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
+        .hh-progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #10b981, #3b82f6);
+          border-radius: 10px;
+          transition: width 0.5s ease;
+          box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+        }
+
+        /* ─── STATS ─── */
+        .hh-stats-row {
+          display: flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+        }
+
+        .hh-stat-item {
+          flex: 1;
+          text-align: center;
+        }
+        .hh-stat-divider {
+          width: 1px;
+          height: 32px;
+          background: rgba(255, 255, 255, 0.08);
+        }
+        .hh-stat-label {
+          font-size: 11px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+        .hh-stat-value {
+          font-size: 14px;
+          font-weight: 800;
+          margin-top: 2px;
+        }
+
+        /* ─── SECTION TITLE ─── */
+        .hh-section-title {
+          font-size: 15px;
+          font-weight: 800;
+          color: white;
+          letter-spacing: -0.01em;
+        }
+
+        /* ─── ACTION CARDS GRID ─── */
         .hh-action-card {
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.07);
@@ -1909,7 +2219,6 @@ export default function DashboardPage() {
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
           animation: hh-card-appear 0.4s ease-out both;
         }
 
@@ -1930,8 +2239,8 @@ export default function DashboardPage() {
           inset: 0;
           background: linear-gradient(
             135deg,
-            rgba(46, 204, 143, 0.08),
-            rgba(245, 215, 110, 0.06)
+            rgba(16, 185, 129, 0.08),
+            rgba(59, 130, 246, 0.05)
           );
           opacity: 0;
           transition: opacity 0.25s ease;
@@ -1940,10 +2249,10 @@ export default function DashboardPage() {
 
         .hh-action-card:hover {
           transform: translateY(-4px) scale(1.02);
-          border-color: rgba(46, 204, 143, 0.3);
+          border-color: rgba(16, 185, 129, 0.25);
           box-shadow:
             0 12px 30px rgba(0, 0, 0, 0.3),
-            0 0 20px rgba(46, 204, 143, 0.08);
+            0 0 20px rgba(16, 185, 129, 0.06);
         }
 
         .hh-action-card:hover::before {
@@ -1954,44 +2263,22 @@ export default function DashboardPage() {
         }
 
         .hh-action-card-icon {
-          font-size: 22px;
+          font-size: 26px;
           line-height: 1;
-          width: 46px;
-          height: 46px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(
-            circle at 40% 35%,
-            rgba(255, 255, 255, 0.06),
-            rgba(0, 0, 0, 0.25)
-          );
-          border: 1.5px solid var(--hh-green-1);
-          box-shadow:
-            0 0 14px rgba(46, 204, 143, 0.45),
-            inset 0 0 10px rgba(46, 204, 143, 0.2);
           margin-bottom: 2px;
-        }
-
-        .hh-action-grid > *:nth-child(even) .hh-action-card-icon {
-          border-color: var(--hh-gold-1);
-          box-shadow:
-            0 0 14px rgba(245, 215, 110, 0.45),
-            inset 0 0 10px rgba(245, 215, 110, 0.2);
         }
 
         .hh-action-card-arrow {
           font-size: 14px;
-          color: rgba(255, 255, 255, 0.25);
-          margin-top: 8px;
+          color: rgba(255, 255, 255, 0.2);
+          margin-top: 6px;
           transition:
             color 0.2s,
             transform 0.2s;
         }
 
         .hh-action-card:hover .hh-action-card-arrow {
-          color: var(--hh-green-1);
+          color: #10b981;
           transform: translateX(4px);
         }
 
@@ -2018,12 +2305,12 @@ export default function DashboardPage() {
         }
 
         .hh-support-blue {
-          background: linear-gradient(135deg, #e0a838, #b9822a);
-          box-shadow: 0 4px 12px rgba(224, 168, 56, 0.3);
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
         .hh-support-green {
-          background: linear-gradient(135deg, #2ecc8f, #22b57d);
-          box-shadow: 0 4px 12px rgba(46, 204, 143, 0.3);
+          background: linear-gradient(135deg, #059669, #047857);
+          box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
         }
 
         .hh-notif-dot {
@@ -2034,11 +2321,77 @@ export default function DashboardPage() {
           height: 8px;
           background: #ef4444;
           border-radius: 50%;
-          border: 2px solid var(--hh-bg-1);
+          border: 2px solid #050d14;
           animation: hh-live-pulse 1.5s ease-in-out infinite;
         }
 
-        /* ─── FLOATING CHAT ─── */
+        /* ─── TRANSACTION ITEMS ─── */
+        .hh-tx-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          transition: all 0.2s ease;
+          animation: hh-card-appear 0.4s ease-out both;
+        }
+
+        .hh-tx-item:hover {
+          background: rgba(255, 255, 255, 0.06);
+          transform: translateX(2px);
+        }
+
+        .hh-tx-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: 900;
+          flex-shrink: 0;
+        }
+
+        .hh-tx-credit {
+          background: rgba(16, 185, 129, 0.15);
+          color: #10b981;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .hh-tx-debit {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        /* ─── EMPTY STATE ─── */
+        .hh-empty-state {
+          text-align: center;
+          padding: 24px 0;
+          opacity: 0.6;
+        }
+
+        /* ─── SEE MORE BUTTON ─── */
+        .hh-see-more-btn {
+          font-size: 13px;
+          font-weight: 700;
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.08);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          border-radius: 20px;
+          padding: 4px 12px;
+          transition: all 0.2s;
+          text-decoration: none;
+        }
+
+        .hh-see-more-btn:hover {
+          background: rgba(16, 185, 129, 0.15);
+          transform: translateX(2px);
+        }
+
+        /* ─── FLOATING LIVE CHAT BUTTON ─── */
         .hh-floating-chat-btn {
           position: fixed;
           bottom: 150px;
@@ -2046,29 +2399,28 @@ export default function DashboardPage() {
           width: 56px;
           height: 56px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #2ecc8f, #f5d76e);
-          border: 2px solid rgba(255, 255, 255, 0.25);
-          color: #0a150f;
+          background: linear-gradient(135deg, #10b981, #059669);
+          border: 2px solid rgba(16, 185, 129, 0.3);
+          color: white;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow:
-            0 4px 20px rgba(46, 204, 143, 0.4),
-            0 4px 20px rgba(245, 215, 110, 0.25);
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
           transition: all 0.3s ease;
           z-index: 35;
         }
+
         .hh-floating-chat-btn:hover {
           transform: scale(1.1);
-          box-shadow:
-            0 6px 30px rgba(46, 204, 143, 0.55),
-            0 6px 30px rgba(245, 215, 110, 0.35);
+          box-shadow: 0 6px 30px rgba(16, 185, 129, 0.6);
         }
+
         .hh-floating-chat-btn:active {
           transform: scale(0.95);
         }
 
+        /* ─── LIVE CHAT MODAL ─── */
         .hh-live-chat-modal {
           position: fixed;
           bottom: 300px;
@@ -2076,6 +2428,7 @@ export default function DashboardPage() {
           z-index: 50;
           animation: hh-chat-slide-up 0.3s ease;
         }
+
         @keyframes hh-chat-slide-up {
           from {
             opacity: 0;
@@ -2095,8 +2448,8 @@ export default function DashboardPage() {
           right: 0;
           max-width: 448px;
           margin: 0 auto;
-          background: rgba(10, 14, 20, 0.85);
-          backdrop-filter: blur(20px) saturate(140%);
+          background: rgba(5, 13, 20, 0.92);
+          backdrop-filter: blur(20px);
           border-top: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-around;
@@ -2111,7 +2464,7 @@ export default function DashboardPage() {
           flex-direction: column;
           align-items: center;
           gap: 3px;
-          color: #5b6672;
+          color: #4b5563;
           text-decoration: none;
           font-size: 11px;
           font-weight: 600;
@@ -2120,314 +2473,52 @@ export default function DashboardPage() {
             transform 0.2s;
           padding: 8px 16px;
           border-radius: 12px;
-          position: relative;
         }
+
         .hh-nav-item:hover {
-          color: var(--hh-green-1);
+          color: #10b981;
           transform: translateY(-2px);
         }
         .hh-nav-active {
-          color: #ffffff !important;
+          color: #10b981 !important;
         }
         .hh-nav-active svg {
-          filter: drop-shadow(0 0 6px rgba(46, 204, 143, 0.6));
-        }
-        .hh-nav-active::after {
-          content: "";
-          position: absolute;
-          left: 14px;
-          right: 14px;
-          bottom: 2px;
-          height: 2px;
-          border-radius: 2px;
-          background: linear-gradient(
-            90deg,
-            var(--hh-green-1),
-            var(--hh-gold-1)
-          );
+          filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
         }
 
-        /* ─── DIALOGS ─── */
+        /* ─── DIALOG ─── */
         .hh-dialog {
-          background: linear-gradient(135deg, #0e1c17, #0a1410) !important;
-          border: 1px solid rgba(46, 204, 143, 0.18) !important;
+          background: linear-gradient(135deg, #0d1f2d, #0a1628) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: 20px !important;
           color: white !important;
         }
+
         .hh-btn-primary {
-          background: linear-gradient(90deg, #2ecc8f, #22b57d);
-          color: #06150f;
-          font-weight: 700;
-          border-radius: 999px;
-          padding: 10px;
-          box-shadow: 0 0 16px rgba(46, 204, 143, 0.3);
-        }
-        .hh-btn-secondary {
-          background: linear-gradient(90deg, #f5d76e, #e0a838);
-          color: var(--hh-text-dark);
-          font-weight: 700;
-          border-radius: 999px;
-          padding: 10px;
-          box-shadow: 0 0 16px rgba(245, 215, 110, 0.3);
-        }
-        .hh-btn-blue {
-          background: transparent;
-          border: 1.5px dashed rgba(245, 215, 110, 0.55);
-          color: var(--hh-gold-1);
-          font-weight: 700;
-          border-radius: 999px;
-          padding: 10px;
-        }
-
-        /* ─── BROWSER CHECK POPUP ─── */
-        .hh-browser-check-popup {
-          background: linear-gradient(135deg, #0e1c17, #0a1410);
-          border: 1px solid rgba(46, 204, 143, 0.2);
-          border-radius: 18px;
-          padding: 16px;
-          max-width: 380px;
-          width: 100%;
-          max-height: 70vh;
-          overflow-y: auto;
-          margin: auto 0;
-          -webkit-overflow-scrolling: touch;
-          line-height: 1.25;
-          overscroll-behavior: contain;
-          box-shadow:
-            0 30px 80px rgba(0, 0, 0, 0.6),
-            0 0 30px rgba(46, 204, 143, 0.1);
-          animation: hh-browser-check-appear 0.4s
-            cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        @keyframes hh-browser-check-appear {
-          from {
-            opacity: 0;
-            transform: scale(0.85) translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-        .hh-browser-check-header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 10px;
-        }
-        .hh-browser-check-icon {
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
-          background: linear-gradient(
-            135deg,
-            rgba(46, 204, 143, 0.2),
-            rgba(46, 204, 143, 0.05)
-          );
-          border: 1px solid rgba(46, 204, 143, 0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 6px 20px rgba(46, 204, 143, 0.15);
-        }
-        .hh-browser-check-link-container {
-          background: rgba(46, 204, 143, 0.08);
-          border: 1px solid rgba(46, 204, 143, 0.2);
-          border-radius: 10px;
-          padding: 10px;
-          margin-bottom: 10px;
-        }
-        .hh-browser-check-link-box {
-          background: rgba(0, 0, 0, 0.3);
-          border: 1.5px dashed rgba(245, 215, 110, 0.45);
-          border-radius: 8px;
-          padding: 6px;
-          margin-bottom: 6px;
-          overflow-x: auto;
-          max-height: 48px;
-          overflow-y: auto;
-        }
-        .hh-browser-check-copy-btn {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 7px;
-          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
-          border: none;
-          border-radius: 999px;
-          color: var(--hh-text-dark);
-          font-weight: 700;
-          font-size: 12px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-        }
-        .hh-browser-check-copy-btn:hover {
-          box-shadow:
-            0 0 20px rgba(46, 204, 143, 0.35),
-            0 0 20px rgba(245, 215, 110, 0.3);
-          transform: translateY(-2px);
-        }
-        .hh-browser-check-copy-btn:active {
-          transform: scale(0.98);
-        }
-        .hh-browser-check-copy-copied {
-          background: linear-gradient(90deg, #22b57d, #e0a838);
-          box-shadow: 0 0 25px rgba(46, 204, 143, 0.4);
-        }
-        .hh-browser-check-divider {
-          height: 1px;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(46, 204, 143, 0.25),
-            rgba(245, 215, 110, 0.25),
-            transparent
-          );
-          margin: 10px 0;
-        }
-        .hh-browser-check-close-btn {
-          background: linear-gradient(90deg, #2ecc8f, #22b57d);
-          color: #06150f;
-          font-weight: 700;
-          font-size: 13px;
-          border: none;
-          border-radius: 999px;
-          padding: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 6px 20px rgba(46, 204, 143, 0.3);
-        }
-        .hh-browser-check-close-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 30px rgba(46, 204, 143, 0.5);
-        }
-        .hh-browser-check-close-btn:active {
-          transform: scale(0.98);
-        }
-
-        /* ─── CLAIM SUCCESS POPUP (overlay on balance card) ─── */
-        .hh-claim-success-popup {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: linear-gradient(135deg, #0f2c22, #123726);
-          border: 1px solid rgba(245, 215, 110, 0.35);
-          border-radius: 18px;
-          padding: 16px 24px;
-          text-align: center;
-          box-shadow:
-            0 20px 60px rgba(0, 0, 0, 0.5),
-            0 0 30px rgba(46, 204, 143, 0.2);
-          min-width: 160px;
-          animation: hh-popup-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)
-            forwards;
-          z-index: 50;
-        }
-
-        @keyframes hh-popup-bounce {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.9);
-          }
-          70% {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.05);
-          }
-          100% {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-          }
-        }
-
-        .hh-success-bar {
-          height: 3px;
-          background: rgba(255, 255, 255, 0.15);
-          border-radius: 3px;
-          overflow: hidden;
-          margin-top: 8px;
-        }
-
-        .hh-success-bar-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #2ecc8f, #f5d76e);
-          border-radius: 3px;
-          animation: hh-bar-drain 3s linear forwards;
-        }
-
-        @keyframes hh-bar-drain {
-          from {
-            width: 100%;
-          }
-          to {
-            width: 0%;
-          }
-        }
-
-        .hh-confetti-dot {
-          position: absolute;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          animation: hh-confetti-fall 0.8s ease-out forwards;
-        }
-
-        .hh-confetti-1 {
-          top: 5px;
-          left: 20%;
-          background: #f5d76e;
-          animation-delay: 0s;
-        }
-        .hh-confetti-2 {
-          top: 5px;
-          left: 40%;
-          background: #2ecc8f;
-          animation-delay: 0.1s;
-        }
-        .hh-confetti-3 {
-          top: 5px;
-          left: 60%;
-          background: #e0a838;
-          animation-delay: 0.05s;
-        }
-        .hh-confetti-4 {
-          top: 5px;
-          left: 75%;
-          background: #34d399;
-          animation-delay: 0.15s;
-        }
-        .hh-confetti-5 {
-          top: 5px;
-          left: 10%;
-          background: #f5d76e;
-          animation-delay: 0.2s;
-        }
-
-        @keyframes hh-confetti-fall {
-          0% {
-            transform: translateY(0) rotate(0);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(50px) rotate(360deg);
-            opacity: 0;
-          }
-        }
-
-        /* ─── SECTION TITLE ─── */
-        .hh-section-title {
-          font-size: 15px;
-          font-weight: 800;
+          background: linear-gradient(135deg, #10b981, #059669);
           color: white;
-          letter-spacing: -0.01em;
+          font-weight: 700;
+          border-radius: 12px;
+          padding: 10px;
         }
 
-        /* ─── ENTRY ANIMATIONS ─── */
+        .hh-btn-secondary {
+          background: linear-gradient(135deg, #7c3aed, #5b21b6);
+          color: white;
+          font-weight: 700;
+          border-radius: 12px;
+          padding: 10px;
+        }
+
+        .hh-btn-blue {
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          color: white;
+          font-weight: 700;
+          border-radius: 12px;
+          padding: 10px;
+        }
+
+        /* ─── STAGGERED ENTRY ANIMATIONS ─── */
         .hh-entry-1 {
           animation: hh-entry 0.5s ease-out 0s both;
         }
@@ -2446,9 +2537,6 @@ export default function DashboardPage() {
         .hh-entry-6 {
           animation: hh-entry 0.5s ease-out 0.5s both;
         }
-        .hh-entry-7 {
-          animation: hh-entry 0.5s ease-out 0.6s both;
-        }
 
         @keyframes hh-entry {
           from {
@@ -2461,18 +2549,159 @@ export default function DashboardPage() {
           }
         }
 
-        /* ─── DESKTOP TWEAKS ─── */
-        @media (min-width: 640px) {
-          .hh-container.max-w-md {
-            max-width: 30rem;
+        /* ─── BROWSER CHECK POPUP ─── */
+        .hh-browser-check-popup {
+          background: linear-gradient(135deg, #0d1f2d, #0a1628);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          border-radius: 18px;
+          padding: 16px;
+          max-width: 380px;
+          width: 100%;
+          max-height: 70vh;
+          overflow-y: auto;
+          margin: auto 0;
+          -webkit-overflow-scrolling: touch;
+          line-height: 1.25;
+          overscroll-behavior: contain;
+          box-shadow:
+            0 30px 80px rgba(0, 0, 0, 0.6),
+            0 0 30px rgba(16, 185, 129, 0.1);
+          animation: hh-browser-check-appear 0.4s
+            cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes hh-browser-check-appear {
+          from {
+            opacity: 0;
+            transform: scale(0.85) translateY(20px);
           }
-          .hh-bottom-nav {
-            max-width: 30rem;
-            border-radius: 20px 20px 0 0;
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
           }
-          .hh-card:hover {
-            transform: translateY(-3px);
-          }
+        }
+
+        .hh-browser-check-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 10px;
+        }
+
+        .hh-browser-check-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          background: linear-gradient(
+            135deg,
+            rgba(16, 185, 129, 0.2),
+            rgba(16, 185, 129, 0.05)
+          );
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .hh-browser-check-link-container {
+          background: rgba(16, 185, 129, 0.08);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          border-radius: 10px;
+          padding: 10px;
+          margin-bottom: 10px;
+        }
+
+        .hh-browser-check-link-box {
+          background: rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(16, 185, 129, 0.15);
+          border-radius: 8px;
+          padding: 6px;
+          margin-bottom: 6px;
+          overflow-x: auto;
+          max-height: 48px;
+          overflow-y: auto;
+        }
+
+        .hh-browser-check-copy-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 7px;
+          background: linear-gradient(
+            135deg,
+            rgba(16, 185, 129, 0.3),
+            rgba(16, 185, 129, 0.1)
+          );
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          border-radius: 8px;
+          color: #10b981;
+          font-weight: 600;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .hh-browser-check-copy-btn:hover {
+          background: linear-gradient(
+            135deg,
+            rgba(16, 185, 129, 0.4),
+            rgba(16, 185, 129, 0.15)
+          );
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+          transform: translateY(-2px);
+        }
+
+        .hh-browser-check-copy-btn:active {
+          transform: scale(0.98);
+        }
+
+        .hh-browser-check-copy-copied {
+          background: linear-gradient(
+            135deg,
+            rgba(16, 185, 129, 0.5),
+            rgba(16, 185, 129, 0.2)
+          );
+          color: #10b981;
+          box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .hh-browser-check-divider {
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(16, 185, 129, 0.2),
+            transparent
+          );
+          margin: 10px 0;
+        }
+
+        .hh-browser-check-close-btn {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          font-weight: 700;
+          font-size: 13px;
+          border: none;
+          border-radius: 10px;
+          padding: 8px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .hh-browser-check-close-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+        }
+
+        .hh-browser-check-close-btn:active {
+          transform: scale(0.98);
         }
 
         /* ─── REDUCED MOTION ─── */
