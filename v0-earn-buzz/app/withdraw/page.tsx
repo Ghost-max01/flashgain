@@ -269,7 +269,7 @@ export default function WithdrawPage() {
               <span className={`hh-toggle-dot ${toggleActive ? 'hh-toggle-dot-active' : ''}`} />
             </button>
           </div>
-        </div> */
+        </div> */}
 
         {/* Balance Card */}
         <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
@@ -317,7 +317,7 @@ export default function WithdrawPage() {
               </div>
             </div>
           </div>
-        </div> */
+        </div> */}
 
         {/* BYPASSED: Progress Section hidden for testing */}
         {/* <div className="hh-card hh-entry-4">
