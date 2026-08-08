@@ -72,13 +72,45 @@ export default function WithdrawPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-NG", {
       style: "currency",
+      currency: "NGN",
+    })
+      .format(amount)
+      .replace("NGN", "₦")
+
+  // Keep completed tasks count in sync across tabs and when the page regains focus
+  useEffect(() => {
+    const updateCompleted = () => {
+      try {
+        const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+        setCompletedTasksCount(Array.isArray(completed) ? completed.length : 0)
+      } catch {
+        setCompletedTasksCount(0)
+      }
+    }
+
+    const updateUserFromStorage = () => {
+      try {
+        const storedUser = localStorage.getItem("tivexx-user")
+        if (!storedUser) return
+        const user = JSON.parse(storedUser)
+        setUserData(user)
+        setBalance(user.balance || 0)
+        if (user.id || user.userId) fetchReferralCount(user.id || user.userId)
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
+
+    // Update immediately on mount
+    updateCompleted()
+    updateUserFromStorage()
+
     const onStorage = (e: StorageEvent) => {
       if (e.key === "tivexx-completed-tasks") updateCompleted()
       if (e.key === "tivexx-user") updateUserFromStorage()
     }
 
     const onCustomUpdate = (e: Event) => {
-      // custom event dispatched from other pages/components in same tab
       try {
         const ce = e as CustomEvent
         const detail = ce?.detail
