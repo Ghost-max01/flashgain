@@ -1225,45 +1225,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Share & Grow card */}
-          <div className="hh-card flex flex-col justify-between">
-            <h3 className="text-lg font-extrabold text-white">
-              Share &amp; Grow
-            </h3>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 bg-white/5 border border-dashed border-emerald-400/50 rounded-full px-3 py-2 text-sm text-gray-300 truncate">
-                {typeof window !== "undefined"
-                  ? `${window.location.origin}/refer?ref=${userData?.userId || "ref"}`
-                  : "loading..."}
-              </div>
-              <button
-                onClick={copyLinkToClipboard}
-                className="hh-copy-btn px-5 py-2 rounded-full font-bold text-sm bg-gradient-to-r from-emerald-400 to-amber-400 text-black shadow-lg hover:scale-105 transition"
-              >
-                {copiedLink ? "Copied!" : "Copy Link"}
-              </button>
-            </div>
-            <div className="flex gap-3 mt-3">
-              <a
-                href="#"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-sm border border-white/10"
-              >
-                ✉
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-sm border border-white/10"
-              >
-                𝕏
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-sm border border-white/10"
-              >
-                f
-              </a>
-            </div>
-          </div>
+          
         </div>
 
         {/* ─── 3. EARNING STEPS ─── */}
@@ -1302,47 +1264,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ─── 4. RECENT EARNERS ─── */}
-        <div className="hh-card hh-entry-4 flex flex-wrap items-center gap-4 py-3">
-          <h3 className="text-sm font-extrabold text-white pr-4 border-r border-white/10">
-            Recent Earners
-          </h3>
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <img
-                src="https://i.pravatar.cc/60?img=47"
-                alt="Sarah K."
-                className="w-8 h-8 rounded-full border border-white/20"
-              />
-              <span className="text-sm text-gray-300">
-                Sarah K. earned{" "}
-                <span className="text-amber-400 font-bold">$50!</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <img
-                src="https://i.pravatar.cc/60?img=12"
-                alt="David L."
-                className="w-8 h-8 rounded-full border border-white/20"
-              />
-              <span className="text-sm text-gray-300">
-                David L. earned{" "}
-                <span className="text-amber-400 font-bold">$25!</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <img
-                src="https://i.pravatar.cc/60?img=32"
-                alt="Maria R."
-                className="w-8 h-8 rounded-full border border-white/20"
-              />
-              <span className="text-sm text-gray-300">
-                Maria R. earned{" "}
-                <span className="text-amber-400 font-bold">$75!</span>
-              </span>
-            </div>
-          </div>
-        </div>
+        
 
         {/* ─── 5. TASK & WITHDRAW BUTTONS (from original) ─── */}
         <div className="flex gap-3 hh-entry-5">
@@ -1420,14 +1342,18 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ─── 7. REFERRAL CARD ─── */}
-        <div className="hh-entry-7">
-          {userData && <ReferralCard userId={userData.id || userData.userId} />}
-        </div>
+        {/* ─── 7. REFERRAL CARD (moved to bottom) ─── */}
 
         {/* ─── USER EMAIL FOOTER ─── */}
         <div className="text-center text-[11px] text-white/40 pb-24 pt-3">
           {userData?.email ? `Email: ${userData.email}` : "Email not available"}
+        </div>
+
+        {/* Share & Grow (Referral) placed at the bottom as requested */}
+        <div className="hh-entry-7 mt-3">
+          {userData && (
+            <ReferralCard userId={userData.id || userData.userId} />
+          )}
         </div>
       </div>
 
