@@ -171,15 +171,11 @@ export default function WithdrawPage() {
     }
   }, [])
 
-  // Recompute whether the cashout button should be shown whenever requirements change.
-  // If `toggleActive` (withdraw without referral) is ON, skip the referral check
-  // but still require balance and completed tasks. Otherwise require referrals too.
+  // BYPASSED: Allow withdrawal without any restrictions for testing
+  // Original logic checked referrals, balance, and completed tasks
   useEffect(() => {
-    const meetsRequirements = toggleActive
-      ? (balance >= 200000 && completedTasksCount >= TOTAL_DAILY_TASKS)
-      : (balance >= 200000 && referralCount >= REQUIRED_REFERRALS && completedTasksCount >= TOTAL_DAILY_TASKS)
-
-    setShowCashout(meetsRequirements)
+    // BYPASS: Always allow cashout for testing
+    setShowCashout(true)
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
   // Auto-close blocked popup after 20 seconds with countdown and reset toggle
@@ -202,32 +198,14 @@ export default function WithdrawPage() {
   }, [showInstantWithdrawBlockedPopup])
 
   const handleCashout = () => {
-    // If toggle is ON, show blocked popup instead of normal flow
-    if (toggleActive) {
-      setShowInstantWithdrawBlockedPopup(true)
-      return
-    }
-
-    const missingBalance = balance < 200000
-    const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
-
-    if (missingTasks) {
-      setShowRequirementsModal(true)
-      return
-    }
-
+    // BYPASSED: Direct withdrawal without any validation checks
+    // Original logic validated balance, referrals, and completed tasks
     setShowWithdrawalInfoModal(true)
   }
 
   const handleProceedToWithdrawal = () => {
     setShowWithdrawalInfoModal(false)
-    
-    // If user chose "Withdraw Without Referral", show upgrade modal when they click withdraw.
-    if (toggleActive) {
-      setShowUpgradePopup(true)
-      return
-    }
-
+    // BYPASSED: Direct to bank selection without upgrade popup
     router.push("/withdraw/select-bank")
   }
 

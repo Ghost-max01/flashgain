@@ -1311,13 +1311,14 @@ export default function DashboardPage() {
         </div>
 
         {/* ── LOAN & WITHDRAW BUTTONS ── */}
+        {/* BYPASSED: Task button hidden for testing */}
         <div className="flex gap-3 hh-entry-3">
-          <Link href="/task" className="flex-1">
+          {/* <Link href="/task" className="flex-1">
             <button className="hh-action-btn hh-action-purple w-full">
               <span className="hh-action-icon">💳</span>
               <span>Task</span>
             </button>
-          </Link>
+          </Link> */}
           <Link href="/withdraw" className="flex-1">
             <button className="hh-action-btn hh-action-green w-full">
               <span className="hh-action-icon">💸</span>
@@ -1390,9 +1391,10 @@ export default function DashboardPage() {
         {/* Support card moved below Referral card per request */}
 
         {/* ── REFERRAL CARD ── */}
-        <div className="hh-entry-5">
+        {/* BYPASSED: Referral card hidden for testing */}
+        {/* <div className="hh-entry-5">
           {userData && <ReferralCard userId={userData.id || userData.userId} />}
-        </div>
+        </div> */}
 
         {/* ── USER EMAIL FOOTER ── */}
         <div className="text-center text-[11px] text-gray-400 pb-24 pt-3">
@@ -1426,10 +1428,11 @@ export default function DashboardPage() {
           <Gamepad2 className="h-5 w-5" />
           <span>About</span>
         </Link>
-        <Link href="/refer" className="hh-nav-item">
+        {/* BYPASSED: Refer & Earn link hidden for testing */}
+        {/* <Link href="/refer" className="hh-nav-item">
           <User className="h-5 w-5" />
           <span>Refer & Earn</span>
-        </Link>
+        </Link> */}
       </div>
 
       <style jsx global>{`
