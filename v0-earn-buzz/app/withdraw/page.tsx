@@ -77,6 +77,12 @@ export default function WithdrawPage() {
       .format(amount)
       .replace("NGN", "₦")
 
+  // FIXED: Memoize progress width to avoid reflows on re-renders
+  const progressWidth = useMemo(() => 
+    `${Math.min((referralCount / REQUIRED_REFERRALS) * 100, 100)}%`, 
+    [referralCount]
+  );
+
   // Keep completed tasks count in sync across tabs and when the page regains focus
   useEffect(() => {
     const updateCompleted = () => {
@@ -95,6 +101,7 @@ export default function WithdrawPage() {
         const user = JSON.parse(storedUser)
         setUserData(user)
         setBalance(user.balance || 0)
+        // refresh referral count if user id changed
         if (user.id || user.userId) fetchReferralCount(user.id || user.userId)
       } catch (e) {
         // ignore parse errors
@@ -111,6 +118,7 @@ export default function WithdrawPage() {
     }
 
     const onCustomUpdate = (e: Event) => {
+      // custom event dispatched from other pages/components in same tab
       try {
         const ce = e as CustomEvent
         const detail = ce?.detail
@@ -163,10 +171,8 @@ export default function WithdrawPage() {
     }
   }, [])
 
-  // BYPASSED: Allow withdrawal without any restrictions for testing
-  // Original logic checked referrals, balance, and completed tasks
+  // BYPASSED: Validation logic skipped - always allow cashout for testing
   useEffect(() => {
-    // BYPASS: Always allow cashout for testing
     setShowCashout(true)
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
@@ -190,14 +196,19 @@ export default function WithdrawPage() {
   }, [showInstantWithdrawBlockedPopup])
 
   const handleCashout = () => {
-    // BYPASSED: Direct withdrawal without any validation checks
-    // Original logic validated balance, referrals, and completed tasks
+    // BYPASSED: Skip all validation checks - go directly to withdrawal modal
     setShowWithdrawalInfoModal(true)
   }
 
   const handleProceedToWithdrawal = () => {
     setShowWithdrawalInfoModal(false)
-    // BYPASSED: Direct to bank selection without upgrade popup
+    
+    // If user chose "Withdraw Without Referral", show upgrade modal when they click withdraw.
+    if (toggleActive) {
+      setShowUpgradePopup(true)
+      return
+    }
+
     router.push("/withdraw/select-bank")
   }
 
@@ -253,8 +264,8 @@ export default function WithdrawPage() {
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
 
-        {/* BYPASSED: Toggle Section hidden for testing */}
-        {/* <div className="hh-card hh-entry-1">
+        {/* Toggle Section */}
+        <div className="hh-card hh-entry-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="hh-icon-ring">
@@ -269,7 +280,7 @@ export default function WithdrawPage() {
               <span className={`hh-toggle-dot ${toggleActive ? 'hh-toggle-dot-active' : ''}`} />
             </button>
           </div>
-        </div> */}
+        </div>
 
         {/* Balance Card */}
         <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
@@ -292,8 +303,8 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* BYPASSED: Requirements Card hidden for testing */}
-        {/* <div className="hh-card hh-entry-3">
+        {/* Requirements Card */}
+        <div className="hh-card hh-entry-3">
           <div className="hh-section-title mb-4">Withdrawal Requirements</div>
           
           <div className="space-y-3">
@@ -317,23 +328,83 @@ export default function WithdrawPage() {
               </div>
             </div>
           </div>
-        </div> */}
+        </div>
 
-        {/* BYPASSED: Progress section removed for testing */}
+        {/* Progress Section */}
+        {!toggleActive && (
+          <div className="hh-card hh-entry-4">
+            <div className="space-y-4">
+              {/* Daily Tasks Progress - Show only when toggle is off */}
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push('/task')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-medium text-white">Daily Tasks Progress</span>
+                  </div>
+                  <span className="text-sm font-bold text-amber-300">{completedTasksCount}/{TOTAL_DAILY_TASKS}</span>
+                </div>
+                <div className="hh-progress-track">
+                  <div 
+                    className="hh-progress-fill hh-progress-tasks" 
+                    style={{ width: `${Math.min((completedTasksCount / TOTAL_DAILY_TASKS) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
 
+              {/* Referral Progress */}
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push('/refer')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-white">Referral Progress</span>
+                  </div>
+                  <span className="text-sm font-bold text-amber-300">{referralCount}/{REQUIRED_REFERRALS}</span>
+                </div>
+                <div className="hh-progress-track">
+                  <div 
+                    className="hh-progress-fill" 
+                    style={{ width: progressWidth }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-          {/* Buttons Section */}
+        {/* Buttons Section */}
         <div className="space-y-3 hh-entry-5">
           {(() => {
-            // BYPASSED: All requirements checks removed - always allow withdrawal
+            // BYPASSED: Always allow withdrawal - skip requirement checks
+            const meetsRequirements = true
+
             return (
               <>
                 <button
                   onClick={handleCashout}
-                  className="hh-withdraw-btn hh-withdraw-ready"
+                  className={`hh-withdraw-btn hh-withdraw-ready`}
                 >
                   ✨ Withdraw Now
                 </button>
+
+                {/* If referrals are the missing piece and the user hasn't toggled withdraw-without-referral, show refer CTA */}
+                {!toggleActive && !meetsRequirements && referralCount < 5 && (
+                  <Link href="/refer" className="block">
+                    <button className="hh-refer-btn">
+                      <Share2 className="h-4 w-4" />
+                      Refer Friends to Unlock Withdrawal
+                    </button>
+                  </Link>
+                )}
               </>
             )
           })()}
