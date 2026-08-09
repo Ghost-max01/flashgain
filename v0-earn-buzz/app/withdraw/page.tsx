@@ -511,7 +511,7 @@ export default function WithdrawPage() {
         {/* Withdrawal Info Modal */}
         <WithdrawalInfoModal
           isOpen={showWithdrawalInfoModal}
-          isEligible={balance >= 200000 && (toggleActive ? (completedTasksCount >= TOTAL_DAILY_TASKS) : (referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS))}
+          isEligible={true}
           completedTasksCount={completedTasksCount}
           referralCount={referralCount}
           onClose={() => setShowWithdrawalInfoModal(false)}
