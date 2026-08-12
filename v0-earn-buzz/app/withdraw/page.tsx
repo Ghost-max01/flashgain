@@ -171,15 +171,9 @@ export default function WithdrawPage() {
     }
   }, [])
 
-  // Recompute whether the cashout button should be shown whenever requirements change.
-  // If `toggleActive` (withdraw without referral) is ON, skip the referral check
-  // but still require balance and completed tasks. Otherwise require referrals too.
+  // BYPASSED: Always show cashout button for testing - skip requirement checks
   useEffect(() => {
-    const meetsRequirements = toggleActive
-      ? (balance >= 200000 && completedTasksCount >= TOTAL_DAILY_TASKS)
-      : (balance >= 200000 && referralCount >= REQUIRED_REFERRALS && completedTasksCount >= TOTAL_DAILY_TASKS)
-
-    setShowCashout(meetsRequirements)
+    setShowCashout(true)
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
   // Auto-close blocked popup after 20 seconds with countdown and reset toggle
@@ -202,32 +196,14 @@ export default function WithdrawPage() {
   }, [showInstantWithdrawBlockedPopup])
 
   const handleCashout = () => {
-    // If toggle is ON, show blocked popup instead of normal flow
-    if (toggleActive) {
-      setShowInstantWithdrawBlockedPopup(true)
-      return
-    }
-
-    const missingBalance = balance < 200000
-    const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
-
-    if (missingTasks) {
-      setShowRequirementsModal(true)
-      return
-    }
-
+    // BYPASSED: Skip all validation checks - go directly to withdrawal modal
     setShowWithdrawalInfoModal(true)
   }
 
   const handleProceedToWithdrawal = () => {
     setShowWithdrawalInfoModal(false)
     
-    // If user chose "Withdraw Without Referral", show upgrade modal when they click withdraw.
-    if (toggleActive) {
-      setShowUpgradePopup(true)
-      return
-    }
-
+    // BYPASSED: Go directly to withdrawal page without referral checks
     router.push("/withdraw/select-bank")
   }
 
@@ -235,14 +211,8 @@ export default function WithdrawPage() {
   const handleUpgradeCancel = () => {
     setShowUpgradePopup(false)
     setToggleActive(false)
-
-    // If user meets both requirements, show cashout button again
-    if (balance >= 200000 && referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS) {
-      setShowCashout(true)
-    } else {
-      // Otherwise show refer & earn section
-      setShowCashout(false)
-    }
+    // BYPASSED: Always show cashout button
+    setShowCashout(true)
   }
 
   const handleUpgradeConfirm = () => {
@@ -534,9 +504,9 @@ export default function WithdrawPage() {
         {/* Withdrawal Info Modal */}
         <WithdrawalInfoModal
           isOpen={showWithdrawalInfoModal}
-          isEligible={balance >= 200000 && (toggleActive ? (completedTasksCount >= TOTAL_DAILY_TASKS) : (referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS))}
-          completedTasksCount={completedTasksCount}
-          referralCount={referralCount}
+          isEligible={true}
+          completedTasksCount={TOTAL_DAILY_TASKS}
+          referralCount={REQUIRED_REFERRALS}
           onClose={() => setShowWithdrawalInfoModal(false)}
           onProceed={handleProceedToWithdrawal}
         />
