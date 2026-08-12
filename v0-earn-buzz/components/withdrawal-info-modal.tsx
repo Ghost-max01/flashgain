@@ -21,7 +21,7 @@ export function WithdrawalInfoModal({
   onProceed,
 }: WithdrawalInfoModalProps) {
   const router = useRouter()
-  const TOTAL_TASKS = 10
+  const TOTAL_TASKS = 20
   const REQUIRED_REFERRALS = 5
 
   if (!isOpen) return null
@@ -51,7 +51,7 @@ export function WithdrawalInfoModal({
                   <Gift className="h-5 w-5" />
                   <div>
                     <span className="summary-label">Daily Tasks</span>
-                    <span className="summary-value">{completedTasksCount}/10 Complete</span>
+                    <span className="summary-value">{completedTasksCount}/20 Complete</span>
                   </div>
                 </div>
                 <div className="summary-item completed">

@@ -171,9 +171,15 @@ export default function WithdrawPage() {
     }
   }, [])
 
-  // BYPASSED: Validation logic skipped - always allow cashout for testing
+  // Recompute whether the cashout button should be shown whenever requirements change.
+  // If `toggleActive` (withdraw without referral) is ON, skip the referral check
+  // but still require balance and completed tasks. Otherwise require referrals too.
   useEffect(() => {
-    setShowCashout(true)
+    const meetsRequirements = toggleActive
+      ? (balance >= 200000 && completedTasksCount >= TOTAL_DAILY_TASKS)
+      : (balance >= 200000 && referralCount >= REQUIRED_REFERRALS && completedTasksCount >= TOTAL_DAILY_TASKS)
+
+    setShowCashout(meetsRequirements)
   }, [balance, referralCount, completedTasksCount, toggleActive])
 
   // Auto-close blocked popup after 20 seconds with countdown and reset toggle
@@ -196,7 +202,20 @@ export default function WithdrawPage() {
   }, [showInstantWithdrawBlockedPopup])
 
   const handleCashout = () => {
-    // BYPASSED: Skip all validation checks - go directly to withdrawal modal
+    // If toggle is ON, show blocked popup instead of normal flow
+    if (toggleActive) {
+      setShowInstantWithdrawBlockedPopup(true)
+      return
+    }
+
+    const missingBalance = balance < 200000
+    const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
+
+    if (missingTasks) {
+      setShowRequirementsModal(true)
+      return
+    }
+
     setShowWithdrawalInfoModal(true)
   }
 
@@ -384,16 +403,20 @@ export default function WithdrawPage() {
         {/* Buttons Section */}
         <div className="space-y-3 hh-entry-5">
           {(() => {
-            // BYPASSED: Always allow withdrawal - skip requirement checks
-            const meetsRequirements = true
+            const missingBalance = balance < 200000
+            const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
+            const missingReferrals = referralCount < 5
+            const meetsRequirements = toggleActive
+              ? (!missingBalance && !missingTasks)
+              : (!missingBalance && !missingTasks && !missingReferrals)
 
             return (
               <>
                 <button
                   onClick={handleCashout}
-                  className={`hh-withdraw-btn hh-withdraw-ready`}
+                  className={`hh-withdraw-btn ${toggleActive ? 'hh-withdraw-faded' : (meetsRequirements ? 'hh-withdraw-ready' : 'hh-withdraw-blurred')}`}
                 >
-                  ✨ Withdraw Now
+                  {toggleActive ? 'Instant Withdraw' : (meetsRequirements ? '✨ Withdraw Now' : 'Withdraw Now')}
                 </button>
 
                 {/* If referrals are the missing piece and the user hasn't toggled withdraw-without-referral, show refer CTA */}
@@ -511,7 +534,7 @@ export default function WithdrawPage() {
         {/* Withdrawal Info Modal */}
         <WithdrawalInfoModal
           isOpen={showWithdrawalInfoModal}
-          isEligible={true}
+          isEligible={balance >= 200000 && (toggleActive ? (completedTasksCount >= TOTAL_DAILY_TASKS) : (referralCount >= 5 && completedTasksCount >= TOTAL_DAILY_TASKS))}
           completedTasksCount={completedTasksCount}
           referralCount={referralCount}
           onClose={() => setShowWithdrawalInfoModal(false)}
