@@ -29,6 +29,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [showPasswordReminder, setShowPasswordReminder] = useState(false);
 
   useEffect(() => {
@@ -76,6 +77,10 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreed) {
+      setError("Please agree to the Support Policy, Payment Policy and Privacy Policy to continue.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -257,11 +262,37 @@ export default function RegisterPage() {
                 )}
               </div>
 
+              {/* Policy Agreement — matches design reference */}
+              <label className="hh-policy-row flex items-start gap-3 cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="hh-checkbox mt-0.5 shrink-0"
+                  aria-label="Agree to policies"
+                />
+                <span className="text-[13px] leading-5 text-white/75">
+                  I agree with{" "}
+                  <Link href="/policies?tab=support" target="_blank" className="text-emerald-300 hover:text-emerald-200 hover:underline font-medium">
+                    Support Policy
+                  </Link>
+                  {", "}
+                  <Link href="/policies?tab=payment" target="_blank" className="text-emerald-300 hover:text-emerald-200 hover:underline font-medium">
+                    Payment Policy
+                  </Link>
+                  {", "}
+                  <Link href="/policies?tab=privacy" target="_blank" className="text-emerald-300 hover:text-emerald-200 hover:underline font-medium">
+                    Privacy and Policy
+                  </Link>
+                </span>
+              </label>
+
               {/* Submit Button */}
               <button
                 type="submit"
                 className="hh-submit-btn w-full"
-                disabled={loading}
+                disabled={loading || !agreed}
+                title={!agreed ? "Please agree to the policies to continue" : undefined}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -269,7 +300,9 @@ export default function RegisterPage() {
                     Creating Account...
                   </span>
                 ) : (
-                  "Register & Get ₦20,000"
+                  <span className="flex items-center justify-center gap-2">
+                    Continue <span aria-hidden>→</span>
+                  </span>
                 )}
               </button>
             </form>
@@ -814,9 +847,41 @@ export default function RegisterPage() {
         }
 
         .hh-submit-btn:disabled {
-          opacity: 0.7;
+          opacity: 0.55;
           cursor: not-allowed;
           animation: none;
+          transform: none !important;
+          box-shadow: 0 4px 16px rgba(16,185,129,0.15) !important;
+        }
+
+        /* ─── POLICY CHECKBOX ─── */
+        .hh-policy-row{margin: 4px 0 2px}
+        .hh-checkbox{
+          appearance:none;
+          width:18px;height:18px;
+          border-radius:4px;
+          border:1.5px solid rgba(255,255,255,0.25);
+          background: rgba(255,255,255,0.06);
+          display:inline-grid;
+          place-items:center;
+          cursor:pointer;
+          transition: all 0.18s ease;
+          flex-shrink:0;
+        }
+        .hh-checkbox:checked{
+          background:#10b981;
+          border-color:#10b981;
+        }
+        .hh-checkbox:checked::after{
+          content:"✓";
+          color:white;
+          font-size:12px;
+          font-weight:800;
+          line-height:1;
+        }
+        .hh-checkbox:focus-visible{
+          outline:2px solid #10b981;
+          outline-offset:2px;
         }
 
         @keyframes hh-btn-glow {
