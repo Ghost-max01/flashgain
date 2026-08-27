@@ -31,7 +31,7 @@ export default function FirstHomepage() {
   const [showInstall, setShowInstall] = useState(true);
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb] text-gray-900 antialiased">
+    <div className="min-h-screen bg-[#f6f7fb] text-gray-900 antialiased pb-[88px] md:pb-0">
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-[64px] flex items-center justify-between">
@@ -379,7 +379,7 @@ export default function FirstHomepage() {
       </section>
 
       {showInstall && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-30">
+        <div className="fixed bottom-[92px] md:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50">
           <div className="bg-white rounded-[20px] border border-gray-100 shadow-2xl p-3 flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-sky-500 to-amber-400 grid place-items-center text-white font-black flex-shrink-0">
               F
@@ -401,8 +401,9 @@ export default function FirstHomepage() {
         </div>
       )}
 
-      <div className="md:hidden sticky bottom-0 z-20 bg-white border-t border-gray-100">
-        <div className="grid grid-cols-5 py-2">
+      {/* Fixed bottom nav — always visible */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+        <div className="grid grid-cols-5 py-2 safe-pb">
           {[
             { label: "Home", icon: Home, active: true },
             { label: "Tasks", icon: ClipboardCheck },
@@ -420,9 +421,8 @@ export default function FirstHomepage() {
             </Link>
           ))}
         </div>
-        <div className="h-3 bg-[#f6f7fb] border-t border-gray-100 flex items-center justify-center gap-2 py-3">
-          <span className="text-xs text-gray-400">rex? •</span>
-          <span className="text-xs font-semibold text-gray-700">flashgain9ja.com.ng</span>
+        <div className="bg-[#f6f7fb] border-t border-gray-100 flex items-center justify-center gap-2 py-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+          <span className="text-xs text-gray-400">rex? •</span><span className="text-xs font-semibold text-gray-700">flashgain9ja.com.ng</span>
         </div>
       </div>
     </div>
