@@ -69,6 +69,10 @@ export default function LoginPage() {
               referral_balance: Number(userRow?.referral_balance || 0),
               referral_count: Number(userRow?.referral_count || 0),
             })
+            try {
+              localStorage.setItem("tivexx-just-authenticated", "1");
+              localStorage.setItem("tivexx-auth-time", Date.now().toString());
+            } catch {}
             router.push("/dashboard")
             return
           }
@@ -144,6 +148,12 @@ export default function LoginPage() {
         referral_balance: Number(fullUser?.referral_balance || 0),
         referral_count: Number(fullUser?.referral_count || 0),
       });
+
+      // Mark that user just authenticated — dashboard will show notification prompt only now (not for guests)
+      try {
+        localStorage.setItem("tivexx-just-authenticated", "1");
+        localStorage.setItem("tivexx-auth-time", Date.now().toString());
+      } catch {}
 
       // Track user session in database
       try {

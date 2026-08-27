@@ -117,6 +117,11 @@ export default function RegisterPage() {
 
       persistUserSession(userData);
       localStorage.removeItem("tivexx-welcome-popup-shown");
+      // Flag for dashboard: show notification enable/status only after successful signup (not for anonymous visitors)
+      try {
+        localStorage.setItem("tivexx-just-authenticated", "1");
+        localStorage.setItem("tivexx-auth-time", Date.now().toString());
+      } catch {}
 
       router.push("/welcome");
     } catch (error: any) {

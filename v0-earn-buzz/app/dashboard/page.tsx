@@ -10,6 +10,7 @@ import {
   History,
   Home,
   Bell,
+  BellOff,
   User,
   Gift,
   Clock,
@@ -32,6 +33,7 @@ import {
   registerForFCM,
   requestNotificationPermission,
   showLocalNotification,
+  getSubscriptionStatus,
 } from "@/services/notification-service";
 import {
   persistUserSession,
@@ -92,6 +94,11 @@ export default function DashboardPage() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [tapCount, setTapCount] = useState(0);
+  // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{ hasAny: boolean; hasFcm: boolean; hasWebpush: boolean } | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   const notifyClaimReady = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -524,6 +531,57 @@ export default function DashboardPage() {
     }
   };
 
+  // ─── Notification handlers — only invoked after successful login/signup (inside dashboard) ───
+  const handleEnableNotifications = useCallback(async () => {
+    if (!userData) return;
+    const uid = (userData as any).id || userData.userId;
+    if (!uid) return;
+    try {
+      const ok = await registerForFCM(uid);
+      if (ok) {
+        setNotificationPermission("granted");
+        toast({ title: "Notifications enabled", description: "You'll receive claim alerts and updates." });
+        showLocalNotification("Notifications enabled", { body: "You'll receive claim alerts and updates." });
+        const status = await getSubscriptionStatus(uid);
+        setSubscriptionStatus(status);
+      } else {
+        const perm = typeof Notification !== "undefined" ? (Notification.permission as NotificationPermission) : "denied";
+        setNotificationPermission(perm);
+        if (perm === "denied") toast({ title: "Notifications blocked", description: "Please enable in browser settings." });
+      }
+    } catch (e) {
+      console.error("[dashboard] enable notifications failed", e);
+    } finally {
+      // consume the just-authenticated flag so prompt doesn't reappear on next visit
+      try {
+        localStorage.removeItem("tivexx-just-authenticated");
+      } catch {}
+      setShowNotificationPrompt(false);
+    }
+  }, [userData, toast]);
+
+  const handleCheckNotificationStatus = useCallback(async () => {
+    if (!userData) return;
+    const uid = (userData as any).id || userData.userId;
+    if (!uid) return;
+    setIsCheckingStatus(true);
+    try {
+      if (typeof Notification !== "undefined") setNotificationPermission(Notification.permission as NotificationPermission);
+      const status = await getSubscriptionStatus(uid);
+      setSubscriptionStatus(status);
+      toast({
+        title: status.hasAny ? "Notifications active" : "No subscription found",
+        description: status.hasAny
+          ? `FCM: ${status.hasFcm ? "yes" : "no"} • WebPush: ${status.hasWebpush ? "yes" : "no"}`
+          : "Tap Enable to subscribe.",
+      });
+    } catch (e) {
+      console.error("[dashboard] check status failed", e);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  }, [userData, toast]);
+
   const handleProfileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -643,8 +701,24 @@ export default function DashboardPage() {
     persistUserSession(user);
 
     const uid = user.id || user.userId;
-    registerForFCM(uid);
-    void ensurePushRegistrationIntegrity(uid);
+    // ─── Notifications: only after successful login/signup (not for guests) ───
+    // We are already inside authenticated dashboard (storedUser exists). Guest users never reach here.
+    // Show the enable prompt only if user just authenticated; otherwise don't auto-prompt.
+    // If permission already granted, silently ensure push integrity for returning users.
+    try {
+      const justAuth = localStorage.getItem("tivexx-just-authenticated") === "1";
+      const perm = typeof Notification !== "undefined" ? (Notification.permission as NotificationPermission) : ("default" as NotificationPermission);
+      setNotificationPermission(perm);
+      if (perm === "granted") {
+        void ensurePushRegistrationIntegrity(uid);
+        // also fetch status for the inside-dashboard status card
+        void getSubscriptionStatus(uid).then(setSubscriptionStatus).catch(() => {});
+      } else if (justAuth && perm === "default") {
+        // defer prompt slightly so dashboard renders first
+        setTimeout(() => setShowNotificationPrompt(true), 1200);
+      }
+      // don't auto-call registerForFCM here — user must tap Enable inside dashboard
+    } catch {}
 
     const handleVisibilityRegistrationCheck = () => {
       if (document.visibilityState === "visible") {
@@ -988,6 +1062,48 @@ export default function DashboardPage() {
               className="flex-1 hh-btn-primary"
             >
               Refer More Friends
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Notification Enable Prompt — only after successful login/signup, inside dashboard ── */}
+      <Dialog
+        open={showNotificationPrompt}
+        onOpenChange={(open) => {
+          setShowNotificationPrompt(open);
+          if (!open) {
+            try {
+              localStorage.removeItem("tivexx-just-authenticated");
+            } catch {}
+          }
+        }}
+      >
+        <DialogContent className="hh-dialog max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl text-white flex items-center justify-center gap-2">
+              <Bell className="h-5 w-5 text-emerald-400" /> Enable notifications?
+            </DialogTitle>
+            <DialogDescription className="text-center space-y-3 pt-3">
+              <p className="text-base text-gray-300">Get instant alerts when your claim is ready and when rewards drop.</p>
+              <p className="text-xs text-gray-400">You can change this anytime in Profile → Notification Settings.</p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowNotificationPrompt(false);
+                try {
+                  localStorage.removeItem("tivexx-just-authenticated");
+                } catch {}
+              }}
+              className="flex-1 rounded-full border-white/15 text-white hover:bg-white/10"
+            >
+              Maybe later
+            </Button>
+            <Button onClick={handleEnableNotifications} className="flex-1 hh-btn-primary rounded-full">
+              Enable
             </Button>
           </div>
         </DialogContent>
@@ -1392,6 +1508,64 @@ export default function DashboardPage() {
         {/* ── REFERRAL CARD ── */}
         <div className="hh-entry-5">
           {userData && <ReferralCard userId={userData.id || userData.userId} />}
+        </div>
+
+        {/* ── NOTIFICATIONS — Enable & Check Status (inside dashboard, only after login/signup) ── */}
+        <div className="hh-card hh-entry-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${notificationPermission === "granted" ? "bg-emerald-500" : "bg-gray-700"}`}>
+                {notificationPermission === "granted" ? <Bell className="h-5 w-5 text-white" /> : <BellOff className="h-5 w-5 text-white/80" />}
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-sm">Notifications</h3>
+                <p className="text-xs text-gray-400">
+                  {notificationPermission === "granted"
+                    ? "Enabled — you'll get claim alerts"
+                    : notificationPermission === "denied"
+                      ? "Blocked — enable in browser settings"
+                      : "Enable to get claim-ready alerts"}
+                </p>
+              </div>
+            </div>
+            {subscriptionStatus?.hasAny && <span className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">Active</span>}
+          </div>
+
+          {subscriptionStatus && (
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl bg-white/5 border border-white/10 py-2">
+                <div className="text-[10px] text-gray-400 uppercase tracking-wider">Permission</div>
+                <div className="text-xs font-bold text-white capitalize">{notificationPermission ?? "unknown"}</div>
+              </div>
+              <div className="rounded-xl bg-white/5 border border-white/10 py-2">
+                <div className="text-[10px] text-gray-400 uppercase tracking-wider">FCM</div>
+                <div className={`text-xs font-bold ${subscriptionStatus.hasFcm ? "text-emerald-300" : "text-gray-400"}`}>{subscriptionStatus.hasFcm ? "yes" : "no"}</div>
+              </div>
+              <div className="rounded-xl bg-white/5 border border-white/10 py-2">
+                <div className="text-[10px] text-gray-400 uppercase tracking-wider">WebPush</div>
+                <div className={`text-xs font-bold ${subscriptionStatus.hasWebpush ? "text-emerald-300" : "text-gray-400"}`}>{subscriptionStatus.hasWebpush ? "yes" : "no"}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Button
+              onClick={handleEnableNotifications}
+              disabled={notificationPermission === "granted" && !!subscriptionStatus?.hasAny}
+              className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-50"
+            >
+              {notificationPermission === "granted" ? "Enabled" : "Enable"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleCheckNotificationStatus}
+              disabled={isCheckingStatus}
+              className="rounded-full border-white/15 text-white hover:bg-white/10 bg-transparent"
+            >
+              {isCheckingStatus ? "Checking…" : "Check status"}
+            </Button>
+          </div>
+          <p className="mt-2 text-[11px] text-gray-500 text-center">Only visible after you log in or sign up. Guests don&apos;t see this.</p>
         </div>
 
         {/* ── USER EMAIL FOOTER ── */}
