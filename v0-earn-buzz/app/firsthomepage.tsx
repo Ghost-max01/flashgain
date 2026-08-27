@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Rocket,
@@ -25,10 +25,71 @@ import {
   Home,
   ClipboardCheck,
   Share2,
+  Share,
+  Smartphone,
+  Plus,
 } from "lucide-react";
 
 export default function FirstHomepage() {
   const [showInstall, setShowInstall] = useState(true);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [iosExpanded, setIosExpanded] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
+
+  useEffect(() => {
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const ios = /iPad|iPhone|iPod/.test(ua) || (typeof navigator !== "undefined" && (navigator as any).platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+    setIsIOS(ios);
+
+    const isStandalone =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true);
+    if (isStandalone) {
+      setShowInstall(false);
+      return;
+    }
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    const handleAppInstalled = () => {
+      setShowInstall(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    // Android with deferredPrompt -> native install; iOS -> expand card 2x with steps
+    if (deferredPrompt) {
+      try {
+        setIsInstalling(true);
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice?.outcome === "accepted") {
+          setShowInstall(false);
+        }
+      } catch {}
+      setDeferredPrompt(null);
+      setIsInstalling(false);
+      return;
+    }
+    if (isIOS) {
+      // iOS: card grows to ~2x and shows Add to Home Screen steps
+      setIosExpanded((v) => !v);
+      return;
+    }
+    // Fallback desktop/no prompt: just close banner (or could link to register)
+    setShowInstall(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f6f7fb] text-gray-900 antialiased pb-[88px] md:pb-0">
@@ -187,11 +248,70 @@ export default function FirstHomepage() {
 
       {showInstall && (
         <div className="fixed bottom-[92px] md:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50">
-          <div className="bg-white rounded-[20px] border border-gray-100 shadow-2xl p-3 flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-sky-500 to-amber-400 grid place-items-center text-white font-black flex-shrink-0">F</div>
-            <div className="flex-1 min-w-0"><div className="text-sm font-black">Install FlashGain</div><div className="text-xs text-gray-500">Add to home screen for quick access</div></div>
-            <Link href="/register" className="px-5 py-2.5 rounded-full bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition flex-shrink-0">Install</Link>
-            <button onClick={() => setShowInstall(false)} className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-50 text-gray-400"><X className="h-4 w-4" /></button>
+          <div
+            className={`bg-white rounded-[20px] border border-gray-100 shadow-2xl p-3 flex flex-col gap-3 transition-all duration-300 overflow-hidden ${iosExpanded ? "min-h-[160px]" : ""}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-sky-500 to-amber-400 grid place-items-center text-white font-black flex-shrink-0">
+                F
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-black">Install FlashGain</div>
+                <div className="text-xs text-gray-500">{isIOS && iosExpanded ? "Follow steps below" : "Add to home screen for quick access"}</div>
+              </div>
+              <button
+                onClick={handleInstallClick}
+                disabled={isInstalling}
+                className="px-5 py-2.5 rounded-full bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition flex-shrink-0 disabled:opacity-60"
+              >
+                {isInstalling ? "..." : isIOS && iosExpanded ? "Got it" : "Install"}
+              </button>
+              <button
+                onClick={() => {
+                  if (isIOS && iosExpanded) setIosExpanded(false);
+                  else setShowInstall(false);
+                }}
+                className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-50 text-gray-400 flex-shrink-0"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* iOS expanded: card grows to ~2x and shows steps */}
+            {isIOS && iosExpanded && (
+              <div className="border-t border-gray-100 pt-3 animate-[fadeIn_0.25s_ease]">
+                <p className="text-xs font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-sky-500" /> To add FlashGain on iPhone:
+                </p>
+                <ol className="space-y-2.5">
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white grid place-items-center text-xs font-bold flex-shrink-0">1</span>
+                    <span className="text-xs text-gray-600">
+                      Tap the <Share className="inline h-3.5 w-3.5 text-sky-600 mx-0.5" /> <span className="font-semibold text-gray-800">Share</span> button in Safari&apos;s bottom bar
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white grid place-items-center text-xs font-bold flex-shrink-0">2</span>
+                    <span className="text-xs text-gray-600">
+                      Scroll and tap <span className="inline-flex items-center gap-1 font-semibold text-gray-800"><Plus className="h-3 w-3" /> Add to Home Screen</span>
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white grid place-items-center text-xs font-bold flex-shrink-0">3</span>
+                    <span className="text-xs text-gray-600">
+                      Tap <span className="font-semibold text-sky-600">Add</span> top-right to install instantly
+                    </span>
+                  </li>
+                </ol>
+                <p className="mt-3 text-[11px] text-gray-400 text-center">Then launch FlashGain from your home screen like a real app.</p>
+              </div>
+            )}
+
+            {/* Android hint when no prompt yet */}
+            {!isIOS && !deferredPrompt && !iosExpanded && (
+              <p className="hidden">{/* placeholder for Android auto-install via prompt */}</p>
+            )}
           </div>
         </div>
       )}
