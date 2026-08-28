@@ -3,9 +3,10 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock } from "lucide-react"
+import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
+import { getBankDetails, type BankDetails } from "@/lib/bank-details"
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -22,6 +23,7 @@ export default function WithdrawPage() {
   const [showWithdrawalInfoModal, setShowWithdrawalInfoModal] = useState(false)
   const [showInstantWithdrawBlockedPopup, setShowInstantWithdrawBlockedPopup] = useState(false)
   const [popupCountdown, setPopupCountdown] = useState(20)
+  const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
@@ -54,6 +56,11 @@ export default function WithdrawPage() {
     }
 
     fetchReferralCount(user.id || user.userId)
+    // Load locked bank details — will replace Available Balance when set
+    try {
+      const bd = getBankDetails()
+      if (bd?.locked) setBankDetails(bd)
+    } catch {}
   }, [router])
 
   const fetchReferralCount = async (userId: string) => {
@@ -144,6 +151,19 @@ export default function WithdrawPage() {
     const onFocus = () => {
       updateCompleted()
       updateUserFromStorage()
+      // also refresh locked bank details when page regains focus
+      try {
+        const bd = getBankDetails()
+        if (bd?.locked) setBankDetails(bd)
+      } catch {}
+    }
+
+    // poll bank details as well (same-tab updates)
+    const updateBankDetails = () => {
+      try {
+        const bd = getBankDetails()
+        if (bd?.locked) setBankDetails(bd)
+      } catch {}
     }
 
     window.addEventListener("storage", onStorage)
@@ -157,6 +177,7 @@ export default function WithdrawPage() {
         const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
         const count = Array.isArray(completed) ? completed.length : 0
         setCompletedTasksCount(count)
+        updateBankDetails()
       } catch (e) {
         // ignore parse errors
       }
@@ -271,26 +292,59 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* Balance Card */}
-        <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
-          <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
-          <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="hh-live-dot"></span>
-              <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Available Balance</span>
+        {/* Bank Details (locked) — shown INSTEAD of Available Balance when set after signup */}
+        {bankDetails?.locked ? (
+          <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
+            <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
+            <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="hh-live-dot"></span>
+                  <span className="text-xs text-emerald-300 font-bold uppercase tracking-wider">Payout Account</span>
+                </div>
+                <span className="flex items-center gap-1 text-xs font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-1 rounded-full">
+                  <Lock className="h-3 w-3" /> Locked
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-white/50">Bank</span>
+                  <span className="text-sm font-bold text-white">{bankDetails.bank}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-white/50">Account Number</span>
+                  <span className="text-sm font-mono font-bold text-white tracking-wide">{bankDetails.accountNumber}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-white/50">Account Name</span>
+                  <span className="text-sm font-bold text-white text-right max-w-[60%] truncate">{bankDetails.accountName}</span>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-amber-200/70 flex items-center gap-1">
+                <Lock className="h-3 w-3" /> Locked after signup — cannot be changed.
+              </p>
             </div>
-            
-            <h2 className="hh-balance-large">
-              <span className="text-2xl align-top opacity-80">₦</span>
-              <span className="text-5xl font-black tracking-tight">
-                {balance.toLocaleString().split('.')[0]}
-              </span>
-              <span className="text-2xl opacity-60">.{balance.toFixed(2).split('.')[1] || '00'}</span>
-            </h2>
           </div>
-        </div>
+        ) : (
+          <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
+            <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
+            <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="hh-live-dot"></span>
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Available Balance</span>
+              </div>
+              <h2 className="hh-balance-large">
+                <span className="text-2xl align-top opacity-80">₦</span>
+                <span className="text-5xl font-black tracking-tight">
+                  {balance.toLocaleString().split('.')[0]}
+                </span>
+                <span className="text-2xl opacity-60">.{balance.toFixed(2).split('.')[1] || '00'}</span>
+              </h2>
+            </div>
+          </div>
+        )}
 
         {/* Requirements Card */}
         <div className="hh-card hh-entry-3">

@@ -123,7 +123,7 @@ export default function RegisterPage() {
         localStorage.setItem("tivexx-auth-time", Date.now().toString());
       } catch {}
 
-      router.push("/welcome");
+      router.push("/setup-bank");
     } catch (error: any) {
       console.error("[v0] Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");
