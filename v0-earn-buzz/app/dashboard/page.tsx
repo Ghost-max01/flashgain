@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Users,
   MessageCircle,
+  Leaf,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardImageCarousel } from "@/components/dashboard-image-carousel";
@@ -1407,20 +1408,31 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Stats row */}
-            <div className="hh-stats-row mt-4">
-              <div className="hh-stat-item">
-                <div className="hh-stat-label">Today's income</div>
-                <div className="hh-stat-value text-emerald-400">
-                  +₦{(claimCount * 2000).toLocaleString()}
+            {/* Trust Score — replaces Today's income / Claims left */}
+            <div
+              className="hh-trust-card mt-4"
+              onClick={() => router.push("/profile")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") router.push("/profile");
+              }}
+            >
+              <div className="hh-trust-header">
+                <div className="hh-trust-icon">
+                  <Leaf className="h-5 w-5 text-white" />
                 </div>
+                <div className="hh-trust-text">
+                  <div className="hh-trust-label">Trust Score</div>
+                  <div className="hh-trust-value">0</div>
+                </div>
+                <span className="hh-trust-badge">Free</span>
               </div>
-              <div className="hh-stat-divider"></div>
-              <div className="hh-stat-item">
-                <div className="hh-stat-label">Claims left</div>
-                <div className="hh-stat-value text-blue-400">
-                  {Math.max(0, 50 - claimCount)} remaining
-                </div>
+              <div className="hh-trust-track">
+                <div className="hh-trust-fill" style={{ width: "0%" }}></div>
+              </div>
+              <div className="hh-trust-footer">
+                20 more to <span className="hh-trust-level">Beginner</span> · tap to upgrade
               </div>
             </div>
           </div>
@@ -2371,6 +2383,100 @@ export default function DashboardPage() {
           font-size: 14px;
           font-weight: 800;
           margin-top: 2px;
+        }
+
+        /* ─── TRUST SCORE (replaces Today's income / Claims left) — image-matched but in site palette ─── */
+        .hh-trust-card {
+          background: rgba(255, 255, 255, 0.97);
+          border: 1px solid rgba(255, 255, 255, 0.9);
+          border-radius: 22px;
+          padding: 16px 16px 14px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 2px 10px rgba(16, 185, 129, 0.08);
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hh-trust-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(16, 185, 129, 0.12);
+        }
+        .hh-trust-card:active {
+          transform: scale(0.99);
+        }
+        .hh-trust-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .hh-trust-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 45%, #3b82f6 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+          flex-shrink: 0;
+        }
+        .hh-trust-text {
+          flex: 1;
+          min-width: 0;
+        }
+        .hh-trust-label {
+          font-size: 13px;
+          font-weight: 700;
+          color: #1f2937;
+          letter-spacing: -0.01em;
+          line-height: 1;
+        }
+        .hh-trust-value {
+          font-size: 26px;
+          font-weight: 900;
+          color: #111827;
+          line-height: 1;
+          margin-top: 4px;
+          font-family: "Syne", sans-serif;
+        }
+        .hh-trust-badge {
+          background: rgba(59, 130, 246, 0.12);
+          border: 1px solid rgba(59, 130, 246, 0.18);
+          color: #2563eb;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 6px 12px;
+          border-radius: 9999px;
+          letter-spacing: 0.01em;
+        }
+        .hh-trust-track {
+          margin-top: 16px;
+          height: 8px;
+          background: #e5e7eb;
+          border-radius: 9999px;
+          overflow: hidden;
+        }
+        .hh-trust-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #10b981, #059669);
+          border-radius: 9999px;
+          transition: width 0.5s ease;
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+        }
+        .hh-trust-footer {
+          margin-top: 10px;
+          text-align: center;
+          font-size: 12px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+        .hh-trust-level {
+          color: #111827;
+          font-weight: 800;
+        }
+        /* dark-mode tuning to keep site cohesion when card sits on #050d14 */
+        @media (prefers-color-scheme: dark) {
+          .hh-trust-card {
+            border-color: rgba(255, 255, 255, 0.9);
+          }
         }
 
         /* ─── SECTION TITLE ─── */
