@@ -1579,16 +1579,13 @@ export default function DashboardPage() {
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
                 </div>
               </div>
-              {/* Auto tap toggle under orb — styled like Withdraw Without Referral */}
-              <div onClick={handleAutoToggle} className="mt-2 flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 px-3 py-3 cursor-pointer select-none">
-                <div className="flex items-center gap-2">
-                  <div className="hh-icon-ring !w-8 !h-8 !rounded-[10px]"><Zap className="h-4 w-4 text-amber-300" /></div>
-                  <span className="text-sm font-black text-white tracking-wide">AUTO TAP</span>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
-                </div>
-                <button type="button" onClick={(e)=>{ e.stopPropagation(); handleAutoToggle(); }} className={`hh-toggle ${autoActive ? 'hh-toggle-active' : ''}`} aria-label="Toggle auto tap">
+              {/* Auto tap toggle under orb — only button, centered like withdraw toggle */}
+              <div className="flex flex-col items-center gap-1 mt-2">
+                <span className="text-[11px] font-black tracking-widest text-white/80">AUTO TAP</span>
+                <button type="button" onClick={handleAutoToggle} className={`hh-toggle ${autoActive ? 'hh-toggle-active' : ''}`} aria-label="Toggle auto tap">
                   <span className={`hh-toggle-dot ${autoActive ? 'hh-toggle-dot-active' : ''}`} />
                 </button>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
               </div>
               {autoActive && <div className="text-center text-[10px] text-emerald-300 font-bold mt-1">{autoTapsDone}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps} taps • {formatAutoLeft(autoLeftMs)} left</div>}
               {tapExhaustUntil && tapExhaustLeft>0 ? (
