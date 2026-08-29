@@ -55,6 +55,18 @@ const TAP_MAX_ENERGY = 100;
 const TAP_EARN_PER = 100;
 const TAP_ENERGY_REGEN_MS = 6000;
 const TAP_STORAGE_KEY = "tap_earn_state";
+const TAP_EXHAUST_COOLDOWN_MS = 10 * 60 * 1000; // 10 mins wait when 100/100 exhausted
+const TAP_EXHAUST_KEY = "tap_exhaust_until";
+const AUTO_TAP_KEY = "auto_tap_state";
+type AutoPlanId = "free1h" | "24h" | "2d" | "3d" | "1w";
+const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: number; maxTaps: number; maxEarn: number }[] = [
+  { id: "free1h", label: "1 hour FREE", sub: "First time only", durationMs: 60*60*1000, maxTaps: 600, maxEarn: 60000 },
+  { id: "24h", label: "24 hours: 1500 taps", sub: "max 150,000", durationMs: 24*60*60*1000, maxTaps: 1500, maxEarn: 150000 },
+  { id: "2d", label: "2 days: 3500 taps", sub: "max 350,000", durationMs: 2*24*60*60*1000, maxTaps: 3500, maxEarn: 350000 },
+  { id: "3d", label: "3 days: 5500 taps", sub: "max 550,000", durationMs: 3*24*60*60*1000, maxTaps: 5500, maxEarn: 550000 },
+  { id: "1w", label: "1 week: 10,000 taps", sub: "max 1,000,000", durationMs: 7*24*60*60*1000, maxTaps: 10000, maxEarn: 1000000 },
+];
+const AUTO_TAP_INTERVAL_MS = 800;
 
 interface UserData {
   name: string;
@@ -111,6 +123,18 @@ export default function DashboardPage() {
   const tapPid = useRef(0);
   const tapAccum = useRef(0);
   const tapSyncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tapExhaustUntil, setTapExhaustUntil] = useState<number | null>(null);
+  const [tapExhaustLeft, setTapExhaustLeft] = useState(0);
+  // auto tap
+  const [autoActive, setAutoActive] = useState(false);
+  const [autoPlan, setAutoPlan] = useState<AutoPlanId | null>(null);
+  const [autoExpiresAt, setAutoExpiresAt] = useState<number | null>(null);
+  const [autoTapsDone, setAutoTapsDone] = useState(0);
+  const [autoLeftMs, setAutoLeftMs] = useState(0);
+  const [autoFirstFreeUsed, setAutoFirstFreeUsed] = useState(false);
+  const [showAutoPlans, setShowAutoPlans] = useState(false);
+  const [showAutoFreePopup, setShowAutoFreePopup] = useState(false);
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
@@ -282,7 +306,7 @@ export default function DashboardPage() {
     };
   }, [toast]);
 
-  // ── Tap-to-Earn: load + regen + persist (round orb in balance card) ──
+  // ── Tap-to-Earn: load + regen + persist + exhaust 10min + auto tap ──
   useEffect(() => {
     try {
       const raw = localStorage.getItem(TAP_STORAGE_KEY);
@@ -294,17 +318,95 @@ export default function DashboardPage() {
         setTapEnergy(energy);
         setTapEarned(s.earned || 0);
       }
+      const ex = localStorage.getItem(TAP_EXHAUST_KEY);
+      if (ex) {
+        const until = Number(ex);
+        if (until > Date.now()) { setTapExhaustUntil(until); setTapEnergy(0); }
+        else localStorage.removeItem(TAP_EXHAUST_KEY);
+      }
+      const aRaw = localStorage.getItem(AUTO_TAP_KEY);
+      if (aRaw) {
+        const a = JSON.parse(aRaw);
+        setAutoFirstFreeUsed(!!a.firstFreeUsed);
+        if (a.active && a.expiresAt && a.expiresAt > Date.now() && a.tapsDone < (AUTO_PLANS.find(p=>p.id===a.planId)?.maxTaps ?? Infinity)) {
+          setAutoActive(true); setAutoPlan(a.planId); setAutoExpiresAt(a.expiresAt); setAutoTapsDone(a.tapsDone||0);
+        } else if (a.firstFreeUsed) {
+          // keep flag
+        }
+      }
     } catch {}
   }, []);
+  // exhaust countdown
+  useEffect(() => {
+    if (!tapExhaustUntil) { setTapExhaustLeft(0); return; }
+    const tick = () => {
+      const left = Math.max(0, tapExhaustUntil - Date.now());
+      setTapExhaustLeft(left);
+      if (left === 0) {
+        setTapExhaustUntil(null);
+        try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+        setTapEnergy(TAP_MAX_ENERGY);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [tapExhaustUntil]);
+  // regen (blocked while exhausted)
   useEffect(() => {
     const id = setInterval(() => {
+      if (tapExhaustUntil && tapExhaustUntil > Date.now()) return;
       setTapEnergy((prev) => (prev >= TAP_MAX_ENERGY ? prev : Math.min(TAP_MAX_ENERGY, prev + 1)));
     }, TAP_ENERGY_REGEN_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [tapExhaustUntil]);
   useEffect(() => {
     try { localStorage.setItem(TAP_STORAGE_KEY, JSON.stringify({ energy: tapEnergy, earned: tapEarned, lastTime: Date.now() })); } catch {}
+    if (tapEnergy === 0 && !tapExhaustUntil) {
+      const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
+      setTapExhaustUntil(until);
+      try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
+    }
   }, [tapEnergy, tapEarned]);
+  // persist auto
+  useEffect(() => {
+    try { localStorage.setItem(AUTO_TAP_KEY, JSON.stringify({ active: autoActive, planId: autoPlan, expiresAt: autoExpiresAt, tapsDone: autoTapsDone, firstFreeUsed: autoFirstFreeUsed })); } catch {}
+  }, [autoActive, autoPlan, autoExpiresAt, autoTapsDone, autoFirstFreeUsed]);
+  // auto countdown + expire
+  useEffect(() => {
+    if (!autoActive || !autoExpiresAt) { setAutoLeftMs(0); return; }
+    const tick = () => {
+      const left = Math.max(0, autoExpiresAt - Date.now());
+      setAutoLeftMs(left);
+      if (left === 0) { setAutoActive(false); setAutoExpiresAt(null); toast({ title: "Auto tap finished" }); }
+      const plan = AUTO_PLANS.find(p=>p.id===autoPlan);
+      if (plan && autoTapsDone >= plan.maxTaps) { setAutoActive(false); setAutoExpiresAt(null); toast({ title: "Auto tap limit reached", description: `${plan.maxTaps} taps completed` }); }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [autoActive, autoExpiresAt, autoPlan, autoTapsDone, toast]);
+  // auto tap interval — no orb animation, just balance ++ with particles
+  useEffect(() => {
+    if (!autoActive) { if (autoTimerRef.current) clearInterval(autoTimerRef.current); autoTimerRef.current = null; return; }
+    if (tapExhaustUntil && tapExhaustUntil > Date.now()) return; // wait for exhaust
+    const plan = AUTO_PLANS.find(p=>p.id===autoPlan);
+    const max = plan?.maxTaps ?? Infinity;
+    autoTimerRef.current = setInterval(() => {
+      if (autoTapsDone >= max) return;
+      if (tapEnergy <= 0) return; // wait regen
+      setTapEnergy(p=> Math.max(0, p-1));
+      setTapEarned(p=> p+TAP_EARN_PER);
+      setBalance(p=> p+TAP_EARN_PER);
+      setAutoTapsDone(p=> p+1);
+      syncTapToBalance(TAP_EARN_PER);
+      // subtle particle without bounce — balance increasing visible
+      const id = tapPid.current++;
+      setTapParticles(prev=> [...prev, { id, x: 75, y: 20 }]);
+      setTimeout(()=> setTapParticles(prev=> prev.filter(p=>p.id!==id)), 700);
+    }, AUTO_TAP_INTERVAL_MS);
+    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
+  }, [autoActive, autoPlan, autoTapsDone, tapEnergy, tapExhaustUntil]);
   const syncTapToBalance = useCallback((amount: number) => {
     tapAccum.current += amount;
     if (tapSyncTimeout.current) clearTimeout(tapSyncTimeout.current);
@@ -328,7 +430,9 @@ export default function DashboardPage() {
   }, []);
   const handleTapEarn = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     try { (e as any).stopPropagation?.(); } catch {}
-    if (tapEnergy <= 0) { toast({ title: "Out of energy", description: "Wait a few seconds to regenerate ⚡" }); return; }
+    if (autoActive) return; // locked while auto
+    if (tapExhaustUntil && tapExhaustUntil > Date.now()) { toast({ title: "Exhausted", description: `Wait ${Math.ceil(tapExhaustLeft/60000)}m ${Math.ceil((tapExhaustLeft%60000)/1000)}s to recharge` }); return; }
+    if (tapEnergy <= 0) { toast({ title: "Out of energy", description: "Wait 10 mins to recharge or use Auto Tap ⚡" }); return; }
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     let cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
     if ("touches" in (e as any) && (e as any).touches?.[0]) { cx = (e as any).touches[0].clientX; cy = (e as any).touches[0].clientY; }
@@ -342,7 +446,25 @@ export default function DashboardPage() {
     setBalance((p) => p + TAP_EARN_PER);
     setTapCount((p) => p + 1);
     syncTapToBalance(TAP_EARN_PER);
-  }, [tapEnergy, toast, syncTapToBalance]);
+  }, [tapEnergy, toast, syncTapToBalance, autoActive, tapExhaustUntil, tapExhaustLeft]);
+  const handleAutoToggle = useCallback(() => {
+    if (autoActive) { setAutoActive(false); setAutoExpiresAt(null); toast({ title: "Auto tap OFF" }); return; }
+    // first time -> show eligible popup + plans
+    if (!autoFirstFreeUsed) setShowAutoFreePopup(true);
+    setShowAutoPlans(true);
+  }, [autoActive, autoFirstFreeUsed, toast]);
+  const startAutoPlan = useCallback((id: AutoPlanId) => {
+    if (id === "free1h" && autoFirstFreeUsed) return;
+    const plan = AUTO_PLANS.find(p=>p.id===id)!;
+    setAutoPlan(id); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    if (id==="free1h") setAutoFirstFreeUsed(true);
+    setShowAutoPlans(false); setShowAutoFreePopup(false);
+    toast({ title: "Auto tap ON", description: `${plan.label} started` });
+  }, [autoFirstFreeUsed, toast]);
+  const formatAutoLeft = (ms:number) => {
+    const s = Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+    if (h>0) return `${h}h ${m}m ${sec}s`; return `${m}m ${sec}s`;
+  };
 
   // Animate balance changes
   useEffect(() => {
@@ -1201,6 +1323,46 @@ export default function DashboardPage() {
         <WithdrawalNotification onClose={handleCloseWithdrawalNotification} />
       )}
 
+      {/* ── AUTO TAP: Eligible popup (1hr free) ── */}
+      <Dialog open={showAutoFreePopup} onOpenChange={setShowAutoFreePopup}>
+        <DialogContent className="hh-dialog max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl text-white">🎉 You are eligible!</DialogTitle>
+            <DialogDescription className="text-center pt-2 text-gray-300">You have 1 hour of FREE auto tap. Your balance will increase automatically without tapping.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button variant="outline" onClick={()=> setShowAutoFreePopup(false)} className="flex-1 rounded-full border-white/15 text-white">Later</Button>
+            <Button onClick={()=> { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full">Start FREE 1hr</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* ── AUTO TAP: Plan selector ── */}
+      <Dialog open={showAutoPlans} onOpenChange={setShowAutoPlans}>
+        <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg text-white">Choose Auto Tap Plan</DialogTitle>
+            <DialogDescription className="text-center text-xs text-gray-400">Only first-time users get 1hr FREE. After that it is crossed out.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-3">
+            {AUTO_PLANS.map((p, idx)=> {
+              const isFree = p.id==="free1h";
+              const disabled = isFree && autoFirstFreeUsed;
+              return (
+                <button key={p.id} disabled={disabled} onClick={()=> startAutoPlan(p.id)} className={`w-full text-left relative rounded-2xl border p-3 flex items-center justify-between ${disabled ? "bg-white/5 border-white/10 opacity-50" : "bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border-emerald-500/30 hover:border-emerald-400/50"}`}>
+                  <div>
+                    <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{idx+1}. {p.label}</div>
+                    <div className="text-xs text-white/60">------&gt; max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub}</div>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-xs font-black ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{disabled ? "Used" : "Start"}</div>
+                  {disabled && <div className="absolute left-3 right-3 top-1/2 h-[2px] bg-gray-400/70 -translate-y-1/2"></div>}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-center text-white/50 mt-3">Auto tap locks the orb (no animation) — balance still rises in real time.</p>
+        </DialogContent>
+      </Dialog>
+
       {/* Browser Check Popup */}
       {showBrowserCheck && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-start sm:items-center justify-center z-50 p-4 overflow-y-auto">
@@ -1401,26 +1563,39 @@ export default function DashboardPage() {
                   <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
                   <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
                   <span className="hh-tap-badge">₦{TAP_EARN_PER}/tap</span>
+                  {autoActive && <span className="hh-auto-on-badge">AUTO ON • {formatAutoLeft(autoLeftMs)}</span>}
                 </div>
                 <span className="text-[11px] font-mono font-bold text-emerald-300 flex items-center gap-1"><Sparkles className="h-3 w-3"/> +₦{tapEarned.toLocaleString()}</span>
               </div>
               <div className="flex flex-col items-center py-1">
                 <div className="hh-orb-stage-sm">
-                  <div className={`te-halo ${tapEnergy > 0 ? "te-halo-active" : "te-halo-inactive"}`}></div>
-                  <div className="te-ring te-ring-outer"></div>
-                  <div className="te-ring te-ring-inner"></div>
-                  <button onClick={handleTapEarn} className={`te-orb hh-orb-sm ${tapEnergy > 0 ? "te-orb-active" : "te-orb-depleted"} ${tapTapping ? "te-orb-tap" : ""}`} aria-label="Tap to earn">
+                  <div className={`te-halo ${tapEnergy > 0 && !autoActive ? "te-halo-active" : "te-halo-inactive"}`}></div>
+                  <div className="te-ring te-ring-outer" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
+                  <div className="te-ring te-ring-inner" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
+                  <button onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0)} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive ? "te-orb-tap" : ""} ${autoActive ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
-                    <div className="te-orb-center"><div className="te-orb-icon-bounce"><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">TAP</span></div>
+                    <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : "TAP"}</span></div>
                   </button>
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${(tapEnergy/TAP_MAX_ENERGY)*100}%` }}></div></div>
-                <span className={`text-[11px] font-mono font-bold whitespace-nowrap ${tapEnergy<20 ? 'text-amber-300' : 'text-white/80'}`}><Zap className="inline h-3 w-3 -mt-0.5"/>{tapEnergy}/{TAP_MAX_ENERGY}</span>
+              {/* Auto tap toggle under orb */}
+              <div className="flex justify-center mt-1">
+                <button onClick={handleAutoToggle} className={`hh-auto-toggle ${autoActive ? "hh-auto-toggle-on" : "hh-auto-toggle-off"}`}>
+                  <span className="hh-auto-toggle-dot"></span>
+                  AUTO TAP — {autoActive ? "ON" : "OFF"}
+                </button>
               </div>
-              <div className="flex items-center justify-between mt-2"><span className="text-[11px] text-white/50">Tap the round orb • balance +₦100 instantly</span><Link href="/earn/tap" className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200">Full game →</Link></div>
+              {autoActive && <div className="text-center text-[10px] text-emerald-300 font-bold mt-1">{autoTapsDone}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps} taps • {formatAutoLeft(autoLeftMs)} left</div>}
+              {tapExhaustUntil && tapExhaustLeft>0 ? (
+                <div className="text-center text-[11px] font-bold text-amber-300 mt-1 flex items-center justify-center gap-1"><Clock className="h-3 w-3"/> Exhausted 100/100 — wait {Math.floor(tapExhaustLeft/60000)}:{String(Math.floor((tapExhaustLeft%60000)/1000)).padStart(2,'0')} to recharge</div>
+              ) : (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${(tapEnergy/TAP_MAX_ENERGY)*100}%` }}></div></div>
+                  <span className={`text-[11px] font-mono font-bold whitespace-nowrap ${tapEnergy<20 ? 'text-amber-300' : 'text-white/80'}`}><Zap className="inline h-3 w-3 -mt-0.5"/>{tapEnergy}/{TAP_MAX_ENERGY}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between mt-2"><span className="text-[11px] text-white/50">{autoActive ? "Auto tapping — balance rising" : "Tap the round orb • balance +₦100 instantly"}</span><Link href="/earn/tap" className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200">Full game →</Link></div>
             </div>
           </div>
         </div>
@@ -2591,6 +2766,12 @@ export default function DashboardPage() {
         .hh-orb-stage-sm .te-ring-outer { inset: -22px; }
         .hh-orb-stage-sm .te-ring-inner { inset: -12px; }
         .hh-orb-sm { width: 118px !important; height: 118px !important; }
+        .te-orb-locked { cursor: not-allowed; filter: brightness(0.85); }
+        .hh-auto-toggle { font-weight: 900; font-size: 11px; letter-spacing: 0.08em; padding: 6px 14px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.12); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .hh-auto-toggle-off { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+        .hh-auto-toggle-on { background: linear-gradient(135deg, #10b981, #059669); color: white; border-color: rgba(16,185,129,0.4); box-shadow: 0 4px 14px rgba(16,185,129,0.35); }
+        .hh-auto-toggle-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.9; }
+        .hh-auto-on-badge { font-size: 9px; font-weight: 900; letter-spacing: 0.07em; background: rgba(16,185,129,0.22); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.35); border-radius: 20px; padding: 2px 7px; }
 
         /* ─── SECTION TITLE ─── */
         .hh-section-title {
