@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -20,6 +20,9 @@ import {
   Users,
   MessageCircle,
   Leaf,
+  Zap,
+  HandCoins,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardImageCarousel } from "@/components/dashboard-image-carousel";
@@ -47,6 +50,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+
+const TAP_MAX_ENERGY = 100;
+const TAP_EARN_PER = 100;
+const TAP_ENERGY_REGEN_MS = 6000;
+const TAP_STORAGE_KEY = "tap_earn_state";
 
 interface UserData {
   name: string;
@@ -95,6 +103,14 @@ export default function DashboardPage() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [tapCount, setTapCount] = useState(0);
+  // ── Tap-to-Earn inline round orb (carried into balance card) ──
+  const [tapEnergy, setTapEnergy] = useState(TAP_MAX_ENERGY);
+  const [tapEarned, setTapEarned] = useState(0);
+  const [tapTapping, setTapTapping] = useState(false);
+  const [tapParticles, setTapParticles] = useState<{id:number,x:number,y:number}[]>([]);
+  const tapPid = useRef(0);
+  const tapAccum = useRef(0);
+  const tapSyncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
@@ -265,6 +281,68 @@ export default function DashboardPage() {
       }
     };
   }, [toast]);
+
+  // ── Tap-to-Earn: load + regen + persist (round orb in balance card) ──
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TAP_STORAGE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        const elapsed = Date.now() - (s.lastTime || Date.now());
+        const regen = Math.floor(elapsed / TAP_ENERGY_REGEN_MS);
+        const energy = Math.min(TAP_MAX_ENERGY, (s.energy ?? TAP_MAX_ENERGY) + regen);
+        setTapEnergy(energy);
+        setTapEarned(s.earned || 0);
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTapEnergy((prev) => (prev >= TAP_MAX_ENERGY ? prev : Math.min(TAP_MAX_ENERGY, prev + 1)));
+    }, TAP_ENERGY_REGEN_MS);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(TAP_STORAGE_KEY, JSON.stringify({ energy: tapEnergy, earned: tapEarned, lastTime: Date.now() })); } catch {}
+  }, [tapEnergy, tapEarned]);
+  const syncTapToBalance = useCallback((amount: number) => {
+    tapAccum.current += amount;
+    if (tapSyncTimeout.current) clearTimeout(tapSyncTimeout.current);
+    tapSyncTimeout.current = setTimeout(() => {
+      const total = tapAccum.current;
+      if (total === 0) return;
+      try {
+        const raw = localStorage.getItem("tivexx-user");
+        if (raw) {
+          const u = JSON.parse(raw);
+          const uid = u.id || u.userId;
+          u.balance = (u.balance || 0) + total;
+          localStorage.setItem("tivexx-user", JSON.stringify(u));
+          persistUserSession(u);
+          setUserData(u);
+          if (uid) void fetch("/api/user-balance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, balance: u.balance }) });
+        }
+      } catch {}
+      tapAccum.current = 0;
+    }, 1200);
+  }, []);
+  const handleTapEarn = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    try { (e as any).stopPropagation?.(); } catch {}
+    if (tapEnergy <= 0) { toast({ title: "Out of energy", description: "Wait a few seconds to regenerate ⚡" }); return; }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    let cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+    if ("touches" in (e as any) && (e as any).touches?.[0]) { cx = (e as any).touches[0].clientX; cy = (e as any).touches[0].clientY; }
+    else if ("clientX" in (e as any)) { cx = (e as any).clientX; cy = (e as any).clientY; }
+    const id = tapPid.current++;
+    setTapParticles((prev) => [...prev, { id, x: cx - rect.left, y: cy - rect.top }]);
+    setTimeout(() => setTapParticles((prev) => prev.filter((p) => p.id !== id)), 700);
+    setTapTapping(true); setTimeout(() => setTapTapping(false), 140);
+    setTapEnergy((p) => p - 1);
+    setTapEarned((p) => p + TAP_EARN_PER);
+    setBalance((p) => p + TAP_EARN_PER);
+    setTapCount((p) => p + 1);
+    syncTapToBalance(TAP_EARN_PER);
+  }, [tapEnergy, toast, syncTapToBalance]);
 
   // Animate balance changes
   useEffect(() => {
@@ -1316,27 +1394,33 @@ export default function DashboardPage() {
               {formatCurrency(animatedBalance)}
             </div>
 
-            {/* Tap & Earn — replaces Daily Reward + Claim button (squeezed without spill) */}
-            <div
-              className="hh-tap-earn-compact mt-4"
-              onClick={() => router.push("/earn/tap")}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") router.push("/earn/tap");
-              }}
-            >
-              <div className="hh-tap-earn-left">
-                <div className="hh-tap-earn-icon">🎮</div>
-                <div>
-                  <div className="hh-tap-earn-title">Tap & Earn Game</div>
-                  <div className="hh-tap-earn-sub">Tap to earn — play now</div>
+            {/* Tap & Earn — MAIN ROUND ORB directly in Available Balance (squeezed) */}
+            <div className="hh-tap-earn-round-wrap mt-4 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
+                  <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
+                  <span className="hh-tap-badge">₦{TAP_EARN_PER}/tap</span>
+                </div>
+                <span className="text-[11px] font-mono font-bold text-emerald-300 flex items-center gap-1"><Sparkles className="h-3 w-3"/> +₦{tapEarned.toLocaleString()}</span>
+              </div>
+              <div className="flex flex-col items-center py-1">
+                <div className="hh-orb-stage-sm">
+                  <div className={`te-halo ${tapEnergy > 0 ? "te-halo-active" : "te-halo-inactive"}`}></div>
+                  <div className="te-ring te-ring-outer"></div>
+                  <div className="te-ring te-ring-inner"></div>
+                  <button onClick={handleTapEarn} className={`te-orb hh-orb-sm ${tapEnergy > 0 ? "te-orb-active" : "te-orb-depleted"} ${tapTapping ? "te-orb-tap" : ""}`} aria-label="Tap to earn">
+                    <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
+                    <div className="te-orb-center"><div className="te-orb-icon-bounce"><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">TAP</span></div>
+                  </button>
+                  {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
                 </div>
               </div>
-              <div className="hh-tap-earn-cta">
-                <span>Play</span>
-                <span className="hh-tap-earn-arrow">→</span>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${(tapEnergy/TAP_MAX_ENERGY)*100}%` }}></div></div>
+                <span className={`text-[11px] font-mono font-bold whitespace-nowrap ${tapEnergy<20 ? 'text-amber-300' : 'text-white/80'}`}><Zap className="inline h-3 w-3 -mt-0.5"/>{tapEnergy}/{TAP_MAX_ENERGY}</span>
               </div>
+              <div className="flex items-center justify-between mt-2"><span className="text-[11px] text-white/50">Tap the round orb • balance +₦100 instantly</span><Link href="/earn/tap" className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200">Full game →</Link></div>
             </div>
           </div>
         </div>
@@ -2474,6 +2558,39 @@ export default function DashboardPage() {
         .hh-tap-earn-compact:hover .hh-tap-earn-arrow {
           transform: translateX(3px);
         }
+        .hh-tap-earn-round-wrap {
+          background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(5,150,105,0.14));
+          border: 1px solid rgba(16,185,129,0.22);
+          border-radius: 16px;
+          padding: 10px 12px;
+        }
+        .hh-tap-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(16,185,129,0.25); flex-shrink: 0; }
+        .hh-tap-badge { font-size: 9px; font-weight: 900; letter-spacing: 0.08em; background: rgba(16,185,129,0.18); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 6px; }
+        .hh-tap-particle { position: absolute; font-size: 12px; font-weight: 900; color: #fbbf24; pointer-events: none; animation: hh-tap-float 0.7s ease-out forwards; text-shadow: 0 1px 6px rgba(0,0,0,0.4); white-space: nowrap; }
+        @keyframes hh-tap-float { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; } 100% { transform: translate(-50%, -90px) scale(1.05); opacity: 0; } }
+        .te-halo { position: absolute; inset: -28px; border-radius: 50%; animation: te-halo-pulse 2.4s ease-in-out infinite; }
+        .te-halo-active { background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%); }
+        .te-halo-inactive { background: radial-gradient(circle, rgba(107,114,128,0.1) 0%, transparent 70%); animation: none; }
+        @keyframes te-halo-pulse { 0%,100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 0.4; } }
+        .te-ring { position: absolute; inset: 0; border-radius: 50%; }
+        .te-ring-outer { inset: -38px; border: 2px dashed rgba(16,185,129,0.18); animation: te-spin 22s linear infinite; }
+        .te-ring-inner { inset: -22px; border: 1px solid rgba(16,185,129,0.12); animation: te-spin 16s linear infinite reverse; }
+        @keyframes te-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .te-orb { position: relative; width: 220px; height: 220px; border-radius: 50%; border: none; outline: none; cursor: pointer; transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1); user-select: none; -webkit-tap-highlight-color: transparent; }
+        .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(52,211,153,0.95), #10b981 48%, rgba(6,95,70,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 60px rgba(16,185,129,0.45), 0 0 120px rgba(16,185,129,0.15); }
+        .te-orb-depleted { background: radial-gradient(circle at 38% 32%, rgba(107,114,128,0.6), rgba(55,65,81,0.8) 100%); box-shadow: inset 0 -8px 20px rgba(0,0,0,0.5); opacity: 0.55; cursor: not-allowed; }
+        .te-orb-tap { transform: scale(0.86) !important; }
+        .te-orb-shine { position: absolute; top: 18px; left: 36px; width: 80px; height: 36px; border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.7), transparent); filter: blur(10px); opacity: 0.25; pointer-events: none; }
+        .te-orb-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        .te-orb-icon-bounce { animation: te-icon-bounce 1.6s ease-in-out infinite; }
+        @keyframes te-icon-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        .te-tap-label { font-size: 10px; font-weight: 900; letter-spacing: 0.22em; color: rgba(255,255,255,0.65); animation: te-label-pulse 2s ease-in-out infinite; }
+        @keyframes te-label-pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
+        .hh-orb-stage-sm { position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; margin: 4px 0; }
+        .hh-orb-stage-sm .te-halo { inset: -18px; }
+        .hh-orb-stage-sm .te-ring-outer { inset: -22px; }
+        .hh-orb-stage-sm .te-ring-inner { inset: -12px; }
+        .hh-orb-sm { width: 118px !important; height: 118px !important; }
 
         /* ─── SECTION TITLE ─── */
         .hh-section-title {
