@@ -1579,11 +1579,15 @@ export default function DashboardPage() {
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
                 </div>
               </div>
-              {/* Auto tap toggle under orb */}
-              <div className="flex justify-center mt-1">
-                <button onClick={handleAutoToggle} className={`hh-auto-toggle ${autoActive ? "hh-auto-toggle-on" : "hh-auto-toggle-off"}`}>
-                  <span className="hh-auto-toggle-dot"></span>
-                  AUTO TAP — {autoActive ? "ON" : "OFF"}
+              {/* Auto tap toggle under orb — styled like Withdraw Without Referral */}
+              <div onClick={handleAutoToggle} className="mt-2 flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 px-3 py-3 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <div className="hh-icon-ring !w-8 !h-8 !rounded-[10px]"><Zap className="h-4 w-4 text-amber-300" /></div>
+                  <span className="text-sm font-black text-white tracking-wide">AUTO TAP</span>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
+                </div>
+                <button type="button" onClick={(e)=>{ e.stopPropagation(); handleAutoToggle(); }} className={`hh-toggle ${autoActive ? 'hh-toggle-active' : ''}`} aria-label="Toggle auto tap">
+                  <span className={`hh-toggle-dot ${autoActive ? 'hh-toggle-dot-active' : ''}`} />
                 </button>
               </div>
               {autoActive && <div className="text-center text-[10px] text-emerald-300 font-bold mt-1">{autoTapsDone}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps} taps • {formatAutoLeft(autoLeftMs)} left</div>}
@@ -2767,6 +2771,11 @@ export default function DashboardPage() {
         .hh-orb-stage-sm .te-ring-inner { inset: -12px; }
         .hh-orb-sm { width: 118px !important; height: 118px !important; }
         .te-orb-locked { cursor: not-allowed; filter: brightness(0.85); }
+        .hh-icon-ring { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(245,158,11,0.2)); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; }
+        .hh-toggle { position: relative; width: 52px; height: 28px; border-radius: 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.3s ease; flex-shrink: 0; }
+        .hh-toggle-active { background: linear-gradient(135deg, #10b981, #059669); border-color: rgba(16,185,129,0.3); }
+        .hh-toggle-dot { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: transform 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .hh-toggle-dot-active { transform: translateX(24px); }
         .hh-auto-toggle { font-weight: 900; font-size: 11px; letter-spacing: 0.08em; padding: 6px 14px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.12); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
         .hh-auto-toggle-off { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
         .hh-auto-toggle-on { background: linear-gradient(135deg, #10b981, #059669); color: white; border-color: rgba(16,185,129,0.4); box-shadow: 0 4px 14px rgba(16,185,129,0.35); }
