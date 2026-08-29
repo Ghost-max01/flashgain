@@ -1316,123 +1316,26 @@ export default function DashboardPage() {
               {formatCurrency(animatedBalance)}
             </div>
 
-            {/* Claim reward section */}
-            <div className="hh-claim-section mt-5 relative">
-              {/* Claim header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="hh-reward-icon">
-                    <Gift className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-white">
-                      Daily Reward
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      Click to claim ₦2,000
-                    </div>
-                  </div>
-                </div>
-                <div className="hh-timer-badge">
-                  <Clock className="h-3 w-3" />
-                  <span>
-                    {pauseEndTime
-                      ? formatPauseTime()
-                      : formatTime(timeRemaining)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Claim button */}
-              <button
-                onClick={handleClaim}
-                disabled={!canClaim && !pauseEndTime}
-                className={`hh-claim-btn ${canClaim && !pauseEndTime ? "hh-claim-ready" : pauseEndTime ? "hh-claim-paused" : "hh-claim-waiting"}`}
-              >
-                <span className="hh-claim-shimmer"></span>
-                <span className="flex items-center justify-center gap-2 relative">
-                  <span className="text-lg">
-                    {pauseEndTime ? "⏳" : canClaim ? "🎁" : "⏰"}
-                  </span>
-                  <span>
-                    {pauseEndTime
-                      ? `Wait ${formatPauseTime()}`
-                      : canClaim
-                        ? "Claim ₦2,000 Now"
-                        : `Next claim in ${formatTime(timeRemaining)}`}
-                  </span>
-                </span>
-              </button>
-
-              {/* Claim success notification */}
-              {showClaimSuccess && (
-                <div className="hh-claim-success-popup">
-                  <div className="hh-confetti-dot hh-confetti-1"></div>
-                  <div className="hh-confetti-dot hh-confetti-2"></div>
-                  <div className="hh-confetti-dot hh-confetti-3"></div>
-                  <div className="hh-confetti-dot hh-confetti-4"></div>
-                  <div className="hh-confetti-dot hh-confetti-5"></div>
-                  <div className="text-2xl mb-1">🎉</div>
-                  <div className="font-black text-white text-lg">
-                    ₦2,000 Added!
-                  </div>
-                  <div className="text-xs text-emerald-300 mt-0.5">
-                    Balance updated
-                  </div>
-                  <div className="hh-success-bar">
-                    <div className="hh-success-bar-fill"></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Claim progress */}
-              <div className="flex items-center justify-between mt-3">
-                <div className="text-xs text-gray-500">Claims today</div>
-                <div className="flex items-center gap-2">
-                  <div className="hh-progress-track">
-                    <div
-                      className="hh-progress-fill"
-                      style={{ width: `${(claimCount / 50) * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs font-bold text-white">
-                    {claimCount}
-                    <span className="text-gray-500">/50</span>
-                  </span>
-                  {claimCount >= 50 && (
-                    <span className="text-xs text-yellow-400 animate-pulse">
-                      🔥 Max
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Trust Score — replaces Today's income / Claims left */}
+            {/* Tap & Earn — replaces Daily Reward + Claim button (squeezed without spill) */}
             <div
-              className="hh-trust-card mt-4"
-              onClick={() => router.push("/profile")}
+              className="hh-tap-earn-compact mt-4"
+              onClick={() => router.push("/earn/tap")}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === "Enter") router.push("/profile");
+                if (e.key === "Enter") router.push("/earn/tap");
               }}
             >
-              <div className="hh-trust-header">
-                <div className="hh-trust-icon">
-                  <Leaf className="h-5 w-5 text-white" />
+              <div className="hh-tap-earn-left">
+                <div className="hh-tap-earn-icon">🎮</div>
+                <div>
+                  <div className="hh-tap-earn-title">Tap & Earn Game</div>
+                  <div className="hh-tap-earn-sub">Tap to earn — play now</div>
                 </div>
-                <div className="hh-trust-text">
-                  <div className="hh-trust-label">Trust Score</div>
-                  <div className="hh-trust-value">0</div>
-                </div>
-                <span className="hh-trust-badge">Free</span>
               </div>
-              <div className="hh-trust-track">
-                <div className="hh-trust-fill" style={{ width: "0%" }}></div>
-              </div>
-              <div className="hh-trust-footer">
-                20 more to <span className="hh-trust-level">Beginner</span> · tap to upgrade
+              <div className="hh-tap-earn-cta">
+                <span>Play</span>
+                <span className="hh-tap-earn-arrow">→</span>
               </div>
             </div>
           </div>
@@ -1452,6 +1355,34 @@ export default function DashboardPage() {
               <span>Withdraw</span>
             </button>
           </Link>
+        </div>
+
+        {/* ── TRUST SCORE — moved under Task / Withdraw ── */}
+        <div
+          className="hh-trust-card hh-entry-3"
+          onClick={() => router.push("/profile")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") router.push("/profile");
+          }}
+        >
+          <div className="hh-trust-header">
+            <div className="hh-trust-icon">
+              <Leaf className="h-5 w-5 text-white" />
+            </div>
+            <div className="hh-trust-text">
+              <div className="hh-trust-label">Trust Score</div>
+              <div className="hh-trust-value">0</div>
+            </div>
+            <span className="hh-trust-badge">Free</span>
+          </div>
+          <div className="hh-trust-track">
+            <div className="hh-trust-fill" style={{ width: "0%" }}></div>
+          </div>
+          <div className="hh-trust-footer">
+            20 more to <span className="hh-trust-level">Beginner</span> · tap to upgrade
+          </div>
         </div>
 
         {/* ── QUICK ACTIONS ── */}
@@ -1502,16 +1433,7 @@ export default function DashboardPage() {
               })}
             </div>
 
-            {/* Tap & Earn button - takes full width (2 boxes), slim design */}
-            <Link href="/earn/tap" className="block focus:outline-none">
-              <button
-                className="w-full hh-action-btn hh-action-green"
-                style={{ animationDelay: "660ms" }}
-              >
-                <span className="hh-action-icon">🎮</span>
-                <span>Tap & Earn Game</span>
-              </button>
-            </Link>
+
           </div>
         </div>
 
@@ -2477,6 +2399,80 @@ export default function DashboardPage() {
           .hh-trust-card {
             border-color: rgba(255, 255, 255, 0.9);
           }
+        }
+
+        /* ─── TAP & EARN COMPACT (replaces Daily Reward + Claim, squeezed) ─── */
+        .hh-tap-earn-compact {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(5,150,105,0.14));
+          border: 1px solid rgba(16,185,129,0.22);
+          border-radius: 16px;
+          padding: 10px 12px;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .hh-tap-earn-compact:hover {
+          transform: translateY(-2px);
+          border-color: rgba(16,185,129,0.35);
+          box-shadow: 0 10px 30px rgba(16,185,129,0.18);
+        }
+        .hh-tap-earn-compact:active {
+          transform: scale(0.98);
+        }
+        .hh-tap-earn-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+        .hh-tap-earn-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 11px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          flex-shrink: 0;
+          box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+        }
+        .hh-tap-earn-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: white;
+          line-height: 1.1;
+          white-space: nowrap;
+        }
+        .hh-tap-earn-sub {
+          font-size: 11px;
+          color: rgba(255,255,255,0.65);
+          margin-top: 2px;
+          white-space: nowrap;
+        }
+        .hh-tap-earn-cta {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          font-weight: 800;
+          font-size: 12px;
+          padding: 8px 12px;
+          border-radius: 9999px;
+          flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+        }
+        .hh-tap-earn-arrow {
+          font-size: 14px;
+          line-height: 1;
+          transition: transform 0.2s ease;
+        }
+        .hh-tap-earn-compact:hover .hh-tap-earn-arrow {
+          transform: translateX(3px);
         }
 
         /* ─── SECTION TITLE ─── */
