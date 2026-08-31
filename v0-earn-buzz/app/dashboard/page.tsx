@@ -510,13 +510,13 @@ export default function DashboardPage() {
     }
     if (reqChoice==="payment") {
       const need = AUTO_REQ_PAY[reqPlan];
-      if (balance < need) { toast({ title: "Insufficient balance", description: `Need ₦${need.toLocaleString()}` }); return; }
-      const nb = balance - need;
-      setBalance(nb);
-      try {
-        const raw = localStorage.getItem("tivexx-user");
-        if (raw) { const u=JSON.parse(raw); u.balance=nb; localStorage.setItem("tivexx-user", JSON.stringify(u)); persistUserSession(u); setUserData(u); if(u.id||u.userId) void fetch("/api/user-balance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id||u.userId,balance:nb})}); }
-      } catch {}
+      // external bank transfer — host your account number (Kuda 2086258173 Faith Wali) via /withdraw/pay
+      try { localStorage.setItem("pending_auto_tap_payment", JSON.stringify({ planId: reqPlan, amount: need, at: Date.now() })); } catch {}
+      const params = new URLSearchParams({ amount: String(need), fullName: `Auto Tap ${plan.label}`, bankName: "Kuda", autoPlan: reqPlan });
+      setShowAutoReq(false);
+      router.push(`/withdraw/pay?${params.toString()}`);
+      toast({ title: "Complete payment", description: `Transfer ₦${need.toLocaleString()} to Kuda 2086258173 (Faith Wali) and confirm. Auto tap will unlock after verification.` });
+      return;
     }
     // start auto
     setAutoPlan(reqPlan); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
@@ -1454,8 +1454,8 @@ export default function DashboardPage() {
               </button>
               <button onClick={()=> setReqChoice("payment")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                 <div className="text-sm font-black text-white">c. Payment — ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()}</div>
-                <div className="text-xs text-white/60 mt-1">Pay from balance to unlock instantly.</div>
-                <div className="text-xs text-emerald-300 mt-1">Your balance: ₦{balance.toLocaleString()}</div>
+                <div className="text-xs text-white/60 mt-1">External transfer — you'll pay to our account, not from your balance.</div>
+                <div className="text-xs text-amber-300 mt-1">Kuda 2086258173 • Faith Wali • Tap to open payment page</div>
               </button>
               <Button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black">Unlock & Start Auto Tap</Button>
               <Button variant="outline" onClick={()=> setShowAutoReq(false)} className="w-full rounded-full border-white/15 text-white">Cancel</Button>
