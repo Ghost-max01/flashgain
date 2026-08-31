@@ -67,6 +67,10 @@ const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: numb
   { id: "1w", label: "1 week: 10,000 taps", sub: "max 1,000,000", durationMs: 7*24*60*60*1000, maxTaps: 10000, maxEarn: 1000000 },
 ];
 const AUTO_TAP_INTERVAL_MS = 800;
+const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 30, "3d": 40, "1w": 60 };
+const AUTO_REQ_REF: Record<AutoPlanId, number> = { free1h: 0, "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
+const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
+const AUTO_REF_LINK_KEY = "auto_tap_ref_code";
 
 interface UserData {
   name: string;
@@ -135,6 +139,12 @@ export default function DashboardPage() {
   const [showAutoPlans, setShowAutoPlans] = useState(false);
   const [showAutoFreePopup, setShowAutoFreePopup] = useState(false);
   const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showAutoReq, setShowAutoReq] = useState(false);
+  const [reqPlan, setReqPlan] = useState<AutoPlanId | null>(null);
+  const [reqChoice, setReqChoice] = useState<"task"|"referral"|"payment"|null>(null);
+  const [autoRefCode, setAutoRefCode] = useState<string>("");
+  const [autoRefCount, setAutoRefCount] = useState(0);
+  const [autoTaskDone, setAutoTaskDone] = useState(0);
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
@@ -334,6 +344,7 @@ export default function DashboardPage() {
           // keep flag
         }
       }
+      try { const c = JSON.parse(localStorage.getItem("tivexx-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);} catch {}
     } catch {}
   }, []);
   // exhaust countdown
@@ -449,18 +460,73 @@ export default function DashboardPage() {
   }, [tapEnergy, toast, syncTapToBalance, autoActive, tapExhaustUntil, tapExhaustLeft]);
   const handleAutoToggle = useCallback(() => {
     if (autoActive) { setAutoActive(false); setAutoExpiresAt(null); toast({ title: "Auto tap OFF" }); return; }
-    // first time -> show eligible popup + plans
     if (!autoFirstFreeUsed) setShowAutoFreePopup(true);
     setShowAutoPlans(true);
   }, [autoActive, autoFirstFreeUsed, toast]);
   const startAutoPlan = useCallback((id: AutoPlanId) => {
     if (id === "free1h" && autoFirstFreeUsed) return;
+    if (id !== "free1h") {
+      // paid plans require 3-option requirement chooser
+      setReqPlan(id); setReqChoice(null); setShowAutoPlans(false); setShowAutoReq(true);
+      // prepare referral code if not exists for this plan
+      try {
+        const stored = localStorage.getItem(AUTO_REF_LINK_KEY);
+        const map = stored ? JSON.parse(stored) : {};
+        if (!map[id]) {
+          const code = `${(userData?.userId||userData?.id||'user').toString().slice(-4)}-AUTO-${id}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+          map[id]=code; localStorage.setItem(AUTO_REF_LINK_KEY, JSON.stringify(map));
+        }
+        const m2 = JSON.parse(localStorage.getItem(AUTO_REF_LINK_KEY)||"{}");
+        setAutoRefCode(m2[id]||"");
+        const cntRaw = localStorage.getItem(`auto_ref_count_${id}`);
+        setAutoRefCount(cntRaw ? Number(cntRaw) : 0);
+      } catch { setAutoRefCode(""); }
+      return;
+    }
     const plan = AUTO_PLANS.find(p=>p.id===id)!;
     setAutoPlan(id); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
     setShowAutoPlans(false); setShowAutoFreePopup(false);
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
-  }, [autoFirstFreeUsed, toast]);
+  }, [autoFirstFreeUsed, toast, userData]);
+  const fulfillRequirement = useCallback(async () => {
+    if (!reqPlan || !reqChoice) return;
+    const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
+    if (reqChoice==="task") {
+      const need = AUTO_REQ_TASK[reqPlan];
+      const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks")||"[]");
+      const done = Array.isArray(completed) ? completed.length : 0;
+      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to Tasks.` }); return; }
+    }
+    if (reqChoice==="referral") {
+      const need = AUTO_REQ_REF[reqPlan];
+      const cntRaw = localStorage.getItem(`auto_ref_count_${reqPlan}`);
+      const cnt = cntRaw ? Number(cntRaw) : 0;
+      // also check total referrals
+      let totalRef = 0;
+      try { const r = await fetch(`/api/referral-stats?userId=${userData?.id||userData?.userId}`); const j=await r.json(); if(j.success) totalRef=j.referral_count||0; } catch {}
+      const effective = Math.max(cnt, totalRef);
+      if (effective < need) { toast({ title: "Requirement not met", description: `Need ${need} referrals, you have ${effective}` }); return; }
+    }
+    if (reqChoice==="payment") {
+      const need = AUTO_REQ_PAY[reqPlan];
+      if (balance < need) { toast({ title: "Insufficient balance", description: `Need ₦${need.toLocaleString()}` }); return; }
+      const nb = balance - need;
+      setBalance(nb);
+      try {
+        const raw = localStorage.getItem("tivexx-user");
+        if (raw) { const u=JSON.parse(raw); u.balance=nb; localStorage.setItem("tivexx-user", JSON.stringify(u)); persistUserSession(u); setUserData(u); if(u.id||u.userId) void fetch("/api/user-balance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id||u.userId,balance:nb})}); }
+      } catch {}
+    }
+    // start auto
+    setAutoPlan(reqPlan); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    setShowAutoReq(false); setReqPlan(null); setReqChoice(null);
+    toast({ title: "Auto tap ON", description: `${plan.label} started` });
+  }, [reqPlan, reqChoice, balance, userData, toast]);
+  const copyAutoRefLink = useCallback(()=>{
+    const link = `${window.location.origin}/refer?ref=${autoRefCode}`;
+    navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
+  }, [autoRefCode, toast]);
   const formatAutoLeft = (ms:number) => {
     const s = Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
     if (h>0) return `${h}h ${m}m ${sec}s`; return `${m}m ${sec}s`;
@@ -1360,6 +1426,41 @@ export default function DashboardPage() {
             })}
           </div>
           <p className="text-[11px] text-center text-white/50 mt-3">Auto tap locks the orb (no animation) — balance still rises in real time.</p>
+        </DialogContent>
+      </Dialog>
+      {/* ── AUTO TAP: Requirement chooser for paid plans ── */}
+      <Dialog open={showAutoReq} onOpenChange={setShowAutoReq}>
+        <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg text-white">Requirement for {reqPlan ? AUTO_PLANS.find(p=>p.id===reqPlan)?.label : ""}</DialogTitle>
+            <DialogDescription className="text-center text-xs text-gray-400">Choose one of 3 options. Referrals use a new tracking link and count to your total.</DialogDescription>
+          </DialogHeader>
+          {reqPlan && (
+            <div className="space-y-3 mt-3">
+              <button onClick={()=> setReqChoice("task")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div className="text-sm font-black text-white">a. Task — {AUTO_REQ_TASK[reqPlan]} tasks</div>
+                <div className="text-xs text-white/60 mt-1">Complete {AUTO_REQ_TASK[reqPlan]} tasks. Then auto tap unlocks.</div>
+                <div className="text-xs text-emerald-300 mt-1">Need {AUTO_REQ_TASK[reqPlan]} • you have {autoTaskDone}</div>
+              </button>
+              <button onClick={()=> setReqChoice("referral")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div className="text-sm font-black text-white">b. Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
+                <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
+                <div className="text-[11px] font-mono text-white/80 mt-2 break-all bg-black/30 rounded-lg p-2">{autoRefCode ? `${typeof window!=="undefined" ? window.location.origin : ""}/refer?ref=${autoRefCode}` : "generating..."}</div>
+                <div className="flex gap-2 mt-2">
+                  <Button onClick={(e)=>{ e.stopPropagation(); copyAutoRefLink(); }} size="sm" className="rounded-full text-xs">Copy link</Button>
+                  <span className="text-xs text-emerald-300 self-center">{autoRefCount}/{AUTO_REQ_REF[reqPlan]} referrals</span>
+                </div>
+                <div className="text-[11px] text-amber-300 mt-1">Referrals from this link add to your total too.</div>
+              </button>
+              <button onClick={()=> setReqChoice("payment")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div className="text-sm font-black text-white">c. Payment — ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()}</div>
+                <div className="text-xs text-white/60 mt-1">Pay from balance to unlock instantly.</div>
+                <div className="text-xs text-emerald-300 mt-1">Your balance: ₦{balance.toLocaleString()}</div>
+              </button>
+              <Button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black">Unlock & Start Auto Tap</Button>
+              <Button variant="outline" onClick={()=> setShowAutoReq(false)} className="w-full rounded-full border-white/15 text-white">Cancel</Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
