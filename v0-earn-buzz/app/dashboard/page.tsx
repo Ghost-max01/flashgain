@@ -1453,9 +1453,8 @@ export default function DashboardPage() {
                 <div className="text-[11px] text-amber-300 mt-1">Referrals from this link add to your total too.</div>
               </button>
               <button onClick={()=> setReqChoice("payment")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                <div className="text-sm font-black text-white">c. Payment — ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()}</div>
-                <div className="text-xs text-white/60 mt-1">External transfer — you'll pay to our account, not from your balance.</div>
-                <div className="text-xs text-amber-300 mt-1">Kuda 2086258173 • Faith Wali • Tap to open payment page</div>
+                <div className="text-sm font-black text-white">c. Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()} for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} estimated taps</div>
+                <div className="text-xs text-white/60 mt-1">One-time payment to unlock auto tap for this plan.</div>
               </button>
               <Button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black">Unlock & Start Auto Tap</Button>
               <Button variant="outline" onClick={()=> setShowAutoReq(false)} className="w-full rounded-full border-white/15 text-white">Cancel</Button>
