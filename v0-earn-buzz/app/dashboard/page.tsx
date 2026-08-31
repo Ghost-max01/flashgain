@@ -145,6 +145,8 @@ export default function DashboardPage() {
   const [autoRefCode, setAutoRefCode] = useState<string>("");
   const [autoRefCount, setAutoRefCount] = useState(0);
   const [autoTaskDone, setAutoTaskDone] = useState(0);
+  const [mtTaskDone, setMtTaskDone] = useState(0);
+  const [muTaskDone, setMuTaskDone] = useState(0);
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
@@ -344,12 +346,25 @@ export default function DashboardPage() {
           // keep flag
         }
       }
-      try { const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);} catch {}
+      try { 
+        const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
+        const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
+        // legacy
+        const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+      } catch {}
     } catch {}
   }, []);
   useEffect(()=>{
-    const id=setInterval(()=>{ try{ const c=JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);}catch{} }, 1000);
-    const upd=()=>{ try{ const c=JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);}catch{} };
+    const id=setInterval(()=>{ try{ 
+      const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
+      const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
+      const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+    }catch{} }, 1000);
+    const upd=()=>{ try{ 
+      const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
+      const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
+      const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+    }catch{} };
     window.addEventListener("focus",upd); window.addEventListener("storage",upd as any);
     return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
   }, []);
@@ -500,9 +515,11 @@ export default function DashboardPage() {
     const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
     if (reqChoice==="task") {
       const need = AUTO_REQ_TASK[reqPlan];
-      const completed = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]");
+      const isMt = reqPlan==="24h" || reqPlan==="3d";
+      const key = isMt ? "mt-completed-tasks" : "mu-completed-tasks";
+      const completed = JSON.parse(localStorage.getItem(key)||"[]");
       const done = Array.isArray(completed) ? completed.length : 0;
-      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to Tasks.` }); return; }
+      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to ${isMt ? "MT" : "MU"} Tasks.` }); return; }
     }
     if (reqChoice==="referral") {
       const need = AUTO_REQ_REF[reqPlan];
@@ -1444,10 +1461,10 @@ export default function DashboardPage() {
           {reqPlan && (
             <div className="space-y-3 mt-3">
               <button onClick={()=> setReqChoice("task")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                <div className="text-sm font-black text-white">a. Task — {AUTO_REQ_TASK[reqPlan]} tasks</div>
-                <div className="text-xs text-white/60 mt-1">Separate Auto Tap tasks — not your normal tasks. Complete {AUTO_REQ_TASK[reqPlan]} special tasks.</div>
-                <div className="text-xs text-emerald-300 mt-1">Need {AUTO_REQ_TASK[reqPlan]} • you have {autoTaskDone}</div>
-                <div onClick={(e)=>{ e.stopPropagation(); router.push("/auto-tap-tasks"); }} className="mt-2 text-xs font-bold text-emerald-400 underline">Open Auto Tap Tasks →</div>
+                <div className="text-sm font-black text-white">a. Task — {AUTO_REQ_TASK[reqPlan]} tasks {(reqPlan==="24h"||reqPlan==="3d")? "(MT)" : "(MU)"}</div>
+                <div className="text-xs text-white/60 mt-1">{(reqPlan==="24h"||reqPlan==="3d") ? "MT tasks — 60 total, shows only required count" : "MU tasks — 100 total, shows only required count"}</div>
+                <div className="text-xs text-emerald-300 mt-1">Need {AUTO_REQ_TASK[reqPlan]} • you have {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone} • {(reqPlan==="24h"||reqPlan==="3d") ? "10 of hai8g/10571302 + 5+5 split" : "YouTube tasks"}</div>
+                <div onClick={(e)=>{ e.stopPropagation(); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className="mt-2 text-xs font-bold text-emerald-400 underline">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]}) →</div>
               </button>
               <button onClick={()=> setReqChoice("referral")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                 <div className="text-sm font-black text-white">b. Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
