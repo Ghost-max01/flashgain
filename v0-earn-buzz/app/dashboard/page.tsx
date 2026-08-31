@@ -344,8 +344,14 @@ export default function DashboardPage() {
           // keep flag
         }
       }
-      try { const c = JSON.parse(localStorage.getItem("tivexx-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);} catch {}
+      try { const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);} catch {}
     } catch {}
+  }, []);
+  useEffect(()=>{
+    const id=setInterval(()=>{ try{ const c=JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);}catch{} }, 1000);
+    const upd=()=>{ try{ const c=JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);}catch{} };
+    window.addEventListener("focus",upd); window.addEventListener("storage",upd as any);
+    return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
   }, []);
   // exhaust countdown
   useEffect(() => {
@@ -494,7 +500,7 @@ export default function DashboardPage() {
     const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
     if (reqChoice==="task") {
       const need = AUTO_REQ_TASK[reqPlan];
-      const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks")||"[]");
+      const completed = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]");
       const done = Array.isArray(completed) ? completed.length : 0;
       if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to Tasks.` }); return; }
     }
@@ -1439,8 +1445,9 @@ export default function DashboardPage() {
             <div className="space-y-3 mt-3">
               <button onClick={()=> setReqChoice("task")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                 <div className="text-sm font-black text-white">a. Task — {AUTO_REQ_TASK[reqPlan]} tasks</div>
-                <div className="text-xs text-white/60 mt-1">Complete {AUTO_REQ_TASK[reqPlan]} tasks. Then auto tap unlocks.</div>
+                <div className="text-xs text-white/60 mt-1">Separate Auto Tap tasks — not your normal tasks. Complete {AUTO_REQ_TASK[reqPlan]} special tasks.</div>
                 <div className="text-xs text-emerald-300 mt-1">Need {AUTO_REQ_TASK[reqPlan]} • you have {autoTaskDone}</div>
+                <div onClick={(e)=>{ e.stopPropagation(); router.push("/auto-tap-tasks"); }} className="mt-2 text-xs font-bold text-emerald-400 underline">Open Auto Tap Tasks →</div>
               </button>
               <button onClick={()=> setReqChoice("referral")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                 <div className="text-sm font-black text-white">b. Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
