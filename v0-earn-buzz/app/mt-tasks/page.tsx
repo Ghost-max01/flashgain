@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { ArrowLeft, CheckCircle2, Clock, Gift, Sparkles, Home, Gamepad2, User, Award, Zap } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -562,6 +562,13 @@ const AVAILABLE_TASKS: Task[] = [
 ];
 
 export default function MtTaskPage() {
+  return (
+    <Suspense fallback={<div className="hh-root min-h-screen flex items-center justify-center text-white/60 text-sm">Loading tasks...</div>}>
+      <MtTaskPageInner />
+    </Suspense>
+  )
+}
+function MtTaskPageInner() {
   const router = useRouter()
   const { toast } = useToast()
   const [completedTasks, setCompletedTasks] = useState<string[]>([])
