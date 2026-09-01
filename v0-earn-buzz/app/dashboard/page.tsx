@@ -1460,11 +1460,10 @@ export default function DashboardPage() {
           </DialogHeader>
           {reqPlan && (
             <div className="space-y-3 mt-3">
-              <button onClick={()=> setReqChoice("task")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                <div className="text-sm font-black text-white">a. Task — {AUTO_REQ_TASK[reqPlan]} tasks {(reqPlan==="24h"||reqPlan==="3d")? "(MT)" : "(MU)"}</div>
-                <div className="text-xs text-white/60 mt-1">{(reqPlan==="24h"||reqPlan==="3d") ? "MT tasks — 60 total, shows only required count" : "MU tasks — 100 total, shows only required count"}</div>
-                <div className="text-xs text-emerald-300 mt-1">Need {AUTO_REQ_TASK[reqPlan]} • you have {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone} • {(reqPlan==="24h"||reqPlan==="3d") ? "10 of hai8g/10571302 + 5+5 split" : "YouTube tasks"}</div>
-                <div onClick={(e)=>{ e.stopPropagation(); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className="mt-2 text-xs font-bold text-emerald-400 underline">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]}) →</div>
+              <button onClick={()=> { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div className="text-sm font-black text-white">a. {AUTO_REQ_TASK[reqPlan]} tasks required</div>
+                <div className="text-xs text-white/70 mt-1">you've only done {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone}/{AUTO_REQ_TASK[reqPlan]}</div>
+                <div className="mt-2 text-xs font-bold text-emerald-400 underline">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]}) →</div>
               </button>
               <button onClick={()=> setReqChoice("referral")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                 <div className="text-sm font-black text-white">b. Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
