@@ -23,6 +23,7 @@ import {
   Zap,
   HandCoins,
   Sparkles,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardImageCarousel } from "@/components/dashboard-image-carousel";
@@ -71,6 +72,8 @@ const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 
 const AUTO_REQ_REF: Record<AutoPlanId, number> = { free1h: 0, "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
 const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
 const AUTO_REF_LINK_KEY = "auto_tap_ref_code";
+const AUTO_PLAN_COOLDOWN_KEY = "auto_tap_plan_cooldowns";
+const AUTO_PLAN_COOLDOWN_MS = 7*24*60*60*1000;
 
 interface UserData {
   name: string;
@@ -147,6 +150,8 @@ export default function DashboardPage() {
   const [autoTaskDone, setAutoTaskDone] = useState(0);
   const [mtTaskDone, setMtTaskDone] = useState(0);
   const [muTaskDone, setMuTaskDone] = useState(0);
+  const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
+  const [nowTick, setNowTick] = useState(() => Date.now());
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
@@ -351,6 +356,7 @@ export default function DashboardPage() {
         const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
         // legacy
         const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+        try { const cd = JSON.parse(localStorage.getItem(AUTO_PLAN_COOLDOWN_KEY)||"{}"); if (cd && typeof cd==="object") setAutoPlanCooldowns(cd); } catch {}
       } catch {}
     } catch {}
   }, []);
@@ -368,6 +374,8 @@ export default function DashboardPage() {
     window.addEventListener("focus",upd); window.addEventListener("storage",upd as any);
     return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
   }, []);
+  // tick for 1-week lock countdown display
+  useEffect(()=>{ const id=setInterval(()=> setNowTick(Date.now()), 60000); return ()=> clearInterval(id); }, []);
   // exhaust countdown
   useEffect(() => {
     if (!tapExhaustUntil) { setTapExhaustLeft(0); return; }
@@ -485,6 +493,14 @@ export default function DashboardPage() {
     setShowAutoPlans(true);
   }, [autoActive, autoFirstFreeUsed, toast]);
   const startAutoPlan = useCallback((id: AutoPlanId) => {
+    // 1-week lock per paid package
+    const cd = autoPlanCooldowns[id];
+    if (cd && cd > Date.now()) {
+      const left = cd - Date.now();
+      const d = Math.floor(left/86400000), h = Math.floor((left%86400000)/3600000);
+      toast({ title: "Plan locked for 1 week", description: `${id} — try again in ${d}d ${h}h`, variant: "destructive" });
+      return;
+    }
     if (id === "free1h" && autoFirstFreeUsed) return;
     if (id !== "free1h") {
       // paid plans require 3-option requirement chooser
@@ -507,9 +523,16 @@ export default function DashboardPage() {
     const plan = AUTO_PLANS.find(p=>p.id===id)!;
     setAutoPlan(id); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
+    // lock this plan for 1 week after starting (paid packages)
+    if (id !== "free1h") {
+      const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
+      const next = { ...autoPlanCooldowns, [id]: exp };
+      setAutoPlanCooldowns(next);
+      try { localStorage.setItem(AUTO_PLAN_COOLDOWN_KEY, JSON.stringify(next)); } catch {}
+    }
     setShowAutoPlans(false); setShowAutoFreePopup(false);
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
-  }, [autoFirstFreeUsed, toast, userData]);
+  }, [autoFirstFreeUsed, toast, userData, autoPlanCooldowns]);
   const fulfillRequirement = useCallback(async () => {
     if (!reqPlan || !reqChoice) return;
     const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
@@ -543,9 +566,18 @@ export default function DashboardPage() {
     }
     // start auto
     setAutoPlan(reqPlan); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    // lock this plan for 1 week
+    if (reqPlan !== "free1h") {
+      const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
+      const next = { ...autoPlanCooldowns, [reqPlan]: exp };
+      setAutoPlanCooldowns(next);
+      try { localStorage.setItem(AUTO_PLAN_COOLDOWN_KEY, JSON.stringify(next)); } catch {}
+    } else {
+      setAutoFirstFreeUsed(true);
+    }
     setShowAutoReq(false); setReqPlan(null); setReqChoice(null);
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
-  }, [reqPlan, reqChoice, balance, userData, toast]);
+  }, [reqPlan, reqChoice, balance, userData, toast, autoPlanCooldowns]);
   const copyAutoRefLink = useCallback(()=>{
     const link = `${window.location.origin}/refer?ref=${autoRefCode}`;
     navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
@@ -1435,14 +1467,20 @@ export default function DashboardPage() {
           <div className="space-y-3 mt-3">
             {AUTO_PLANS.map((p, idx)=> {
               const isFree = p.id==="free1h";
-              const disabled = isFree && autoFirstFreeUsed;
+              const freeDisabled = isFree && autoFirstFreeUsed;
+              const cd = autoPlanCooldowns[p.id];
+              const isLocked = !isFree && cd && cd > nowTick;
+              const disabled = freeDisabled || !!isLocked;
+              const lockLeft = isLocked ? cd - nowTick : 0;
+              const lockDays = Math.floor(lockLeft/86400000);
+              const lockHours = Math.floor((lockLeft%86400000)/3600000);
               return (
                 <button key={p.id} disabled={disabled} onClick={()=> startAutoPlan(p.id)} className={`w-full text-left relative rounded-2xl border p-3 flex items-center justify-between ${disabled ? "bg-white/5 border-white/10 opacity-50" : "bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border-emerald-500/30 hover:border-emerald-400/50"}`}>
                   <div>
-                    <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{idx+1}. {p.label}</div>
-                    <div className="text-xs text-white/60">------&gt; max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub}</div>
+                    <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{idx+1}. {p.label} {isLocked ? "• Locked 1 week" : ""}</div>
+                    <div className="text-xs text-white/60">------&gt; max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub} {isLocked ? `• ${lockDays}d ${lockHours}h left` : ""}</div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-black ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{disabled ? "Used" : "Start"}</div>
+                  <div className={`px-3 py-1 rounded-full text-xs font-black ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{isLocked ? "Locked" : disabled ? "Used" : "Start"}</div>
                   {disabled && <div className="absolute left-3 right-3 top-1/2 h-[2px] bg-gray-400/70 -translate-y-1/2"></div>}
                 </button>
               );
@@ -1821,6 +1859,22 @@ export default function DashboardPage() {
         </div>
 
         {/* Support card moved below Referral card per request */}
+
+        {/* ── PLAY & WIN — STAKE ── */}
+        <Link href="/stake" className="block hh-entry-4">
+          <div className="hh-card relative overflow-hidden bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-600 border-amber-500/30 !p-4 flex items-center justify-between hover:from-amber-600 hover:to-emerald-600 transition cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+                <Trophy className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="font-black text-white text-base flex items-center gap-2">Play & Win <span className="px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-black">×2.2</span></div>
+                <div className="text-xs font-bold text-white/80">Stake to win — instant payout</div>
+              </div>
+            </div>
+            <span className="px-4 py-2 rounded-full bg-white text-emerald-700 font-black text-sm shadow-lg">Play →</span>
+          </div>
+        </Link>
 
         {/* ── REFERRAL CARD ── */}
         <div className="hh-entry-5">
