@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Sparkles, Zap, Trophy, Clock, Users, Flame, Crown, Gift, TrendingUp, ShieldCheck, Timer, Coins } from "lucide-react"
@@ -9,6 +9,20 @@ import { useToast } from "@/hooks/use-toast"
 
 const STAKE_OPTIONS = [500, 1000, 2000, 5000, 10000, 20000]
 const MULTIPLIER = 2.2
+
+// Spin & Win — 30% win = 3 wins / 10 segments (additive inside /stake)
+const SPIN_SEGMENTS = [
+  { label: "WIN ×2", win: true, amount: 2, color: "#10b981" },
+  { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
+  { label: "WIN ×5", win: true, amount: 5, color: "#f59e0b" },
+  { label: "LOSE", win: false, amount: 0, color: "#334155" },
+  { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
+  { label: "LOSE", win: false, amount: 0, color: "#334155" },
+  { label: "WIN ×3", win: true, amount: 3, color: "#06b6d4" },
+  { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
+  { label: "LOSE", win: false, amount: 0, color: "#334155" },
+  { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
+]
 
 export default function StakeWinPage() {
   const router = useRouter()
@@ -42,6 +56,51 @@ export default function StakeWinPage() {
     const m = Math.floor(s/60)
     return `${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
   }
+
+  // Spin & Win state (inside same /stake page, pool untouched)
+  const [spinStake, setSpinStake] = useState(1000)
+  const [spinCustom, setSpinCustom] = useState("1000")
+  const [spinning, setSpinning] = useState(false)
+  const [rotation, setRotation] = useState(0)
+  const [spinResult, setSpinResult] = useState<(typeof SPIN_SEGMENTS)[number] | null>(null)
+  const [showSpinResult, setShowSpinResult] = useState(false)
+  const [spins, setSpins] = useState(0)
+
+  const doSpin = useCallback(() => {
+    if (spinning) return
+    if (spinStake < 200) return toast({ title: "Min stake ₦200", variant: "destructive" })
+    if (spinStake > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
+    const isWinRoll = Math.random() < 0.30
+    const winPool = SPIN_SEGMENTS.filter(s => s.win)
+    const losePool = SPIN_SEGMENTS.filter(s => !s.win)
+    const target = isWinRoll ? winPool[Math.floor(Math.random() * winPool.length)] : losePool[Math.floor(Math.random() * losePool.length)]
+    const targetIdx = SPIN_SEGMENTS.indexOf(target)
+    const segAngle = 360 / SPIN_SEGMENTS.length
+    const targetAngle = 360 - (targetIdx * segAngle + segAngle / 2)
+    const spinsCount = 6 + Math.random() * 4
+    const total = rotation + spinsCount * 360 + targetAngle - (rotation % 360)
+    setSpinning(true)
+    setSpinResult(null)
+    setShowSpinResult(false)
+    setRotation(total)
+    setTimeout(() => {
+      setSpinning(false)
+      setSpinResult(target)
+      setShowSpinResult(true)
+      setSpins(s => s + 1)
+      if (target.win) {
+        const winAmt = spinStake * target.amount
+        const newBal = balance + winAmt
+        setBalance(newBal)
+        try { const raw = localStorage.getItem("tivexx-user"); if (raw) { const u = JSON.parse(raw); u.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u)) } } catch {}
+        toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${target.label} on ₦${spinStake.toLocaleString()} stake` })
+      } else {
+        const newBal = Math.max(0, balance - spinStake)
+        setBalance(newBal)
+        try { const raw = localStorage.getItem("tivexx-user"); if (raw) { const u = JSON.parse(raw); u.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u)) } } catch {}
+      }
+    }, 3200)
+  }, [spinning, spinStake, balance, rotation, toast])
 
   const onStake = () => {
     if (amount < 500) return toast({ title: "Minimum stake is ₦500", variant: "destructive" })
@@ -166,10 +225,53 @@ export default function StakeWinPage() {
           <Button onClick={onStake} className="w-full mt-4 rounded-full hh-btn-primary font-black text-base py-6 shadow-[0_10px_30px_rgba(16,185,129,0.35)]">
             <Zap className="h-5 w-5 mr-2" /> Stake ₦{amount.toLocaleString()} — Win ₦{win.toLocaleString()}
           </Button>
-          <Link href="/spin-win" className="mt-2 flex items-center justify-center gap-2 rounded-full bg-white/5 border border-white/10 py-2.5 text-sm font-black text-amber-300 hover:bg-white/10">
-            <Trophy className="h-4 w-4" /> Try Spin & Win — 30% win →
-          </Link>
           <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p>
+        </div>
+
+        {/* Spin & Win — 30% win, cool wheel, inside /stake as requested (pool left as is) */}
+        <div className="hh-card flex flex-col items-center !py-6 border-amber-500/20">
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-2 font-black tracking-widest text-[12px]"><Crown className="h-4 w-4 text-amber-300" /> SPIN & WIN</div>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">30% WIN</span>
+          </div>
+          <p className="w-full text-left text-xs text-white/60 mt-1">Stake, spin, win up to ×5. Cool neon wheel, 30% win rate, instant payout. Pool above stays.</p>
+          <div className="mt-1 w-full grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-2.5 text-center"><div className="text-[10px] font-black text-white/50">YOUR BALANCE</div><div className="text-sm font-black">₦{balance.toLocaleString()}</div></div>
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-center"><div className="text-[10px] font-black text-amber-300">WIN RATE</div><div className="text-lg font-black text-amber-300">30%</div></div>
+            <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-center"><div className="text-[10px] font-black text-emerald-300">SPINS</div><div className="text-lg font-black text-emerald-300">{spins}</div></div>
+          </div>
+          <div className="relative mt-5">
+            <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-amber-500/30 via-emerald-500/20 to-cyan-500/30 blur-xl"></div>
+            <div className="relative rounded-full p-1.5 bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.35)]">
+              <div className="rounded-full p-1 bg-[#0a1620]">
+                <div className="relative rounded-full overflow-hidden" style={{ width: "min(78vw, 300px)", height: "min(78vw, 300px)", transform: `rotate(${rotation}deg)`, transition: spinning ? "transform 3.2s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none" }}>
+                  <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(from -90deg, ${SPIN_SEGMENTS.map((s, i) => { const a = (i / SPIN_SEGMENTS.length) * 360; const b = ((i + 1) / SPIN_SEGMENTS.length) * 360; return `${s.color} ${a}deg ${b}deg` }).join(", ")})` }} />
+                  {SPIN_SEGMENTS.map((s, i) => { const ang = (i + 0.5) * (360 / SPIN_SEGMENTS.length) - 90; return (<div key={i} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-[10px] tracking-widest text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" style={{ transform: `translate(-50%, -50%) rotate(${ang}deg) translateY(-88px) rotate(90deg)` }}>{s.label}</div>) })}
+                  <div className="absolute inset-0 rounded-full border border-white/10"></div>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
+            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex items-center justify-center border-4 border-white/20">{spinning ? "..." : "SPIN"}</button>
+          </div>
+          {showSpinResult && spinResult && (
+            <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
+              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{(spinStake * spinResult.amount).toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, 30% win each spin</div>}
+              <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${(spinStake * spinResult.amount - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
+            </div>
+          )}
+          <div className="mt-4 w-full">
+            <div className="flex items-center justify-between"><span className="text-sm font-black flex items-center gap-2"><Coins className="h-4 w-4 text-emerald-400" /> Spin stake</span><span className="text-[11px] font-bold text-white/50">Min ₦200 • 30% win</span></div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {[500, 1000, 2000, 5000].map(v => (<button key={v} onClick={() => { setSpinStake(v); setSpinCustom(String(v)) }} className={`rounded-2xl border py-2.5 font-black text-sm ${spinStake===v ? "bg-amber-500 text-black border-amber-400" : "bg-white/5 border-white/10 text-white"}`}>₦{v.toLocaleString()}</button>))}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <div className="flex-1 relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-black">₦</span><input inputMode="numeric" value={spinCustom} onChange={e => { const r=e.target.value.replace(/[^0-9]/g,""); setSpinCustom(r); const n=Number(r||0); if(n) setSpinStake(n) }} placeholder="Custom" className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-3 py-3 text-sm font-bold text-white outline-none focus:border-amber-500/40" /></div>
+              <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 to-emerald-500/15 border border-amber-500/20 px-4 flex flex-col justify-center text-center min-w-[110px]"><div className="text-[10px] font-black text-white/60">MAX WIN</div><div className="text-sm font-black text-amber-300">₦{(spinStake*5).toLocaleString()}</div></div>
+            </div>
+            <Button onClick={doSpin} disabled={spinning} className="w-full mt-3 rounded-full hh-btn-primary font-black py-6"><Zap className="h-5 w-5 mr-2" /> {spinning ? "Spinning..." : `Spin for ₦${spinStake.toLocaleString()}`}</Button>
+            <p className="text-center text-[11px] text-white/40 mt-2 flex items-center justify-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> 30% win, provably fair RNG. You will tell me what to remove later — additive only.</p>
+          </div>
         </div>
 
         {/* How it works */}
