@@ -166,6 +166,9 @@ export default function StakeWinPage() {
           <Button onClick={onStake} className="w-full mt-4 rounded-full hh-btn-primary font-black text-base py-6 shadow-[0_10px_30px_rgba(16,185,129,0.35)]">
             <Zap className="h-5 w-5 mr-2" /> Stake ₦{amount.toLocaleString()} — Win ₦{win.toLocaleString()}
           </Button>
+          <Link href="/spin-win" className="mt-2 flex items-center justify-center gap-2 rounded-full bg-white/5 border border-white/10 py-2.5 text-sm font-black text-amber-300 hover:bg-white/10">
+            <Trophy className="h-4 w-4" /> Try Spin & Win — 30% win →
+          </Link>
           <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p>
         </div>
 
