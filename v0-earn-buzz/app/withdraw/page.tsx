@@ -274,7 +274,7 @@ export default function WithdrawPage() {
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
 
-        {/* Toggle Section */}
+        {/* Toggle Section — HIDDEN per request (code kept commented, not deleted)
         <div className="hh-card hh-entry-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -291,6 +291,7 @@ export default function WithdrawPage() {
             </button>
           </div>
         </div>
+        */}
 
         {/* Bank Details (locked) — shown INSTEAD of Available Balance when set after signup */}
         {bankDetails?.locked ? (
