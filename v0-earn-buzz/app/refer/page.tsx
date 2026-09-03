@@ -1,8 +1,8 @@
 // app/refer/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Copy,
@@ -38,7 +38,17 @@ interface UserData {
 }
 
 export default function ReferPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#050d14] text-white/60 text-sm">Loading...</div>}>
+      <ReferContent />
+    </Suspense>
+  );
+}
+
+function ReferContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoTapPlan = searchParams.get("autoTapPlan") as string | null;
   const [copied, setCopied] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -542,6 +552,9 @@ export default function ReferPage() {
             <span>Telegram</span>
           </button>
         </div>
+
+        {/* Auto Tap Referral — separate page/section above How It Works */}
+        <AutoTapReferralSection autoTapPlan={autoTapPlan} origin={origin} referralLink={referralLink} userData={userData} />
 
         {/* How It Works */}
         <div className="hh-card hh-entry-4">
@@ -1702,6 +1715,87 @@ export default function ReferPage() {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }: { autoTapPlan: string | null; origin: string; referralLink: string; userData: any }) {
+  const router = useRouter();
+  const [autoRefCode, setAutoRefCode] = useState("");
+  const [autoRefCount, setAutoRefCount] = useState(0);
+  const planMap: Record<string, { label: string; need: number; maxEarn: number }> = {
+    "24h": { label: "24 hours: 1500 taps", need: 10, maxEarn: 150000 },
+    "2d": { label: "2 days: 3500 taps", need: 20, maxEarn: 350000 },
+    "3d": { label: "3 days: 5500 taps", need: 30, maxEarn: 550000 },
+    "1w": { label: "1 week: 10,000 taps", need: 50, maxEarn: 1000000 },
+  };
+  const plan = autoTapPlan ? planMap[autoTapPlan] : null;
+
+  useEffect(() => {
+    if (!autoTapPlan) return;
+    try {
+      const mapRaw = localStorage.getItem("auto_tap_ref_code");
+      const map = mapRaw ? JSON.parse(mapRaw) : {};
+      let code = map[autoTapPlan];
+      if (!code) {
+        const base = (userData?.referral_code || userData?.id || "USER").toString().slice(-4);
+        code = `${base}-AUTO-${autoTapPlan}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+        map[autoTapPlan] = code;
+        localStorage.setItem("auto_tap_ref_code", JSON.stringify(map));
+      }
+      setAutoRefCode(code);
+      const cnt = localStorage.getItem(`auto_ref_count_${autoTapPlan}`);
+      setAutoRefCount(cnt ? Number(cnt) : 0);
+      // also sync from server if available
+      const uid = userData?.id;
+      if (uid) {
+        fetch(`/api/referral-stats?userId=${uid}&t=${Date.now()}`).then(r=>r.json()).then(d=>{
+          if (typeof d.referral_count === "number") setAutoRefCount(d.referral_count);
+        }).catch(()=>{});
+      }
+    } catch {}
+  }, [autoTapPlan, userData]);
+
+  if (!autoTapPlan || !plan) {
+    // hidden when not in autoTap referral mode — no extra page
+    return null;
+  }
+
+  const autoLink = origin && autoRefCode ? `${origin}/refer?ref=${autoRefCode}` : `${origin}${referralLink}`;
+  const done = autoRefCount;
+  const need = plan.need;
+  const pct = Math.min(100, Math.round((done/need)*100));
+
+  const copy = () => {
+    navigator.clipboard.writeText(autoLink);
+  };
+
+  return (
+    <div className="hh-card hh-entry-3 border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-amber-500/10">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="hh-icon-ring"><Users className="h-4 w-4 text-emerald-300" /></div>
+        <span className="text-xs font-black tracking-widest text-emerald-300">AUTO TAP REFERRAL</span>
+        <span className="ml-auto text-[11px] font-bold text-white/60">{autoTapPlan}</span>
+      </div>
+      <h3 className="text-sm font-black text-white">Unlock {plan.label} — {need} referrals</h3>
+      <p className="text-xs text-white/60 mt-1">Share your dedicated Auto Tap link. Referrals from this link count toward this plan AND your total. Max ₦{plan.maxEarn.toLocaleString()} when unlocked.</p>
+      <div className="mt-3">
+        <div className="flex items-center justify-between text-xs mb-1"><span className="text-white/60">Progress</span><span className="font-mono font-bold text-white">{done}/{need}</span></div>
+        <div className="hh-progress-track"><div className="hh-progress-fill" style={{ width: `${pct}%` }}></div></div>
+      </div>
+      <div className="mt-3 bg-black/30 rounded-xl p-2.5 border border-white/10">
+        <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1">Your Auto Tap referral link</div>
+        <div className="text-xs font-mono text-white break-all">{autoLink || "generating..."}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <button onClick={copy} className="hh-share-btn hh-share-copy flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black"><Copy className="h-4 w-4" /> Copy link</button>
+        <button onClick={()=> { const msg = `Join FlashGain9ja and help me unlock Auto Tap ${plan.label}! ${autoLink}`; window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_self"); }} className="hh-share-btn hh-share-wa flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black"><Share2 className="h-4 w-4" /> Share</button>
+      </div>
+      {done >= need ? (
+        <button onClick={()=> router.push("/dashboard")} className="w-full mt-3 rounded-full bg-emerald-500 text-white font-black py-3 text-sm">Unlock & Start Auto Tap →</button>
+      ) : (
+        <p className="text-[11px] text-amber-300 mt-2 text-center">{need - done} more referral{need-done===1?"":"s"} to unlock</p>
+      )}
     </div>
   );
 }
