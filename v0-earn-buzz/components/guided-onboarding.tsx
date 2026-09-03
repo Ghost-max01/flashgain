@@ -43,17 +43,19 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
   useEffect(() => {
     if (!open) return;
     function update() {
-      if (!step.target) { setRect(null); return; }
-      const el = document.querySelector(step.target) as HTMLElement | null;
-      if (!el) { setRect(null); return; }
-      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-      setTimeout(() => setRect(el.getBoundingClientRect()), 400);
+      try {
+        if (!step.target) { setRect(null); return; }
+        const el = document.querySelector(step.target) as HTMLElement | null;
+        if (!el) { setRect(null); return; }
+        try { el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }); } catch {}
+        setTimeout(() => { try { setRect(el.getBoundingClientRect()); } catch { setRect(null); } }, 400);
+      } catch { setRect(null); }
     }
     update();
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     const t = setTimeout(update, 600);
-    return () => { window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); clearTimeout(t); };
+    return () => { try { window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); clearTimeout(t); } catch {} };
   }, [open, idx, step.target]);
 
   const close = () => {
@@ -67,20 +69,21 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
   const prev = () => setIdx(i => Math.max(0, i - 1));
 
   if (!open) return null;
-  const Icon = step.icon;
+  if (!step) return null;
+  const Icon = step.icon || Sparkles;
 
   return (
     <div className={`fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 ${leaving ? "pointer-events-none" : ""}`} role="dialog" aria-modal="true">
       {/* dim + spotlight */}
       <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] transition-opacity" onClick={close} />
-      {/* spotlight cutout */}
+      {/* spotlight cutout — safe window */}
       {rect && (
         <div
           className="absolute rounded-[18px] transition-all duration-[620ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           style={{
             left: Math.max(8, rect.left - 10),
             top: Math.max(8, rect.top - 10),
-            width: Math.min(window.innerWidth - 16, rect.width + 20),
+            width: Math.min((typeof window !== "undefined" ? window.innerWidth : 390) - 16, rect.width + 20),
             height: rect.height + 20,
             boxShadow: "0 0 0 9999px rgba(0,0,0,0.62), 0 0 0 2px rgba(16,185,129,0.9), 0 12px 40px rgba(16,185,129,0.35)",
             pointerEvents: "none",

@@ -33,7 +33,8 @@ import { ReferralCard } from "@/components/referral-card";
 import { TutorialModal } from "@/components/tutorial-modal";
 import { ScrollingText } from "@/components/scrolling-text";
 import { LiveChat } from "@/components/live-chat";
-import { GuidedOnboarding } from "@/components/guided-onboarding";
+import dynamic from "next/dynamic";
+const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").then(m => m.GuidedOnboarding), { ssr: false }) as any;
 import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
 import {
