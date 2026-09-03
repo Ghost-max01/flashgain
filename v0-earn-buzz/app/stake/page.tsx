@@ -252,7 +252,7 @@ export default function StakeWinPage() {
               </div>
             </div>
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
-            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex items-center justify-center border-4 border-white/20">{spinning ? "..." : "SPIN"}</button>
+            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>SPIN</span><span>NOW</span></>}</button>
           </div>
           {showSpinResult && spinResult && (
             <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
@@ -269,7 +269,7 @@ export default function StakeWinPage() {
               <div className="flex-1 relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-black">₦</span><input inputMode="numeric" value={spinCustom} onChange={e => { const r=e.target.value.replace(/[^0-9]/g,""); setSpinCustom(r); const n=Number(r||0); if(n) setSpinStake(n) }} placeholder="Custom" className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-3 py-3 text-sm font-bold text-white outline-none focus:border-amber-500/40" /></div>
               <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 to-emerald-500/15 border border-amber-500/20 px-4 flex flex-col justify-center text-center min-w-[110px]"><div className="text-[10px] font-black text-white/60">MAX WIN</div><div className="text-sm font-black text-amber-300">₦{(spinStake*5).toLocaleString()}</div></div>
             </div>
-            <Button onClick={doSpin} disabled={spinning} className="w-full mt-3 rounded-full hh-btn-primary font-black py-6"><Zap className="h-5 w-5 mr-2" /> {spinning ? "Spinning..." : `Spin for ₦${spinStake.toLocaleString()}`}</Button>
+            <Button onClick={doSpin} disabled={spinning} className="w-full mt-3 rounded-full hh-btn-primary font-black py-6"><Zap className="h-5 w-5 mr-2" /> {spinning ? "Spinning..." : `Spin Now — ₦${spinStake.toLocaleString()}`}</Button>
             <p className="text-center text-[11px] text-white/40 mt-2 flex items-center justify-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> 30% win, provably fair RNG. You will tell me what to remove later — additive only.</p>
           </div>
         </div>
