@@ -6,6 +6,32 @@ export function ServiceWorkerUpdater() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
+    // ── Nuke stale SW/caches that are serving the old broken layout/dashboard chunks ──
+    // Do this once per session, fire-and-forget.
+    try {
+      const NUKED_KEY = 'sw-nuked-20260318';
+      if (!sessionStorage.getItem(NUKED_KEY)) {
+        sessionStorage.setItem(NUKED_KEY, '1');
+        // unregister any old /notification-sw.js registration (404) and old /sw.js if corrupted
+        void navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(r => {
+            const url = (r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '') as string;
+            if (url.includes('notification-sw') || url.includes('/sw.js')) {
+              // Don't unregister the current good /sw.js outright — just update it.
+              // Only nuke the 404 notification-sw.
+              if (url.includes('notification-sw')) void r.unregister();
+            }
+          });
+        });
+        // clear old Next chunk caches that may hold the broken layout-ef862 / page-5f716
+        if ('caches' in window) {
+          void caches.keys().then(keys => keys.forEach(k => {
+            if (k.includes('next') || k.includes('workbox') || k.includes('flashgain')) void caches.delete(k);
+          }));
+        }
+      }
+    } catch {}
+
     let attempts = 0
     let hasReloaded = false
 
