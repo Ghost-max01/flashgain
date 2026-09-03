@@ -70,7 +70,7 @@ const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: numb
 const AUTO_TAP_INTERVAL_MS = 800;
 const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 30, "3d": 40, "1w": 60 };
 const AUTO_REQ_REF: Record<AutoPlanId, number> = { free1h: 0, "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
-const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
+const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 100, "2d": 30000, "3d": 50000, "1w": 100000 };
 const AUTO_REF_LINK_KEY = "auto_tap_ref_code";
 const AUTO_PLAN_COOLDOWN_KEY = "auto_tap_plan_cooldowns";
 const AUTO_PLAN_COOLDOWN_MS = 7*24*60*60*1000;
