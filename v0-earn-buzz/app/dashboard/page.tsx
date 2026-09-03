@@ -68,9 +68,14 @@ const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: numb
   { id: "1w", label: "1 week: 10,000 taps", sub: "max 1,000,000", durationMs: 7*24*60*60*1000, maxTaps: 10000, maxEarn: 1000000 },
 ];
 const AUTO_TAP_INTERVAL_MS = 800;
+const getAutoIntervalMs = (planId: AutoPlanId) => {
+  const p = AUTO_PLANS.find(x=>x.id===planId);
+  if (!p) return AUTO_TAP_INTERVAL_MS;
+  return Math.max(900, Math.floor(p.durationMs / p.maxTaps));
+};
 const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 30, "3d": 40, "1w": 60 };
 const AUTO_REQ_REF: Record<AutoPlanId, number> = { free1h: 0, "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
-const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 100, "2d": 30000, "3d": 50000, "1w": 100000 };
+const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
 const AUTO_REF_LINK_KEY = "auto_tap_ref_code";
 const AUTO_PLAN_COOLDOWN_KEY = "auto_tap_plan_cooldowns";
 const AUTO_PLAN_COOLDOWN_MS = 7*24*60*60*1000;
@@ -426,25 +431,26 @@ export default function DashboardPage() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [autoActive, autoExpiresAt, autoPlan, autoTapsDone, toast]);
-  // auto tap interval — no orb animation, just balance ++ with particles
+  // auto tap interval — duration-matched: maxTaps spread evenly over plan duration (e.g. 24h/1500 ≈ 57.6s per tap)
+  // exhaust/regen returned: auto consumes tapEnergy and will pause on exhaust, but guarantees maxTaps anyway (waits regen, then resumes)
   useEffect(() => {
     if (!autoActive) { if (autoTimerRef.current) clearInterval(autoTimerRef.current); autoTimerRef.current = null; return; }
-    if (tapExhaustUntil && tapExhaustUntil > Date.now()) return; // wait for exhaust
     const plan = AUTO_PLANS.find(p=>p.id===autoPlan);
     const max = plan?.maxTaps ?? Infinity;
+    const intervalMs = getAutoIntervalMs(autoPlan);
     autoTimerRef.current = setInterval(() => {
       if (autoTapsDone >= max) return;
-      if (tapEnergy <= 0) return; // wait regen
+      if (tapExhaustUntil && tapExhaustUntil > Date.now()) return; // wait exhaust regen, but don't abort — will resume
+      if (tapEnergy <= 0) return; // wait regen 6s, then next tick will fire
       setTapEnergy(p=> Math.max(0, p-1));
       setTapEarned(p=> p+TAP_EARN_PER);
       setBalance(p=> p+TAP_EARN_PER);
       setAutoTapsDone(p=> p+1);
       syncTapToBalance(TAP_EARN_PER);
-      // subtle particle without bounce — balance increasing visible
       const id = tapPid.current++;
       setTapParticles(prev=> [...prev, { id, x: 75, y: 20 }]);
       setTimeout(()=> setTapParticles(prev=> prev.filter(p=>p.id!==id)), 700);
-    }, AUTO_TAP_INTERVAL_MS);
+    }, intervalMs);
     return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
   }, [autoActive, autoPlan, autoTapsDone, tapEnergy, tapExhaustUntil]);
   const syncTapToBalance = useCallback((amount: number) => {
@@ -1761,16 +1767,20 @@ export default function DashboardPage() {
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
                 </div>
               </div>
-              {/* Auto tap toggle under orb — only button, centered like withdraw toggle */}
-              <div className="flex flex-col items-center gap-1 mt-2">
+              {/* Auto tap toggle — compact row: ON/OFF in front of button */}
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
                 <span className="text-[11px] font-black tracking-widest text-white/80">AUTO TAP</span>
                 <button type="button" onClick={handleAutoToggle} className={`hh-toggle ${autoActive ? 'hh-toggle-active' : ''}`} aria-label="Toggle auto tap">
                   <span className={`hh-toggle-dot ${autoActive ? 'hh-toggle-dot-active' : ''}`} />
                 </button>
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
               </div>
-              {autoActive && <div className="text-center text-[10px] text-emerald-300 font-bold mt-1">{autoTapsDone}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps} taps • {formatAutoLeft(autoLeftMs)} left</div>}
-              {tapExhaustUntil && tapExhaustLeft>0 ? (
+              {autoActive ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${Math.min(100,(autoTapsDone/(AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps||1))*100)}%` }}></div></div>
+                  <span className="text-[11px] font-mono font-bold whitespace-nowrap text-emerald-300"><Zap className="inline h-3 w-3 -mt-0.5"/>{TAP_MAX_ENERGY}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps}</span>
+                </div>
+              ) : tapExhaustUntil && tapExhaustLeft>0 ? (
                 <div className="text-center text-[11px] font-bold text-amber-300 mt-1 flex items-center justify-center gap-1"><Clock className="h-3 w-3"/> Exhausted 100/100 — wait {Math.floor(tapExhaustLeft/60000)}:{String(Math.floor((tapExhaustLeft%60000)/1000)).padStart(2,'0')} to recharge</div>
               ) : (
                 <div className="flex items-center gap-2 mt-1">
