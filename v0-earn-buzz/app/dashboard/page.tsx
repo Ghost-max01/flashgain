@@ -556,12 +556,33 @@ export default function DashboardPage() {
     }
     if (reqChoice==="payment") {
       const need = AUTO_REQ_PAY[reqPlan];
-      // external bank transfer — host your account number (Kuda 2086258173 Faith Wali) via /withdraw/pay
-      try { localStorage.setItem("pending_auto_tap_payment", JSON.stringify({ planId: reqPlan, amount: need, at: Date.now() })); } catch {}
-      const params = new URLSearchParams({ amount: String(need), fullName: `Auto Tap ${plan.label}`, bankName: "Kuda", autoPlan: reqPlan });
-      setShowAutoReq(false);
-      router.push(`/withdraw/pay?${params.toString()}`);
-      toast({ title: "Complete payment", description: `Transfer ₦${need.toLocaleString()} to Kuda 2086258173 (Faith Wali) and confirm. Auto tap will unlock after verification.` });
+      const email = (userData as any)?.email || JSON.parse(localStorage.getItem("tivexx-user")||"{}")?.email || ""
+      if (!email) {
+        toast({ title: "Add your email first", description: "We need your email for Paystack receipt", variant: "destructive" })
+        return
+      }
+      try {
+        toast({ title: "Starting Paystack...", description: `Pay ₦${need.toLocaleString()} to unlock ${plan.label}` })
+        const res = await fetch("/api/paystack/initialize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            amount: need,
+            callbackUrl: `${window.location.origin}/paystack/callback`,
+            metadata: { type: "auto_tap", planId: reqPlan, userId: (userData as any)?.id || (userData as any)?.userId || "", amount: need },
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data?.authorization_url) {
+          throw new Error(data?.error || "Could not start Paystack")
+        }
+        // Save pending for UX; real activation happens in /paystack/callback after verification
+        try { localStorage.setItem("pending_auto_tap_payment", JSON.stringify({ planId: reqPlan, amount: need, reference: data.reference, at: Date.now() })); } catch {}
+        window.location.href = data.authorization_url
+      } catch (e: any) {
+        toast({ title: "Payment failed", description: e?.message || "Try again", variant: "destructive" })
+      }
       return;
     }
     // start auto

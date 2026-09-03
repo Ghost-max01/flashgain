@@ -56,6 +56,44 @@ function InvestmentPaymentContent() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const [paying, setPaying] = React.useState(false);
+
+  const handlePaystack = async () => {
+    const rawAmount = String(amountParam).replace(/[^0-9]/g, "");
+    const amountNum = Number(rawAmount);
+    if (!amountNum || amountNum < 100) {
+      alert("Invalid amount");
+      return;
+    }
+    try {
+      const rawUser = typeof window !== "undefined" ? localStorage.getItem("tivexx-user") : null;
+      const u = rawUser ? JSON.parse(rawUser) : null;
+      const email = u?.email || "";
+      if (!email) {
+        alert("Please update your profile email first");
+        return;
+      }
+      setPaying(true);
+      const res = await fetch("/api/paystack/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          amount: amountNum,
+          callbackUrl: `${window.location.origin}/paystack/callback`,
+          metadata: { type: "investment", plan: planParam || "custom", userId: u?.id || u?.userId || "", amount: amountNum },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.authorization_url) throw new Error(data?.error || "Paystack failed");
+      window.location.href = data.authorization_url;
+    } catch (e: any) {
+      alert(e?.message || "Payment init failed");
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const handleConfirmPayment = () => {
     const rawAmount = String(amountParam).replace(/[^0-9.-]/g, "");
     const params = new URLSearchParams({ fullName, amount: rawAmount, method: "Investment" });
@@ -201,10 +239,18 @@ function InvestmentPaymentContent() {
           </div>
         </div>
 
-        {/* Confirm Button */}
+        {/* Confirm Buttons */}
+        <button
+          onClick={handlePaystack}
+          disabled={paying}
+          className="hh-proceed-btn hh-proceed-active w-full hh-entry-5"
+        >
+          {paying ? "Starting Paystack..." : `Pay ₦${formatNumber(amountParam)} with Paystack — Instant ✓`}
+        </button>
+        <div className="text-center text-xs text-white/40 hh-entry-5">— or pay via bank transfer —</div>
         <button
           onClick={handleConfirmPayment}
-          className="hh-proceed-btn hh-proceed-active w-full hh-entry-6"
+          className="hh-proceed-btn w-full hh-entry-6 !bg-white/5 !border !border-white/10"
         >
           I have made this bank Transfer
         </button>
