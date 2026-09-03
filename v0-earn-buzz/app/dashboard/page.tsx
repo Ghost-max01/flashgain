@@ -1541,19 +1541,13 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">b</span>
-                <div className={`flex-1 rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                  <button onClick={()=> { setReqChoice("referral"); router.push(`/refer?autoTapPlan=${reqPlan}`); setShowAutoReq(false); }} className="w-full text-left">
+                <button onClick={()=> { setReqChoice("referral"); router.push(`/refer/auto-tap?plan=${reqPlan}`); setShowAutoReq(false); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                  <div>
                     <div className="text-sm font-black text-white">Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
                     <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
-                  </button>
-                  <div className="text-[11px] font-mono text-white/80 mt-2 break-all bg-black/30 rounded-lg p-2">{autoRefCode ? `${typeof window!=="undefined" ? window.location.origin : ""}/refer?ref=${autoRefCode}` : "generating..."}</div>
-                  <div className="flex gap-2 mt-2">
-                    <Button onClick={(e)=>{ e.stopPropagation(); copyAutoRefLink(); }} size="sm" className="rounded-full text-xs">Copy link</Button>
-                    <span className="text-xs text-emerald-300 self-center">{autoRefCount}/{AUTO_REQ_REF[reqPlan]} referrals</span>
-                    <button onClick={()=> { router.push(`/refer?autoTapPlan=${reqPlan}`); setShowAutoReq(false); }} className="ml-auto px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white self-center shrink-0">Start</button>
                   </div>
-                  <div className="text-[11px] text-amber-300 mt-1">Referrals from this link add to your total too.</div>
-                </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">c</span>
