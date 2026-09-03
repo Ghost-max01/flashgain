@@ -32,6 +32,8 @@ import { ReferralCard } from "@/components/referral-card";
 import { TutorialModal } from "@/components/tutorial-modal";
 import { ScrollingText } from "@/components/scrolling-text";
 import { LiveChat } from "@/components/live-chat";
+import { GuidedOnboarding } from "@/components/guided-onboarding";
+import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
 import {
   ensurePushRegistrationIntegrity,
@@ -157,6 +159,11 @@ export default function DashboardPage() {
   const [muTaskDone, setMuTaskDone] = useState(0);
   const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
+  // ── Trust Score (compounding) ──
+  const [trustScore, setTrustScore] = useState(0);
+  const [trustMeta, setTrustMeta] = useState<any>(null);
+  const [showTrustInfo, setShowTrustInfo] = useState(false);
+  const [showGuided, setShowGuided] = useState(false);
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
@@ -413,6 +420,104 @@ export default function DashboardPage() {
       try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
     }
   }, [tapEnergy, tapEarned]);
+  // ── Trust Score engine (compounding) ──
+  useEffect(() => {
+    // initial load
+    try {
+      const m = loadMeta();
+      // hydrate referral from /api may come later; pay count from localStorage
+      const payRaw = localStorage.getItem("tivexx-pay-count");
+      if (payRaw) m.payCount = Number(payRaw) || m.payCount;
+      const navRaw = localStorage.getItem("tivexx-nav-count");
+      if (navRaw) m.navCount = Number(navRaw) || m.navCount;
+      setTrustMeta(m);
+      setTrustScore(computeScore(m));
+    } catch {}
+    // track time spent (every 30s)
+    const start = Date.now();
+    let lastSave = Date.now();
+    const tick = () => {
+      try {
+        const m = loadMeta();
+        const prev = Number(localStorage.getItem(TRUST_TIME_KEY) || "0");
+        // accumulate visible time only
+        const now = Date.now();
+        const delta = document.visibilityState === "visible" ? now - lastSave : 0;
+        lastSave = now;
+        const total = prev + delta;
+        localStorage.setItem(TRUST_TIME_KEY, String(total));
+        m.timeMs = total;
+        // pull latest referral count from state if available
+        // referralCount will be synced separately
+        m.referralCount = autoRefCount || m.referralCount;
+        const nav = Number(localStorage.getItem("tivexx-nav-count") || "0");
+        m.navCount = nav;
+        const pay = Number(localStorage.getItem("tivexx-pay-count") || "0");
+        m.payCount = pay;
+        saveMeta(m);
+        setTrustMeta({ ...m });
+        setTrustScore(computeScore(m));
+      } catch {}
+    };
+    const id = setInterval(tick, 30000);
+    // count this page as a navigation
+    try {
+      const n = Number(localStorage.getItem("tivexx-nav-count") || "0");
+      localStorage.setItem("tivexx-nav-count", String(n + 1));
+    } catch {}
+    // listen for future navigations (clicks on links)
+    const onNav = () => {
+      try {
+        const n = Number(localStorage.getItem("tivexx-nav-count") || "0");
+        localStorage.setItem("tivexx-nav-count", String(n + 1));
+        const m = loadMeta(); m.navCount = n + 1; saveMeta(m); setTrustScore(computeScore(m));
+      } catch {}
+    };
+    window.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement)?.closest?.("a[href]");
+      if (a) onNav();
+    });
+    // after 5 mins toast once
+    const t5 = setTimeout(() => {
+      try {
+        const m = loadMeta();
+        if (computeScore(m) > 0) toast({ title: "Trust Score +2", description: "You spent 5 mins — keep compounding!" });
+      } catch {}
+    }, 5 * 60 * 1000);
+    return () => { clearInterval(id); clearTimeout(t5); };
+  }, [autoRefCount, toast]);
+  // sync referral count into trust meta when referral stats load
+  useEffect(() => {
+    if (!userData) return;
+    try {
+      const m = loadMeta();
+      const rc = Number(userData.referral_count || userData.referralCount || autoRefCount || 0);
+      if (rc !== m.referralCount) {
+        m.referralCount = rc;
+        saveMeta(m);
+        setTrustScore(computeScore(m));
+        setTrustMeta({ ...m });
+      }
+    } catch {}
+  }, [userData, autoRefCount]);
+  // detect payment success (paystack callback sets tivexx-pay-count)
+  useEffect(() => {
+    const onStorage = () => {
+      try { const m = loadMeta(); setTrustScore(computeScore(m)); setTrustMeta({ ...m }); } catch {}
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onStorage);
+    return () => { window.removeEventListener("storage", onStorage); window.removeEventListener("focus", onStorage); };
+  }, []);
+  // auto-show guided onboarding once for new users (not static — moving spotlight)
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("tivexx-tutorial-shown") && !localStorage.getItem("tivexx-guided-shown")) {
+        const t = setTimeout(() => setShowGuided(true), 1200);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, []);
   // persist auto
   useEffect(() => {
     try { localStorage.setItem(AUTO_TAP_KEY, JSON.stringify({ active: autoActive, planId: autoPlan, expiresAt: autoExpiresAt, tapsDone: autoTapsDone, firstFreeUsed: autoFirstFreeUsed })); } catch {}
@@ -1463,9 +1568,32 @@ export default function DashboardPage() {
           onClose={() => {
             setShowTutorial(false);
             localStorage.setItem("tivexx-tutorial-shown", "true");
+            // after static tutorial, launch moving guide
+            setTimeout(() => setShowGuided(true), 600);
           }}
         />
       )}
+      <GuidedOnboarding open={showGuided} onClose={() => { setShowGuided(false); localStorage.setItem("tivexx-guided-shown", "true"); localStorage.setItem("tivexx-tutorial-shown", "true"); }} />
+      {/* Trust Score breakdown */}
+      <Dialog open={showTrustInfo} onOpenChange={setShowTrustInfo}>
+        <DialogContent className="hh-dialog max-w-sm">
+          <DialogHeader><DialogTitle className="text-white flex items-center gap-2"><Award className="h-5 w-5 text-emerald-400"/> Trust Score — how it compounds</DialogTitle><DialogDescription className="text-white/60 text-xs">Everything compounds. Your score = sum of all actions.</DialogDescription></DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-500/15 to-blue-500/15 border border-emerald-500/20 p-4 flex items-center justify-between">
+              <div><div className="text-xs text-white/60 uppercase tracking-wider font-bold">Your Score</div><div className="text-3xl font-black text-white">{trustScore}</div><div className="text-xs font-bold" style={{color: getLevel(trustScore).color}}>{getLevel(trustScore).label} • {getProgress(trustScore)}%</div></div>
+              <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center"><span className="text-2xl font-black" style={{color: getLevel(trustScore).color}}>{trustScore}</span></div>
+            </div>
+            {(() => { const m = trustMeta || { timeMs:0, referralCount:0, navCount:0, payCount:0 }; const timePts=Math.floor(m.timeMs/(5*60*1000))*2; const refPts=Math.floor(m.referralCount/10)*2; const navPts=m.navCount*1; const payPts=m.payCount*5; const rows=[
+              { label:"Time in app (5m = +2)", value: `${Math.floor(m.timeMs/60000)}m`, pts: timePts, icon: Clock, color:"text-emerald-400" },
+              { label:"Referrals (10 = +2)", value: `${m.referralCount}`, pts: refPts, icon: Users, color:"text-violet-400" },
+              { label:"App navigations (+1 each)", value: `${m.navCount}`, pts: navPts, icon: TrendingUp, color:"text-amber-400" },
+              { label:"Payments into app (+5 each)", value: `${m.payCount}`, pts: payPts, icon: Wallet, color:"text-blue-400" },
+            ]; return rows.map(r=> (<div key={r.label} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5"><div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center ${r.color}`}><r.icon className="h-4 w-4"/></div><div><div className="text-xs font-bold text-white">{r.label}</div><div className="text-[11px] text-white/50">{r.value} → +{r.pts}</div></div></div><span className="text-sm font-black text-white">+{r.pts}</span></div>)); })()}
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200 leading-relaxed">💡 Tip: Stay 5 mins, invite 10 friends, explore the app, and fund once — you instantly jump to <b>Trusted</b>. Everything compounds, never resets.</div>
+            <Button onClick={()=>{ setShowTrustInfo(false); setShowGuided(true); }} className="w-full rounded-full bg-white text-[#050d14] font-black">Take guided tour →</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {showWithdrawalNotification && (
         <WithdrawalNotification onClose={handleCloseWithdrawalNotification} />
@@ -1729,7 +1857,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── BALANCE CARD ── */}
-        <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
+        <div data-tour="balance" className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
           {/* Decorative glow orbs */}
           <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
           <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
@@ -1775,7 +1903,7 @@ export default function DashboardPage() {
                   <div className={`te-halo ${tapEnergy > 0 && !autoActive ? "te-halo-active" : "te-halo-inactive"}`}></div>
                   <div className="te-ring te-ring-outer" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
                   <div className="te-ring te-ring-inner" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
-                  <button onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0)} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive ? "te-orb-tap" : ""} ${autoActive ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
+                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0)} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive ? "te-orb-tap" : ""} ${autoActive ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
                     <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : "TAP"}</span></div>
                   </button>
@@ -1824,14 +1952,15 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* ── TRUST SCORE — moved under Task / Withdraw ── */}
+        {/* ── TRUST SCORE — compounding, tap for breakdown ── */}
         <div
+          data-tour="trust"
           className="hh-trust-card hh-entry-3"
-          onClick={() => router.push("/profile")}
+          onClick={() => setShowTrustInfo(true)}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
-            if (e.key === "Enter") router.push("/profile");
+            if (e.key === "Enter") setShowTrustInfo(true);
           }}
         >
           <div className="hh-trust-header">
@@ -1840,20 +1969,20 @@ export default function DashboardPage() {
             </div>
             <div className="hh-trust-text">
               <div className="hh-trust-label">Trust Score</div>
-              <div className="hh-trust-value">0</div>
+              <div className="hh-trust-value">{trustScore}</div>
             </div>
-            <span className="hh-trust-badge">Free</span>
+            <span className="hh-trust-badge">{getLevel(trustScore).label}</span>
           </div>
           <div className="hh-trust-track">
-            <div className="hh-trust-fill" style={{ width: "0%" }}></div>
+            <div className="hh-trust-fill" style={{ width: `${getProgress(trustScore)}%` }}></div>
           </div>
           <div className="hh-trust-footer">
-            20 more to <span className="hh-trust-level">Beginner</span> · tap to upgrade
+            {(() => { const nxt = getNextLabel(trustScore); return nxt ? <>{nxt.need} more to <span className="hh-trust-level">{nxt.label}</span> · tap to see breakdown</> : <>Elite — max level unlocked 🎉</>; })()}
           </div>
         </div>
 
         {/* ── QUICK ACTIONS ── */}
-        <div className="hh-card hh-entry-4">
+        <div data-tour="quick-actions" className="hh-card hh-entry-4">
           <div className="hh-section-title">Quick Actions</div>
           <div className="space-y-3 mt-3">
             {/* Main 2-column grid for first 4 items */}
@@ -1907,7 +2036,7 @@ export default function DashboardPage() {
         {/* Support card moved below Referral card per request */}
 
         {/* ── PLAY & WIN — STAKE ── */}
-        <Link href="/stake" className="block hh-entry-4">
+        <Link data-tour="play-win" href="/stake" className="block hh-entry-4">
           <div className="hh-card relative overflow-hidden bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-600 border-amber-500/30 !p-4 flex items-center justify-between hover:from-amber-600 hover:to-emerald-600 transition cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
@@ -1923,7 +2052,7 @@ export default function DashboardPage() {
         </Link>
 
         {/* ── REFERRAL CARD ── */}
-        <div className="hh-entry-5">
+        <div data-tour="referral" className="hh-entry-5">
           {userData && <ReferralCard userId={userData.id || userData.userId} />}
         </div>
 

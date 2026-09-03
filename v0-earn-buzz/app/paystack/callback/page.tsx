@@ -97,9 +97,23 @@ function CallbackInner() {
           } catch {}
         }
 
+        // Payment into app = +5 Trust Score (compounding) — once per ref
+        try {
+          if (!localStorage.getItem(`paystack_ref_${reference}_trust`)) {
+            const c = Number(localStorage.getItem("tivexx-pay-count") || "0");
+            localStorage.setItem("tivexx-pay-count", String(c + 1));
+            localStorage.setItem(`paystack_ref_${reference}_trust`, "1");
+            try {
+              const metaRaw = localStorage.getItem("tivexx-trust-meta");
+              if (metaRaw) { const m = JSON.parse(metaRaw); m.payCount = (m.payCount||0)+1; m.payAmount=(m.payAmount||0)+amount; localStorage.setItem("tivexx-trust-meta", JSON.stringify(m)); }
+              else { const m2 = { timeMs: Number(localStorage.getItem("tivexx-trust-time-ms")||"0"), referralCount:0, navCount:Number(localStorage.getItem("tivexx-nav-count")||"0"), payCount: c+1, payAmount: amount, lastTimeAwarded:0, bonus:0 }; localStorage.setItem("tivexx-trust-meta", JSON.stringify(m2)); }
+            } catch {}
+          }
+        } catch {}
+
         if (!cancelled) {
           setStatus("success")
-          const extra = type === "auto_tap" ? `Auto Tap ${metadata.planId} activated!` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated!` : `₦${amount.toLocaleString()} added to balance!`
+          const extra = type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+5 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+5 Trust)` : `₦${amount.toLocaleString()} added to balance! (+5 Trust)`
           setMsg(extra)
           toast({ title: "Payment verified ✓", description: extra })
           setTimeout(() => router.replace(type === "investment" ? "/dashboard" : "/dashboard"), 2500)
