@@ -4,7 +4,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Copy, Share2, Users, Check } from "lucide-react";
+import { ArrowLeft, Copy, Share2, Users, Check, Send } from "lucide-react";
 
 function AutoTapReferContent() {
   const router = useRouter();
@@ -64,6 +64,10 @@ function AutoTapReferContent() {
     const msg = `Join FlashGain9ja and help me unlock Auto Tap ${plan.label}! ${autoLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_self");
   };
+  const shareTG = () => {
+    const msg = `Join FlashGain9ja and help me unlock Auto Tap ${plan.label}!`;
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(autoLink)}&text=${encodeURIComponent(msg)}`, "_self");
+  };
 
   return (
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
@@ -94,9 +98,10 @@ function AutoTapReferContent() {
             <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1">Your Auto Tap referral link</div>
             <div className="text-xs font-mono text-white break-all">{autoLink || "generating..."}</div>
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <button onClick={copy} className="hh-share-btn hh-share-copy flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black">{copied ? <><Check className="h-4 w-4" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy link</>}</button>
-            <button onClick={shareWA} className="hh-share-btn hh-share-wa flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black"><Share2 className="h-4 w-4" /> Share</button>
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <button onClick={copy} className="hh-share-btn hh-share-copy flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-black">{copied ? <><Check className="h-4 w-4" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy</>}</button>
+            <button onClick={shareWA} className="hh-share-btn hh-share-wa flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-black"><Share2 className="h-4 w-4" /> WhatsApp</button>
+            <button onClick={shareTG} className="hh-share-btn hh-share-tg flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-black"><Send className="h-4 w-4" /> Telegram</button>
           </div>
           {autoRefCount >= plan.need ? (
             <button onClick={()=> router.push("/dashboard")} className="w-full mt-3 rounded-full bg-emerald-500 text-white font-black py-3 text-sm">Unlock & Start Auto Tap →</button>
@@ -118,7 +123,8 @@ function AutoTapReferContent() {
         .hh-progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 9999px; transition: width 0.3s ease; }
         .hh-share-btn { border-radius: 12px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); }
         .hh-share-copy { background: rgba(255,255,255,0.08); color: white; }
-        .hh-share-wa { background: linear-gradient(135deg, #10b981, #059669); color: white; border-color: rgba(16,185,129,0.3); }
+        .hh-share-wa { background: linear-gradient(135deg, #25D366, #128C7E); color: white; border-color: rgba(37,211,102,0.3); }
+        .hh-share-tg { background: linear-gradient(135deg, #2AABEE, #229ED9); color: white; border-color: rgba(42,171,238,0.3); }
         .hh-bubbles-container { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
         .hh-bubble { position: absolute; border-radius: 50%; opacity: 0; animation: hh-bubble-rise linear infinite; }
         .hh-bubble-1 { width: 8px; height: 8px; left: 10%; background: radial-gradient(circle, rgba(16,185,129,0.6), transparent); animation-duration: 8s; }
