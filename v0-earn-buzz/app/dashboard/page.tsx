@@ -500,6 +500,24 @@ export default function DashboardPage() {
       }
     } catch {}
   }, [userData, autoRefCount]);
+  // sync completed tasks → +1 each (compounding)
+  useEffect(() => {
+    try {
+      const totalTasks = (mtTaskDone || 0) + (muTaskDone || 0) + (autoTaskDone || 0);
+      // also include generic task key if present
+      let generic = 0;
+      try { const g = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]"); if (Array.isArray(g)) generic = g.length; } catch {}
+      const all = totalTasks + generic;
+      const m = loadMeta();
+      if (all !== m.taskCount) {
+        m.taskCount = all;
+        saveMeta(m);
+        setTrustScore(computeScore(m));
+        setTrustMeta({ ...m });
+        if (all > 0 && all > (m.taskCount - 1) && all <= 20) { /* quiet, no spam */ }
+      }
+    } catch {}
+  }, [mtTaskDone, muTaskDone, autoTaskDone]);
   // detect payment success (paystack callback sets tivexx-pay-count)
   useEffect(() => {
     const onStorage = () => {
@@ -510,9 +528,16 @@ export default function DashboardPage() {
     return () => { window.removeEventListener("storage", onStorage); window.removeEventListener("focus", onStorage); };
   }, []);
   // auto-show guided onboarding once for new users (not static — moving spotlight)
+  // This deploy: force for BOTH old + new users once (v2), afterwards new users only
   useEffect(() => {
     try {
-      if (!localStorage.getItem("tivexx-tutorial-shown") && !localStorage.getItem("tivexx-guided-shown")) {
+      const force = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tour") === "1";
+      if (force) {
+        const t = setTimeout(() => setShowGuided(true), 600);
+        return () => clearTimeout(t);
+      }
+      const V2_KEY = "tivexx-guided-v2-shown";
+      if (!localStorage.getItem(V2_KEY)) {
         const t = setTimeout(() => setShowGuided(true), 1200);
         return () => clearTimeout(t);
       }
@@ -1573,7 +1598,7 @@ export default function DashboardPage() {
           }}
         />
       )}
-      <GuidedOnboarding open={showGuided} onClose={() => { setShowGuided(false); localStorage.setItem("tivexx-guided-shown", "true"); localStorage.setItem("tivexx-tutorial-shown", "true"); }} />
+      <GuidedOnboarding open={showGuided} onClose={() => { setShowGuided(false); localStorage.setItem("tivexx-guided-shown", "true"); localStorage.setItem("tivexx-guided-v2-shown", "true"); localStorage.setItem("tivexx-tutorial-shown", "true"); }} />
       {/* Trust Score breakdown */}
       <Dialog open={showTrustInfo} onOpenChange={setShowTrustInfo}>
         <DialogContent className="hh-dialog max-w-sm">
@@ -1583,14 +1608,18 @@ export default function DashboardPage() {
               <div><div className="text-xs text-white/60 uppercase tracking-wider font-bold">Your Score</div><div className="text-3xl font-black text-white">{trustScore}</div><div className="text-xs font-bold" style={{color: getLevel(trustScore).color}}>{getLevel(trustScore).label} • {getProgress(trustScore)}%</div></div>
               <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center"><span className="text-2xl font-black" style={{color: getLevel(trustScore).color}}>{trustScore}</span></div>
             </div>
-            {(() => { const m = trustMeta || { timeMs:0, referralCount:0, navCount:0, payCount:0 }; const timePts=Math.floor(m.timeMs/(5*60*1000))*2; const refPts=Math.floor(m.referralCount/10)*2; const navPts=m.navCount*1; const payPts=m.payCount*5; const rows=[
+            {(() => { const m = trustMeta || { timeMs:0, referralCount:0, navCount:0, payCount:0, taskCount:0 }; const timePts=Math.floor(m.timeMs/(5*60*1000))*2; const refPts=Math.floor(m.referralCount/10)*2; const navPts=m.navCount*1; const payPts=m.payCount*5; const taskPts=(m.taskCount||0)*1; const rows=[
               { label:"Time in app (5m = +2)", value: `${Math.floor(m.timeMs/60000)}m`, pts: timePts, icon: Clock, color:"text-emerald-400" },
               { label:"Referrals (10 = +2)", value: `${m.referralCount}`, pts: refPts, icon: Users, color:"text-violet-400" },
+              { label:"Tasks done (+1 each)", value: `${m.taskCount||0}`, pts: taskPts, icon: Gift, color:"text-emerald-300" },
               { label:"App navigations (+1 each)", value: `${m.navCount}`, pts: navPts, icon: TrendingUp, color:"text-amber-400" },
               { label:"Payments into app (+5 each)", value: `${m.payCount}`, pts: payPts, icon: Wallet, color:"text-blue-400" },
             ]; return rows.map(r=> (<div key={r.label} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5"><div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center ${r.color}`}><r.icon className="h-4 w-4"/></div><div><div className="text-xs font-bold text-white">{r.label}</div><div className="text-[11px] text-white/50">{r.value} → +{r.pts}</div></div></div><span className="text-sm font-black text-white">+{r.pts}</span></div>)); })()}
-            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200 leading-relaxed">💡 Tip: Stay 5 mins, invite 10 friends, explore the app, and fund once — you instantly jump to <b>Trusted</b>. Everything compounds, never resets.</div>
-            <Button onClick={()=>{ setShowTrustInfo(false); setShowGuided(true); }} className="w-full rounded-full bg-white text-[#050d14] font-black">Take guided tour →</Button>
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200 leading-relaxed">💡 Tip: Stay 5 mins, do tasks (+1 each), invite 10 friends, explore, and fund once — you instantly jump to <b>Trusted</b>. Everything compounds.</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={()=>{ setShowTrustInfo(false); localStorage.removeItem("tivexx-guided-v2-shown"); localStorage.removeItem("tivexx-guided-shown"); setTimeout(()=> setShowGuided(true), 300); }} className="rounded-full border-white/15 text-white">Replay tour</Button>
+              <Button onClick={()=>{ setShowTrustInfo(false); setShowGuided(true); }} className="rounded-full bg-white text-[#050d14] font-black">Take guided tour →</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

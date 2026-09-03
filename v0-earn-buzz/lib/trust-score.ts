@@ -6,6 +6,7 @@
 //  • every 10 referrals       = +2
 //  • each app navigation      = +1
 //  • each successful payment  = +5
+//  • each completed task      = +1
 export const TRUST_STORAGE_KEY = "tivexx-trust-score";
 export const TRUST_META_KEY = "tivexx-trust-meta";
 export const TRUST_TIME_KEY = "tivexx-trust-time-ms";
@@ -24,12 +25,13 @@ export interface TrustMeta {
   navCount: number;
   payCount: number;
   payAmount: number;    // total paid (for display)
+  taskCount: number;    // completed tasks (+1 each)
   lastTimeAwarded: number; // ms threshold already awarded
   bonus: number;        // manual bumps
 }
 
 export function defaultMeta(): TrustMeta {
-  return { timeMs: 0, referralCount: 0, navCount: 0, payCount: 0, payAmount: 0, lastTimeAwarded: 0, bonus: 0 };
+  return { timeMs: 0, referralCount: 0, navCount: 0, payCount: 0, payAmount: 0, taskCount: 0, lastTimeAwarded: 0, bonus: 0 };
 }
 
 export function loadMeta(): TrustMeta {
@@ -48,7 +50,8 @@ export function computeScore(m: TrustMeta): number {
   const refPoints = Math.floor(m.referralCount / 10) * 2;        // 10 refs = 2
   const navPoints = m.navCount * 1;                              // 1 per navigate
   const payPoints = m.payCount * 5;                              // 5 per pay
-  return timePoints + refPoints + navPoints + payPoints + m.bonus;
+  const taskPoints = (m.taskCount || 0) * 1;                     // 1 per completed task
+  return timePoints + refPoints + navPoints + payPoints + taskPoints + m.bonus;
 }
 
 export function getLevel(score: number) {
