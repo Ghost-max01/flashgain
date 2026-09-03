@@ -7,6 +7,7 @@ export function ServiceWorkerUpdater() {
     if (!('serviceWorker' in navigator)) return
 
     let attempts = 0
+    let hasReloaded = false
 
     const handleControllerChange = () => {
       // New service worker has taken control. Do a silent background fetch

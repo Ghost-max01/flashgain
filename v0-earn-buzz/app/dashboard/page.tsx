@@ -24,6 +24,7 @@ import {
   HandCoins,
   Sparkles,
   Trophy,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardImageCarousel } from "@/components/dashboard-image-carousel";
