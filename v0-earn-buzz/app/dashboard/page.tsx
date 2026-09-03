@@ -1502,14 +1502,17 @@ export default function DashboardPage() {
               const lockDays = Math.floor(lockLeft/86400000);
               const lockHours = Math.floor((lockLeft%86400000)/3600000);
               return (
-                <button key={p.id} disabled={disabled} onClick={()=> startAutoPlan(p.id)} className={`w-full text-left relative rounded-2xl border p-3 flex items-center justify-between ${disabled ? "bg-white/5 border-white/10 opacity-50" : "bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border-emerald-500/30 hover:border-emerald-400/50"}`}>
-                  <div>
-                    <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{idx+1}. {p.label} {isLocked ? "• Locked 1 week" : ""}</div>
-                    <div className="text-xs text-white/60">------&gt; max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub} {isLocked ? `• ${lockDays}d ${lockHours}h left` : ""}</div>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-black ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{isLocked ? "Locked" : disabled ? "Used" : "Start"}</div>
-                  {disabled && <div className="absolute left-3 right-3 top-1/2 h-[2px] bg-gray-400/70 -translate-y-1/2"></div>}
-                </button>
+                <div key={p.id} className="flex items-center gap-2">
+                  <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">{idx+1}</span>
+                  <button disabled={disabled} onClick={()=> startAutoPlan(p.id)} className={`flex-1 text-left relative rounded-2xl border p-3 flex items-center justify-between ${disabled ? "bg-white/5 border-white/10 opacity-50" : "bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border-emerald-500/30 hover:border-emerald-400/50"}`}>
+                    <div>
+                      <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{p.label} {isLocked ? "• Locked 1 week" : ""}</div>
+                      <div className="text-xs text-white/60">max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub} {isLocked ? `• ${lockDays}d ${lockHours}h left` : ""}</div>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-black ml-2 shrink-0 ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{isLocked ? "Locked" : disabled ? "Used" : "Start"}</div>
+                    {disabled && <div className="absolute left-3 right-3 top-1/2 h-[2px] bg-gray-400/70 -translate-y-1/2"></div>}
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -1525,25 +1528,43 @@ export default function DashboardPage() {
           </DialogHeader>
           {reqPlan && (
             <div className="space-y-3 mt-3">
-              <button onClick={()=> { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                <div className="text-sm font-black text-white">a. {AUTO_REQ_TASK[reqPlan]} tasks required</div>
-                <div className="text-xs text-white/70 mt-1">you've only done {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone}/{AUTO_REQ_TASK[reqPlan]}</div>
-                <div className="mt-2 text-xs font-bold text-emerald-400 underline">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]}) →</div>
-              </button>
-              <button onClick={()=> setReqChoice("referral")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                <div className="text-sm font-black text-white">b. Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
-                <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
-                <div className="text-[11px] font-mono text-white/80 mt-2 break-all bg-black/30 rounded-lg p-2">{autoRefCode ? `${typeof window!=="undefined" ? window.location.origin : ""}/refer?ref=${autoRefCode}` : "generating..."}</div>
-                <div className="flex gap-2 mt-2">
-                  <Button onClick={(e)=>{ e.stopPropagation(); copyAutoRefLink(); }} size="sm" className="rounded-full text-xs">Copy link</Button>
-                  <span className="text-xs text-emerald-300 self-center">{autoRefCount}/{AUTO_REQ_REF[reqPlan]} referrals</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">a</span>
+                <button onClick={()=> { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                  <div>
+                    <div className="text-sm font-black text-white">{AUTO_REQ_TASK[reqPlan]} tasks required</div>
+                    <div className="text-xs text-white/70 mt-1">you've only done {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone}/{AUTO_REQ_TASK[reqPlan]}</div>
+                    <div className="mt-1 text-xs text-white/50">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]})</div>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">b</span>
+                <div className={`flex-1 rounded-2xl border p-3 ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                  <button onClick={()=> setReqChoice("referral")} className="w-full text-left">
+                    <div className="text-sm font-black text-white">Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
+                    <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
+                  </button>
+                  <div className="text-[11px] font-mono text-white/80 mt-2 break-all bg-black/30 rounded-lg p-2">{autoRefCode ? `${typeof window!=="undefined" ? window.location.origin : ""}/refer?ref=${autoRefCode}` : "generating..."}</div>
+                  <div className="flex gap-2 mt-2">
+                    <Button onClick={(e)=>{ e.stopPropagation(); copyAutoRefLink(); }} size="sm" className="rounded-full text-xs">Copy link</Button>
+                    <span className="text-xs text-emerald-300 self-center">{autoRefCount}/{AUTO_REQ_REF[reqPlan]} referrals</span>
+                    <span className="ml-auto px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white self-center shrink-0">Start</span>
+                  </div>
+                  <div className="text-[11px] text-amber-300 mt-1">Referrals from this link add to your total too.</div>
                 </div>
-                <div className="text-[11px] text-amber-300 mt-1">Referrals from this link add to your total too.</div>
-              </button>
-              <button onClick={()=> setReqChoice("payment")} className={`w-full text-left rounded-2xl border p-3 ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
-                <div className="text-sm font-black text-white">c. Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()} for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} estimated taps</div>
-                <div className="text-xs text-white/60 mt-1">One-time payment to unlock auto tap for this plan.</div>
-              </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">c</span>
+                <button onClick={()=> setReqChoice("payment")} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                  <div>
+                    <div className="text-sm font-black text-white">Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()} for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} estimated taps</div>
+                    <div className="text-xs text-white/60 mt-1">One-time payment to unlock auto tap for this plan.</div>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
+                </button>
+              </div>
               <Button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black">Unlock & Start Auto Tap</Button>
               <Button variant="outline" onClick={()=> setShowAutoReq(false)} className="w-full rounded-full border-white/15 text-white">Cancel</Button>
             </div>
@@ -2946,7 +2967,7 @@ export default function DashboardPage() {
           background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(5,150,105,0.14));
           border: 1px solid rgba(16,185,129,0.22);
           border-radius: 16px;
-          padding: 10px 12px;
+          padding: 9px 11px;
         }
         .hh-tap-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(16,185,129,0.25); flex-shrink: 0; }
         .hh-tap-badge { font-size: 9px; font-weight: 900; letter-spacing: 0.08em; background: rgba(16,185,129,0.18); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 6px; }
@@ -2970,7 +2991,7 @@ export default function DashboardPage() {
         @keyframes te-icon-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
         .te-tap-label { font-size: 10px; font-weight: 900; letter-spacing: 0.22em; color: rgba(255,255,255,0.65); animation: te-label-pulse 2s ease-in-out infinite; }
         @keyframes te-label-pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
-        .hh-orb-stage-sm { position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; margin: 4px 0; }
+        .hh-orb-stage-sm { position: relative; width: 135px; height: 135px; display: flex; align-items: center; justify-content: center; margin: 2px 0; }
         .hh-orb-stage-sm .te-halo { inset: -18px; }
         .hh-orb-stage-sm .te-ring-outer { inset: -22px; }
         .hh-orb-stage-sm .te-ring-inner { inset: -12px; }
