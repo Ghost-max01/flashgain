@@ -108,7 +108,7 @@ export default function RegisterPage() {
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
-        balance: 20000, // Changed signup bonus to ₦20,000
+        balance: 5000, // signup bonus ₦5,000
         userId: data.user.referral_code,
         hasMomoNumber: false,
         level: "Basic",
@@ -324,7 +324,7 @@ export default function RegisterPage() {
                 </Link>
               </p>
               <p className="text-center text-xs text-white/40 mt-3">
-                Get instant ₦20,000 bonus + earn ₦2,000 per referral
+                Get instant ₦5,000 bonus + earn ₦2,000 per referral
               </p>
             </div>
           </div>

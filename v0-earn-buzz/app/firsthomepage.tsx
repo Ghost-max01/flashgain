@@ -118,7 +118,7 @@ export default function FirstHomepage() {
         <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-start">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-semibold text-emerald-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> New • Get ₦20,000 welcome bonus when you join
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> New • Get ₦5,000 welcome bonus when you join
             </div>
             <h1 className="mt-5 text-[32px] md:text-[46px] font-black tracking-tight leading-[0.95]">
               <span className="text-gray-900">Turn spare time into</span><br />
@@ -237,7 +237,7 @@ export default function FirstHomepage() {
         <div className="rounded-[28px] bg-gradient-to-br from-emerald-600 via-indigo-600 to-sky-600 p-[1px] shadow-xl shadow-indigo-200">
           <div className="rounded-[27px] bg-gradient-to-br from-emerald-600 via-indigo-600 to-sky-600 p-6 md:p-8 text-center text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
-            <div className="relative"><h2 className="text-2xl md:text-3xl font-black">Ready to start earning?</h2><p className="mt-3 text-white/80 max-w-2xl mx-auto text-sm md:text-base">Join thousands of Nigerians who turn simple actions into real money every day. Your first ₦20,000 is waiting.</p><Link href="/register" className="mt-6 inline-flex items-center justify-center px-8 py-4 rounded-2xl bg-white text-indigo-700 font-black shadow-lg hover:bg-gray-50 transition">Create free account</Link><div className="mt-3 text-xs text-white/70">No card required • Takes 30 seconds</div></div>
+            <div className="relative"><h2 className="text-2xl md:text-3xl font-black">Ready to start earning?</h2><p className="mt-3 text-white/80 max-w-2xl mx-auto text-sm md:text-base">Join thousands of Nigerians who turn simple actions into real money every day. Your first ₦5,000 is waiting.</p><Link href="/register" className="mt-6 inline-flex items-center justify-center px-8 py-4 rounded-2xl bg-white text-indigo-700 font-black shadow-lg hover:bg-gray-50 transition">Create free account</Link><div className="mt-3 text-xs text-white/70">No card required • Takes 30 seconds</div></div>
           </div>
         </div>
         <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-400">

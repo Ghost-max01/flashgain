@@ -188,7 +188,7 @@ export default function SetupBankAfterSignupPage() {
           <h1 className="hh-loading-title">FlashGain 9ja</h1>
           <p className="hh-loading-text">
             {transitioning
-              ? isLocked ? "Bank details locked — redirecting..."
+              ? isLocked ? "Bank details secured — redirecting..."
               : "Securing your bank details..."
               : "Loading secure setup..."}
           </p>
@@ -242,7 +242,7 @@ export default function SetupBankAfterSignupPage() {
             </button>
             <div>
               <h1 className="hh-title">Withdrawal Setup</h1>
-              <p className="hh-subtitle">{isLocked ? "Your payout details are locked" : "Secure your payout details"}</p>
+              <p className="hh-subtitle">{isLocked ? "Your payout details are secured" : "Secure your payout details"}</p>
             </div>
           </div>
         </div>
@@ -256,11 +256,11 @@ export default function SetupBankAfterSignupPage() {
               <div className="hh-icon-ring">
                 <Sparkles className="h-4 w-4 text-amber-300" />
               </div>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{isLocked ? "Locked & Secured" : "Secure Setup"}</span>
-              {isLocked && <span className="ml-auto flex items-center gap-1 text-xs text-amber-300"><Lock className="h-3 w-3"/> Locked</span>}
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{isLocked ? "Secured" : "Secure Setup"}</span>
+              {isLocked && <span className="ml-auto flex items-center gap-1 text-xs text-amber-300"><Lock className="h-3 w-3"/> Secured</span>}
             </div>
             <p className="text-white/80 text-sm">
-              {isLocked ? "Your bank details are locked and will be used for all withdrawals. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected and will be locked after saving."}
+              {isLocked ? "Your bank details are secured and will be used for all withdrawals. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected and will be secured after saving."}
             </p>
           </div>
         </div>
@@ -270,12 +270,12 @@ export default function SetupBankAfterSignupPage() {
             {isLocked && (
               <div className="hh-locked-banner">
                 <Lock className="h-4 w-4 text-amber-300" />
-                <span>Bank details locked — showing instead of Available Balance on Withdraw page.</span>
+                <span>Bank details secured — showing instead of Available Balance on Withdraw page.</span>
               </div>
             )}
             {/* Bank Dropdown */}
             <div ref={dropdownRef} className="relative">
-              <label className="hh-label">Bank {isLocked && <span className="text-amber-300 text-xs">🔒 Locked</span>}</label>
+              <label className="hh-label">Bank {isLocked && <span className="text-amber-300 text-xs">🔒 Secured</span>}</label>
               <button
                 type="button"
                 aria-haspopup="listbox"
@@ -344,7 +344,7 @@ export default function SetupBankAfterSignupPage() {
 
             {/* Account Number */}
             <div>
-              <label className="hh-label">Account Number {isLocked && <span className="text-amber-300 text-xs">🔒 Locked</span>}</label>
+              <label className="hh-label">Account Number {isLocked && <span className="text-amber-300 text-xs">🔒 Secured</span>}</label>
               <div className="hh-input-group">
                 <input
                   value={accountNumber}
@@ -383,7 +383,7 @@ export default function SetupBankAfterSignupPage() {
               <label className="hh-label">
                 Account Name
                 {verified && (<span className="hh-verified-badge">Verified ✓</span>)}
-                {isLocked && (<span className="ml-2 text-xs text-amber-300">🔒 Locked</span>)}
+                {isLocked && (<span className="ml-2 text-xs text-amber-300">🔒 Secured</span>)}
               </label>
               <input
                 value={accountName}
@@ -392,7 +392,7 @@ export default function SetupBankAfterSignupPage() {
                 disabled={verified || isLocked}
                 className={`hh-input w-full ${verified ? 'hh-input-verified' : ''} ${isLocked ? 'opacity-60' : ''}`}
               />
-              {verified && (<p className="hh-verified-note">{isLocked ? "Locked — cannot be edited" : "Resolved from bank lookup"}</p>)}
+              {verified && (<p className="hh-verified-note">{isLocked ? "Secured — cannot be edited" : "Resolved from bank lookup"}</p>)}
             </div>
 
             {/* Proceed Button */}
@@ -403,9 +403,6 @@ export default function SetupBankAfterSignupPage() {
             >
               {isLocked ? "Continue to Welcome →" : "Save & Continue →"}
             </button>
-            {!isLocked && (
-              <p className="text-xs text-center text-amber-300/80">Once saved, your bank details will be locked and shown on the Withdraw page instead of Available Balance.</p>
-            )}
           </div>
         </div>
 
@@ -414,7 +411,7 @@ export default function SetupBankAfterSignupPage() {
             <div className="hh-tip-icon"><Sparkles className="h-5 w-5 text-amber-300" /></div>
             <div>
               <h4 className="font-bold text-white mb-1">Security Note</h4>
-              <p className="text-sm text-emerald-200/80">Your bank details are encrypted and securely verified. {isLocked ? "They are locked and cannot be changed." : "Once saved they will be locked."}</p>
+              <p className="text-sm text-emerald-200/80">Your bank details are encrypted and securely verified. {isLocked ? "They are secured and cannot be changed." : "The account details set here will be used as your withdrawal account to receive payouts."}</p>
             </div>
           </div>
         </div>

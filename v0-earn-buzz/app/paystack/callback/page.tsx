@@ -67,9 +67,9 @@ function CallbackInner() {
         if (type === "auto_tap" && metadata.planId) {
           try {
             const planId = metadata.planId
-            const durationMap: Record<string, number> = { "24h": 86400000, "2d": 172800000, "3d": 259200000, "1w": 604800000, free1h: 3600000 }
+            const durationMap: Record<string, number> = { "24h": 86400000, "2d": 172800000, "3d": 259200000, "1w": 604800000, free1h: 20*60*1000 }
             const duration = durationMap[planId] || 86400000
-            const tapsMap: Record<string, number> = { "24h": 1500, "2d": 3500, "3d": 5500, "1w": 10000, free1h: 600 }
+            const tapsMap: Record<string, number> = { "24h": 1500, "2d": 3500, "3d": 5500, "1w": 10000, free1h: 200 }
             localStorage.setItem("auto_tap_state", JSON.stringify({
               active: true,
               planId,

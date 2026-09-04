@@ -7,6 +7,7 @@ import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, 
 import { Button } from "@/components/ui/button"
 import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 import { getBankDetails, type BankDetails } from "@/lib/bank-details"
+import { loadMeta, computeScore, TRUST_LEVELS } from "@/lib/trust-score"
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export default function WithdrawPage() {
   const [showInstantWithdrawBlockedPopup, setShowInstantWithdrawBlockedPopup] = useState(false)
   const [popupCountdown, setPopupCountdown] = useState(20)
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
+  const [showTrustRequiredPopup, setShowTrustRequiredPopup] = useState(false)
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
@@ -242,6 +244,22 @@ export default function WithdrawPage() {
     router.push("/toggle")
   }
 
+  const handleEditBankDetails = () => {
+    try {
+      const meta = loadMeta()
+      const score = computeScore(meta)
+      const requiredLevel = TRUST_LEVELS[2] // Trusted — third level (index 2, min 50)
+      if (score < requiredLevel.min) {
+        setShowTrustRequiredPopup(true)
+        return
+      }
+      // If at or above Trusted, allow edit — navigate to setup-bank
+      router.push("/setup-bank")
+    } catch {
+      setShowTrustRequiredPopup(true)
+    }
+  }
+
   return (
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
       {/* Animated background bubbles */}
@@ -305,7 +323,7 @@ export default function WithdrawPage() {
                   <span className="text-xs text-emerald-300 font-bold uppercase tracking-wider">Payout Account</span>
                 </div>
                 <span className="flex items-center gap-1 text-xs font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-1 rounded-full">
-                  <Lock className="h-3 w-3" /> Locked
+                  <Lock className="h-3 w-3" /> Secured
                 </span>
               </div>
               <div className="space-y-2">
@@ -315,7 +333,10 @@ export default function WithdrawPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-white/50">Account Number</span>
-                  <span className="text-sm font-mono font-bold text-white tracking-wide">{bankDetails.accountNumber}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono font-bold text-white tracking-wide">{bankDetails.accountNumber}</span>
+                    <button onClick={handleEditBankDetails} className="text-xs font-bold text-emerald-300 border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 rounded-full hover:bg-emerald-400/20 transition">Edit now</button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-white/50">Account Name</span>
@@ -323,7 +344,7 @@ export default function WithdrawPage() {
                 </div>
               </div>
               <p className="mt-3 text-xs text-amber-200/70 flex items-center gap-1">
-                <Lock className="h-3 w-3" /> Locked after signup — cannot be changed.
+                <Lock className="h-3 w-3" /> Secured after signup — cannot be changed.
               </p>
             </div>
           </div>
@@ -646,6 +667,38 @@ export default function WithdrawPage() {
         </div>
 
       </div>
+
+      {/* Trust Level Required Popup */}
+      {showTrustRequiredPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4">
+            <div className="hh-popup-header">
+              <Lock className="h-8 w-8 text-amber-400" />
+              <h2 className="text-xl font-bold text-white text-center">Trust Level Required</h2>
+            </div>
+            <p className="text-gray-300 text-center mb-2">
+              You've not gotten to the level of trust score required to change account details.
+            </p>
+            <p className="text-xs text-white/50 text-center mb-6">
+              You need to reach <span className="font-bold text-emerald-400">Trusted</span> level (Trust Score 50+) to edit your payout account. Keep earning, referring and completing tasks to increase your trust score.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowTrustRequiredPopup(false)}
+                className="hh-popup-btn hh-popup-btn-cancel flex-1"
+              >
+                OK, Got it
+              </button>
+              <button
+                onClick={() => { setShowTrustRequiredPopup(false); router.push("/dashboard"); }}
+                className="hh-popup-btn hh-popup-btn-confirm flex-1"
+              >
+                View Trust Score
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <div className="hh-bottom-nav">

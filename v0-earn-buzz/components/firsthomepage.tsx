@@ -127,7 +127,7 @@ export default function FirstHomepage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-semibold text-emerald-700">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              New • Get ₦20,000 welcome bonus when you join
+              New • Get ₦5,000 welcome bonus when you join
             </div>
 
             <h1 className="mt-5 text-[32px] md:text-[46px] font-black tracking-tight leading-[0.95]">
@@ -402,7 +402,7 @@ export default function FirstHomepage() {
             <div className="relative">
               <h2 className="text-2xl md:text-3xl font-black">Ready to start earning?</h2>
               <p className="mt-3 text-white/80 max-w-2xl mx-auto text-sm md:text-base">
-                Join thousands of Nigerians who turn simple actions into real money every day. Your first ₦20,000 is waiting.
+                Join thousands of Nigerians who turn simple actions into real money every day. Your first ₦5,000 is waiting.
               </p>
               <Link
                 href="/register"

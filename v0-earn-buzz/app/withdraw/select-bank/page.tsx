@@ -521,7 +521,7 @@ export default function SetupWithdrawalAccountPage() {
             </button>
             <div>
               <h1 className="hh-title">Withdrawal Setup</h1>
-              <p className="hh-subtitle">{isLocked ? "Your payout details are locked" : "Secure your payout details"}</p>
+              <p className="hh-subtitle">{isLocked ? "Your payout details are secured" : "Secure your payout details"}</p>
             </div>
           </div>
         </div>
@@ -540,12 +540,12 @@ export default function SetupWithdrawalAccountPage() {
               <div className="hh-icon-ring">
                 <Sparkles className="h-4 w-4 text-amber-300" />
               </div>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{isLocked ? "Locked & Secured" : "Secure Setup"}</span>
-              {isLocked && <span className="ml-auto flex items-center gap-1 text-xs text-amber-300"><Lock className="h-3 w-3"/> Locked</span>}
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{isLocked ? "Secured" : "Secure Setup"}</span>
+              {isLocked && <span className="ml-auto flex items-center gap-1 text-xs text-amber-300"><Lock className="h-3 w-3"/> Secured</span>}
             </div>
             
             <p className="text-white/80 text-sm">
-              {isLocked ? "Your bank details are locked after signup and will be shown on the Withdraw page instead of Available Balance. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected."}
+              {isLocked ? "Your bank details are secured after signup and will be shown on the Withdraw page instead of Available Balance. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected."}
             </p>
           </div>
         </div>
@@ -555,12 +555,12 @@ export default function SetupWithdrawalAccountPage() {
           <div className="space-y-5">
             {isLocked && (
               <div className="flex items-center gap-2 bg-amber-400/10 border border-amber-400/20 rounded-xl px-3 py-2 text-xs text-amber-300">
-                <Lock className="h-4 w-4" /> Bank details locked — cannot be edited. Showing on Withdraw page instead of balance.
+                <Lock className="h-4 w-4" /> Bank details secured — cannot be edited. Showing on Withdraw page instead of balance.
               </div>
             )}
             {/* Bank Dropdown */}
             <div ref={dropdownRef} className="relative">
-              <label className="hh-label">Bank {isLocked && <span className="text-amber-300 text-xs">🔒 Locked</span>}</label>
+              <label className="hh-label">Bank {isLocked && <span className="text-amber-300 text-xs">🔒 Secured</span>}</label>
               <button
                 type="button"
                 aria-haspopup="listbox"
@@ -647,7 +647,7 @@ export default function SetupWithdrawalAccountPage() {
 
             {/* Account Number */}
             <div>
-              <label className="hh-label">Account Number {isLocked && <span className="text-amber-300 text-xs">🔒 Locked</span>}</label>
+              <label className="hh-label">Account Number {isLocked && <span className="text-amber-300 text-xs">🔒 Secured</span>}</label>
               <div className="hh-input-group">
                 <input
                   value={accountNumber}
@@ -704,7 +704,7 @@ export default function SetupWithdrawalAccountPage() {
                     Verified ✓
                   </span>
                 )}
-                {isLocked && (<span className="ml-2 text-xs text-amber-300">🔒 Locked</span>)}
+                {isLocked && (<span className="ml-2 text-xs text-amber-300">🔒 Secured</span>)}
               </label>
               <input
                 value={accountName}
@@ -718,7 +718,7 @@ export default function SetupWithdrawalAccountPage() {
                 } ${isLocked ? 'opacity-60' : ''}`}
               />
               {verified && (
-                <p className="hh-verified-note">{isLocked ? "Locked — cannot be edited" : "Resolved from bank lookup"}</p>
+                <p className="hh-verified-note">{isLocked ? "Secured — cannot be edited" : "Resolved from bank lookup"}</p>
               )}
             </div>
 
@@ -732,11 +732,8 @@ export default function SetupWithdrawalAccountPage() {
                   : 'hh-proceed-active'
               } hh-entry-4`}
             >
-              {isLocked ? "Proceed (Locked) →" : "Proceed"}
+              {isLocked ? "Proceed (Secured) →" : "Proceed"}
             </button>
-            {!isLocked && (
-              <p className="text-xs text-center text-amber-300/80">Once saved, your bank details will be locked and shown on Withdraw page instead of Available Balance.</p>
-            )}
           </div>
         </div>
 
@@ -749,7 +746,7 @@ export default function SetupWithdrawalAccountPage() {
             <div>
               <h4 className="font-bold text-white mb-1">Security Note</h4>
               <p className="text-sm text-emerald-200/80">
-                Your bank details are encrypted and securely verified. {isLocked ? "They are locked and cannot be changed." : "Once saved they will be locked."}
+                Your bank details are encrypted and securely verified. {isLocked ? "They are secured and cannot be changed." : "The account details set here will be used as your withdrawal account to receive payouts."}
               </p>
             </div>
           </div>

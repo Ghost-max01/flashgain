@@ -36,8 +36,8 @@ export default function HistoryPage() {
     const storedTransactions = localStorage.getItem("tivexx-transactions")
     if (storedTransactions) txs = JSON.parse(storedTransactions)
 
-    // ✅ Ensure the signup bonus (₦100,000) exists exactly once at the bottom
-    const hasSignupBonus = txs.some((tx) => tx.category === "signup" && tx.amount === 100000)
+    // ✅ Ensure the signup bonus (₦5,000) exists exactly once at the bottom
+    const hasSignupBonus = txs.some((tx) => tx.category === "signup" && tx.amount === 5000)
     if (!hasSignupBonus) {
       const signupDate =
         user.created_at ||
@@ -49,7 +49,7 @@ export default function HistoryPage() {
         type: "credit",
         category: "signup",
         description: "Signup Bonus",
-        amount: 50000,
+        amount: 5000,
         date: signupDate,
       }
 
@@ -123,7 +123,7 @@ export default function HistoryPage() {
       type: "credit",
       category: "signup",
       description: "Signup Bonus",
-      amount: 50000,
+      amount: 5000,
       date: signupDate,
     }
     const newTxs = [signupBonus]

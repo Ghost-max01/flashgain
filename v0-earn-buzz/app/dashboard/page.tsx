@@ -65,7 +65,7 @@ const TAP_EXHAUST_KEY = "tap_exhaust_until";
 const AUTO_TAP_KEY = "auto_tap_state";
 type AutoPlanId = "free1h" | "24h" | "2d" | "3d" | "1w";
 const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: number; maxTaps: number; maxEarn: number }[] = [
-  { id: "free1h", label: "1 hour FREE", sub: "First time only", durationMs: 60*60*1000, maxTaps: 600, maxEarn: 60000 },
+  { id: "free1h", label: "20 mins FREE", sub: "First time only", durationMs: 20*60*1000, maxTaps: 200, maxEarn: 20000 },
   { id: "24h", label: "24 hours: 1500 taps", sub: "max 150,000", durationMs: 24*60*60*1000, maxTaps: 1500, maxEarn: 150000 },
   { id: "2d", label: "2 days: 3500 taps", sub: "max 350,000", durationMs: 2*24*60*60*1000, maxTaps: 3500, maxEarn: 350000 },
   { id: "3d", label: "3 days: 5500 taps", sub: "max 550,000", durationMs: 3*24*60*60*1000, maxTaps: 5500, maxEarn: 550000 },
@@ -1652,16 +1652,16 @@ export default function DashboardPage() {
         <WithdrawalNotification onClose={handleCloseWithdrawalNotification} />
       )}
 
-      {/* ── AUTO TAP: Eligible popup (1hr free) ── */}
+      {/* ── AUTO TAP: Eligible popup (20 mins free) ── */}
       <Dialog open={showAutoFreePopup} onOpenChange={setShowAutoFreePopup}>
         <DialogContent className="hh-dialog max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">🎉 You are eligible!</DialogTitle>
-            <DialogDescription className="text-center pt-2 text-gray-300">You have 1 hour of FREE auto tap. Your balance will increase automatically without tapping.</DialogDescription>
+            <DialogDescription className="text-center pt-2 text-gray-300">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 mt-4">
             <Button variant="outline" onClick={()=> setShowAutoFreePopup(false)} className="flex-1 rounded-full border-white/15 text-white">Later</Button>
-            <Button onClick={()=> { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full">Start FREE 1hr</Button>
+            <Button onClick={()=> { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full">Start FREE 20 mins</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1670,7 +1670,7 @@ export default function DashboardPage() {
         <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-lg text-white">Choose Auto Tap Plan</DialogTitle>
-            <DialogDescription className="text-center text-xs text-gray-400">Only first-time users get 1hr FREE. After that it is crossed out.</DialogDescription>
+            <DialogDescription className="text-center text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 mt-3">
             {AUTO_PLANS.map((p, idx)=> {
