@@ -48,36 +48,60 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
         if (!step.target) { setRect(null); setTipPos(null); return; }
         const el = document.querySelector(step.target) as HTMLElement | null;
         if (!el) { setRect(null); setTipPos(null); return; }
-        try { el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }); } catch {}
+        // Push the target up so the tooltip + Next button stay visible (fixes 2/7 hidden Next)
+        // Use block:'nearest' first, then fine-adjust so card never clips below viewport
+        try {
+          const vwTmp = window.innerWidth; const vhTmp = window.innerHeight;
+          const estCardH = 156; const gapTmp = 14;
+          const r0 = el.getBoundingClientRect();
+          const willFitBelow = vhTmp - r0.bottom >= estCardH + gapTmp + 12;
+          // if won't fit below, scroll target higher (toward top) to make room
+          if (!willFitBelow && r0.top > vhTmp * 0.35) {
+            el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+            // nudge viewport up a bit to expose Next
+            setTimeout(() => { try { window.scrollBy({ top: -8, behavior: "smooth" }); } catch {} }, 380);
+          } else {
+            el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+          }
+        } catch {}
         setTimeout(() => {
           try {
             const r = el.getBoundingClientRect();
             setRect(r);
-            // compute tooltip position — tiny card anchors near the spotlighted element
+            // compute tooltip position — keep compact like other steps and never hide Next
             const vw = window.innerWidth;
             const vh = window.innerHeight;
             const cardW = 268;
-            const cardH = 148;
-            const gap = 14;
-            // prefer below, else above
+            const cardH = 156; // compact height matching actual card (fixes 2/7)
+            const gap = 12;
+            const safeBottomPad = 10; // keep Next inside viewport
             const spaceBelow = vh - r.bottom;
             const spaceAbove = r.top;
             let top: number;
             let placement: "top" | "bottom";
-            if (spaceBelow >= cardH + gap + 8) {
+            if (spaceBelow >= cardH + gap + safeBottomPad) {
               top = r.bottom + gap;
               placement = "bottom";
-            } else if (spaceAbove >= cardH + gap + 8) {
+            } else if (spaceAbove >= cardH + gap + safeBottomPad) {
               top = r.top - cardH - gap;
               placement = "top";
             } else {
-              // fallback: below with clamp
-              top = Math.min(vh - cardH - 16, r.bottom + gap);
-              top = Math.max(12, top);
-              placement = "bottom";
+              // not enough room either side — pin inside viewport and let target scroll away
+              // prefer bottom but clamp hard so Next is always visible
+              if (spaceBelow >= spaceAbove) {
+                top = Math.min(vh - cardH - safeBottomPad, r.bottom + gap);
+                top = Math.max(safeBottomPad, top);
+                placement = "bottom";
+              } else {
+                top = Math.max(safeBottomPad, r.top - cardH - gap);
+                top = Math.min(vh - cardH - safeBottomPad, top);
+                placement = "top";
+              }
             }
+            // final safety clamp
+            top = Math.max(safeBottomPad, Math.min(vh - cardH - safeBottomPad, top));
             let left = r.left + r.width / 2 - cardW / 2;
-            left = Math.max(10, Math.min(vw - cardW - 10, left));
+            left = Math.max(8, Math.min(vw - cardW - 8, left));
             setTipPos({ top, left, placement });
           } catch { setRect(null); setTipPos(null); }
         }, 420);

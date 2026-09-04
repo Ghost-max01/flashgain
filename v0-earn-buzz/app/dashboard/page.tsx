@@ -529,8 +529,9 @@ export default function DashboardPage() {
     window.addEventListener("focus", onStorage);
     return () => { window.removeEventListener("storage", onStorage); window.removeEventListener("focus", onStorage); };
   }, []);
-  // auto-show guided onboarding once for new users (not static — moving spotlight)
-  // This deploy: force for BOTH old + new users once (v2), afterwards new users only
+  // Guided onboarding must come AFTER TutorialModal (Welcome → Refer & Earn → Withdraw Anytime → Proceed to Dashboard)
+  // Order: setup-bank → /welcome (6s) → dashboard → TutorialModal → GuidedOnboarding (7 steps)
+  // This effect only auto-shows Guided if Tutorial has already been completed (so sequence is preserved)
   useEffect(() => {
     try {
       const force = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tour") === "1";
@@ -539,8 +540,10 @@ export default function DashboardPage() {
         return () => clearTimeout(t);
       }
       const V2_KEY = "tivexx-guided-v2-shown";
-      if (!localStorage.getItem(V2_KEY)) {
-        const t = setTimeout(() => setShowGuided(true), 1200);
+      const TUTORIAL_KEY = "tivexx-tutorial-shown";
+      // Only auto-show Guided if user already finished TutorialModal; otherwise TutorialModal's onClose will chain into Guided
+      if (!localStorage.getItem(V2_KEY) && localStorage.getItem(TUTORIAL_KEY)) {
+        const t = setTimeout(() => setShowGuided(true), 900);
         return () => clearTimeout(t);
       }
     } catch {}
