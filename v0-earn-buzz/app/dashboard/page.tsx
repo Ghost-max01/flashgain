@@ -1259,7 +1259,18 @@ export default function DashboardPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId }),
         });
-        const data = await response.json();
+        if (!response.ok) {
+          console.warn("[dashboard] timer/check non-ok, skipping:", response.status);
+          return;
+        }
+        let data: any = {};
+        try {
+          data = await response.json();
+        } catch {
+          const txt = await response.text().catch(() => "");
+          console.warn("[dashboard] timer/check non-JSON, skipping:", txt.slice(0, 200));
+          return;
+        }
 
         if (data.success && data.timerReady) {
           console.log(
@@ -1279,7 +1290,18 @@ export default function DashboardPage() {
         const response = await fetch(
           `/api/user-balance?userId=${user.id || user.userId}&t=${Date.now()}`,
         );
-        const data = await response.json();
+        if (!response.ok) {
+          console.warn("[dashboard] user-balance non-ok:", response.status);
+          throw new Error(`user-balance ${response.status}`);
+        }
+        let data: any = {};
+        try {
+          data = await response.json();
+        } catch {
+          const txt = await response.text().catch(() => "");
+          console.warn("[dashboard] user-balance non-JSON:", txt.slice(0, 200));
+          throw new Error("non-JSON user-balance");
+        }
 
         // Read the latest local storage value (in case it changed while user was away)
         const storedLatestRaw = localStorage.getItem("tivexx-user");

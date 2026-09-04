@@ -215,7 +215,14 @@ export async function getSubscriptionStatus(uid: string): Promise<{
       return { hasAny: false, hasFcm: false, hasWebpush: false }
     }
 
-    const data = await response.json()
+    let data: any = {}
+    try {
+      data = await response.json()
+    } catch {
+      const txt = await response.text().catch(() => "")
+      console.warn("[notification-service] status non-JSON:", txt.slice(0, 200))
+      return { hasAny: false, hasFcm: false, hasWebpush: false }
+    }
     return {
       hasAny: Boolean(data?.hasAny),
       hasFcm: Boolean(data?.hasFcm),
