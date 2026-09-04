@@ -6,14 +6,14 @@
 //  • every 10 referrals       = +2
 //  • each app navigation      = +1
 //  • each successful payment  = +5
-//  • each completed task      = +1
+//  • every 10 tasks           = +2  (same as referrals)
 export const TRUST_STORAGE_KEY = "tivexx-trust-score";
 export const TRUST_META_KEY = "tivexx-trust-meta";
 export const TRUST_TIME_KEY = "tivexx-trust-time-ms";
 
 export const TRUST_LEVELS = [
-  { label: "Free", min: 0, max: 19, color: "#2563eb", next: 20 },
-  { label: "Beginner", min: 20, max: 49, color: "#10b981", next: 50 },
+  { label: "Free", min: 0, max: 29, color: "#2563eb", next: 30 },
+  { label: "Beginner", min: 30, max: 49, color: "#10b981", next: 50 },
   { label: "Trusted", min: 50, max: 99, color: "#059669", next: 100 },
   { label: "Verified", min: 100, max: 199, color: "#7c3aed", next: 200 },
   { label: "Elite", min: 200, max: 9999, color: "#f59e0b", next: null as number | null },
@@ -50,7 +50,7 @@ export function computeScore(m: TrustMeta): number {
   const refPoints = Math.floor(m.referralCount / 10) * 2;        // 10 refs = 2
   const navPoints = m.navCount * 1;                              // 1 per navigate
   const payPoints = m.payCount * 5;                              // 5 per pay
-  const taskPoints = (m.taskCount || 0) * 1;                     // 1 per completed task
+  const taskPoints = Math.floor((m.taskCount || 0) / 10) * 2;     // 10 tasks = 2 (same as referrals)
   return timePoints + refPoints + navPoints + payPoints + taskPoints + m.bonus;
 }
 

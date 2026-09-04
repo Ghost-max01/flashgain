@@ -27,6 +27,10 @@ function AutoTapReferContent() {
     "1w": { label: "1 week: 10,000 taps", need: 50, maxEarn: 1000000 },
   };
   const plan = planMap[planId] || planMap["24h"];
+  // Full requirements as shown on dashboard (task / referral / payment)
+  const taskNeedMap: Record<string, number> = { "24h": 20, "2d": 30, "3d": 40, "1w": 60 };
+  const refNeedMap: Record<string, number> = { "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
+  const payNeedMap: Record<string, number> = { "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
 
   const referralMessages = [
     "Join FlashGain9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
@@ -117,6 +121,25 @@ function AutoTapReferContent() {
 
         {/* Quick Share */}
         <div className="grid grid-cols-2 gap-3 hh-entry-3"><button onClick={shareWhatsApp} className="hh-action-btn hh-action-green"><span className="hh-action-icon">📱</span><span>WhatsApp</span></button><button onClick={shareTelegram} className="hh-action-btn hh-action-blue"><span className="hh-action-icon">✈️</span><span>Telegram</span></button></div>
+
+        {/* Plan Requirements — same 3 options as dashboard dialog */}
+        <div className="hh-card hh-entry-3">
+          <h3 className="text-sm font-black text-white flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-300" /> Requirements for {plan.label}</h3>
+          <p className="text-xs text-white/60 mt-1">Choose one of 3 options — same as dashboard. This page is the referral option.</p>
+          <div className="space-y-2 mt-4">
+            <div className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+              <div><div className="text-xs font-bold text-white">a) {taskNeedMap[planId]} tasks required</div><div className="text-[11px] text-white/50">MT/MU tasks — complete tasks to unlock</div></div><span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${planId ? "bg-white/10 text-white/60" : ""}`}>On dashboard</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5">
+              <div><div className="text-xs font-bold text-white">b) {refNeedMap[planId]} referrals required</div><div className="text-[11px] text-white/60">You are here — referral tracking</div></div><span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-500 text-white">Active</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+              <div><div className="text-xs font-bold text-white">c) Pay ₦{payNeedMap[planId].toLocaleString()}</div><div className="text-[11px] text-white/50">One-time payment — max ₦{plan.maxEarn.toLocaleString()}</div></div><span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-white/10 text-white/60">On dashboard</span>
+            </div>
+          </div>
+          <p className="text-[11px] text-white/40 mt-3 text-center">To use tasks or payment, go back to dashboard and choose that option.</p>
+          <button onClick={()=> router.push("/dashboard")} className="w-full mt-2 rounded-full border border-white/15 text-white font-bold py-2.5 text-xs">Back to Dashboard</button>
+        </div>
 
         {/* Auto Tap Referral — stops above How It Works (no How It Works below) */}
         <div className="hh-card hh-entry-3 border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-amber-500/10">
