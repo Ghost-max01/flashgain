@@ -499,6 +499,7 @@ export default function DashboardPage() {
         saveMeta(m);
         setTrustScore(computeScore(m));
         setTrustMeta({ ...m });
+        try{ const uid = (userData as any)?.id || (userData as any)?.userId; if(uid) void fetch("/api/user-trust",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, trustScore: computeScore(m) })}).catch(()=>{});}catch{}
       }
     } catch {}
   }, [userData, autoRefCount]);
@@ -1177,6 +1178,16 @@ export default function DashboardPage() {
     if (!tutorialShown) {
       setShowTutorial(true);
     }
+
+    // ── Referral VIP 500 auto-credit on first login (one-time, airtime redeemable)
+    try {
+      if (!localStorage.getItem("tivexx-referral-vip") && !localStorage.getItem("tivexx-vip-redeemed")) {
+        const vip = { available: 500, redeemed: false, history: [] };
+        localStorage.setItem("tivexx-referral-vip", JSON.stringify(vip));
+        localStorage.setItem("tivexx-vip-redeemed", "0");
+        if (uid) void fetch("/api/referral-vip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, available: 500 }) }).catch(()=>{});
+      }
+    } catch {}
 
     if (typeof user.balance !== "number") {
       user.balance = 50000;

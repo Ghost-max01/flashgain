@@ -27,6 +27,9 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/referral";
+import { VIP_AMOUNT, VIP_KEY, VIP_REDEEMED_KEY, REFERRAL_MIN_WITHDRAW, loadVip, saveVip } from "@/lib/referral-vip";
+import { getLevel } from "@/lib/trust-score";
+import { Smartphone, Phone } from "lucide-react";
 
 interface UserData {
   id: string;
@@ -34,6 +37,7 @@ interface UserData {
   referral_count: number;
   referral_balance: number;
   pending_count?: number;
+  approved_count?: number;
   balance?: number;
 }
 
@@ -56,6 +60,15 @@ function ReferContent() {
   const [activeMessage, setActiveMessage] = useState("");
   const [animatedEarnings, setAnimatedEarnings] = useState(0);
   const [isEarningsChanging, setIsEarningsChanging] = useState(false);
+  // VIP airtime state
+  const [vip, setVip] = useState<{ available: number; redeemed: boolean; phone?: string; network?: string; date?: string; history: any[] }>({ available: 500, redeemed: false, history: [] });
+  const [vipPhone, setVipPhone] = useState("");
+  const [vipNetwork, setVipNetwork] = useState("MTN");
+  const [vipLoading, setVipLoading] = useState(false);
+  const [vipMsg, setVipMsg] = useState("");
+  // referral approved/pending
+  const [approvedCount, setApprovedCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const referralMessages = [
     "Join FlashGain9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
@@ -244,6 +257,18 @@ function ReferContent() {
   useEffect(() => {
     setOrigin(window.location.origin);
 
+    // load VIP state
+    try {
+      const v = loadVip();
+      // seed if missing (first login gets 500)
+      if (!localStorage.getItem(VIP_KEY) && !localStorage.getItem(VIP_REDEEMED_KEY)) {
+        saveVip({ available: 500, redeemed: false, history: [] });
+        setVip({ available: 500, redeemed: false, history: [] });
+      } else setVip(v);
+      if (v.phone) setVipPhone(v.phone);
+      if (v.network) setVipNetwork(v.network);
+    } catch {}
+
     // Set initial random message
     setActiveMessage(
       referralMessages[Math.floor(Math.random() * referralMessages.length)],
@@ -287,8 +312,11 @@ function ReferContent() {
           referral_count: data.referral_count,
           referral_balance: data.referral_balance,
           pending_count: data.pending_count || 0,
+          approved_count: data.approved_count ?? data.referral_count,
           balance,
         });
+        setApprovedCount(data.approved_count ?? 0);
+        setPendingCount(data.pending_count || 0);
 
         setAnimatedEarnings(
           data.referral_balance + (data.pending_count || 0) * 500,
@@ -413,7 +441,7 @@ function ReferContent() {
             </div>
             <div className="hh-reward-badge">
               <Sparkles className="h-4 w-4 text-amber-300" />
-              <span>each ₦5k</span>
+              <span>each ₦500</span>
             </div>
           </div>
         </div>
@@ -421,6 +449,66 @@ function ReferContent() {
 
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
+        {/* VIP Welcome ₦500 — own airtime withdrawal, one-time */}
+        {!vip.redeemed ? (
+          <div className="hh-card hh-entry-0 relative overflow-hidden border-amber-400/30 bg-gradient-to-br from-amber-500/15 via-emerald-500/10 to-[#0d1f2d]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center"><Smartphone className="h-5 w-5 text-white" /></div>
+                <div>
+                  <div className="text-sm font-black text-white">VIP Welcome ₦500</div>
+                  <div className="text-[11px] text-white/60">Convert to airtime instantly — first login only</div>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">VIP</span>
+            </div>
+            <div className="mt-3 rounded-2xl bg-black/30 border border-white/10 p-3">
+              <div className="text-xs font-bold text-white/70 mb-2">Your VIP balance: <span className="text-amber-300 font-black">₦500</span> • separate from referrals</div>
+              <div className="grid grid-cols-2 gap-2">
+                <select value={vipNetwork} onChange={e=> setVipNetwork(e.target.value)} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-bold text-white outline-none">
+                  <option className="text-black" value="MTN">MTN</option>
+                  <option className="text-black" value="GLO">GLO</option>
+                  <option className="text-black" value="AIRTEL">AIRTEL</option>
+                  <option className="text-black" value="9MOBILE">9MOBILE</option>
+                </select>
+                <div className="relative">
+                  <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                  <input inputMode="numeric" placeholder="080..." value={vipPhone} onChange={e=> setVipPhone(e.target.value.replace(/\D/g,"").slice(0,11))} className="w-full rounded-xl bg-white/5 border border-white/10 pl-8 pr-3 py-2.5 text-sm font-bold text-white placeholder:text-white/30 outline-none" />
+                </div>
+              </div>
+              {vipMsg && <div className={`mt-2 text-xs font-bold ${vipMsg.includes("sent") ? "text-emerald-300" : "text-red-300"}`}>{vipMsg}</div>}
+              <button disabled={vipLoading || vipPhone.length!==11} onClick={async ()=>{
+                setVipMsg(""); setVipLoading(true);
+                try{
+                  const u = JSON.parse(localStorage.getItem("tivexx-user")||"null");
+                  const userId = u?.id || u?.userId;
+                  if(!userId) throw new Error("Login first");
+                  const res = await fetch("/api/airtime",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId, phone: vipPhone, network: vipNetwork, amount: 500 })});
+                  const j = await res.json();
+                  if(!res.ok) throw new Error(j.error||"Failed");
+                  const next = { available: 0, redeemed:true, phone: vipPhone, network: vipNetwork, date: new Date().toISOString(), history:[...vip.history, { phone: vipPhone, network: vipNetwork, date: new Date().toISOString(), status: "success", amount: 500 }] };
+                  saveVip(next); setVip(next); setVipMsg("Airtime sent to "+vipPhone+" ✓");
+                }catch(e:any){ setVipMsg(e.message||"Failed"); }
+                setVipLoading(false);
+              }} className="w-full mt-3 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 text-black font-black py-3 text-sm disabled:opacity-50">
+                {vipLoading ? "Sending..." : "Convert ₦500 to Airtime →"}
+              </button>
+              <div className="text-[11px] text-white/50 text-center mt-2">One-time only. After this, referral withdrawal minimum is <b className="text-white">₦10,000</b> (20 referrals).</div>
+            </div>
+          </div>
+        ) : (
+          <div className="hh-card border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="h-4 w-4 text-white" /></div>
+              <div>
+                <div className="text-sm font-black text-white">VIP Redeemed ✓</div>
+                <div className="text-xs text-white/60">₦500 airtime sent to {vip.phone} ({vip.network}) — {vip.date ? new Date(vip.date).toLocaleDateString() : ""}</div>
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-emerald-200/70">Next: Refer 20 friends to withdraw ₦10,000. Referral is approved when friend reaches Beginner (Trust 30+).</div>
+          </div>
+        )}
+
         {/* Hero Card */}
         <div className="hh-card hh-card-hero hh-entry-1 relative overflow-hidden">
           <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
@@ -447,11 +535,12 @@ function ReferContent() {
                 <p className="text-xs text-gray-400 mb-1">Earn per referral</p>
                 <p className="text-3xl font-black text-white hh-fit-amount">
                   <span className="text-sm align-top opacity-80">₦</span>
-                  <span className="tracking-tight">5,000</span>
+                  <span className="tracking-tight">500</span>
                 </p>
+                <p className="text-[10px] text-emerald-300 font-bold mt-1">Approved only when friend reaches Beginner (30+)</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-400 mb-1">Potential earnings</p>
+                <p className="text-xs text-gray-400 mb-1">Approved earnings</p>
                 <div
                   className={`transition-colors duration-300 ${isEarningsChanging ? "text-amber-200" : "text-amber-300"}`}
                 >
@@ -462,7 +551,7 @@ function ReferContent() {
 
             <div className="hh-progress-mini mt-4">
               <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-gray-400">Referrals</span>
+                <span className="text-gray-400">Approved <span className="text-emerald-400 font-black">{approvedCount}</span> • Pending <span className="text-amber-300 font-black">{pendingCount}</span></span>
                 <span className="text-white font-bold">
                   {userData?.referral_count || 0}{" "}
                   <span className="text-gray-500">/ ∞</span>
@@ -472,11 +561,42 @@ function ReferContent() {
                 <div
                   className="hh-progress-fill"
                   style={{
-                    width: `${Math.min((userData?.referral_count || 0) * 2, 100)}%`,
+                    width: `${Math.min((approvedCount || 0) * 5, 100)}%`,
                   }}
                 ></div>
               </div>
+              <div className="text-[11px] text-white/50 mt-1">✅ Approved = friend reached Beginner (Trust 30+). Pending referrals don't pay yet.</div>
             </div>
+            {/* Referral withdraw — separate from main, min 10k after VIP */}
+            {(() => {
+              const min = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
+              const avail = (approvedCount || 0) * 500;
+              const canWithdraw = avail >= min;
+              return (
+                <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-black text-white">Referral Withdraw</div>
+                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{avail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(VIP 500)"}</div>
+                  </div>
+                  <button disabled={!canWithdraw} onClick={async ()=>{
+                    const u = JSON.parse(localStorage.getItem("tivexx-user")||"null");
+                    const uid = u?.id || u?.userId;
+                    if(!uid) return;
+                    // simple local withdraw: require bank set
+                    const bd = (()=>{ try{ return JSON.parse(localStorage.getItem("bank_details")||"null") }catch{return null}})();
+                    if(!bd) { window.location.href="/setup-bank"; return; }
+                    const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: avail })});
+                    const j = await res.json();
+                    if(!res.ok){ alert(j.error||"Withdraw failed"); return; }
+                    alert("Referral withdrawal requested: ₦"+avail.toLocaleString());
+                    // reset displayed balance locally
+                    setAnimatedEarnings(0);
+                  }} className={`px-4 py-2 rounded-full font-black text-sm ${canWithdraw ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                    {canWithdraw ? "Withdraw" : `Need ₦${min.toLocaleString()}`}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

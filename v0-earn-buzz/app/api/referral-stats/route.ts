@@ -73,12 +73,36 @@ export async function GET(request: Request) {
 
     if (pendingError) throw pendingError
 
+    // ── Approved vs Pending gate: approved only when referred user reached Beginner (Trust 30+) ──
+    let approvedCount = referralCount || 0
+    let computedPending = pendingCount || 0
+    try {
+      const { data: allRefs } = await supabase.from("referrals").select("referred_id, processed, amount").eq("referrer_id", userId).limit(2000)
+      if (allRefs && allRefs.length > 0) {
+        const ids = allRefs.map((r: any) => r.referred_id).filter(Boolean)
+        if (ids.length > 0) {
+          const { data: referredUsers } = await supabase.from("users").select("id, trust_score").in("id", ids)
+          const scoreMap = new Map((referredUsers || []).map((u: any) => [u.id, Number(u.trust_score || 0)]))
+          let approved = 0
+          let pending2 = 0
+          for (const r of allRefs as any[]) {
+            const sc = scoreMap.get(r.referred_id) ?? 0
+            if (sc >= 30) approved++
+            else pending2++
+          }
+          approvedCount = approved
+          computedPending = pending2
+        }
+      }
+    } catch {}
+
     return NextResponse.json({
       success: true,
       referral_code: user?.referral_code || "",
       referral_count: referralCount,
       referral_balance: referralBalance,
-      pending_count: pendingCount
+      pending_count: computedPending,
+      approved_count: approvedCount
     })
   } catch (error) {
     console.error("Error:", error)
