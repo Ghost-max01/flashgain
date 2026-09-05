@@ -3,10 +3,11 @@
 // ── Trust Score — compounding engine ──
 // Rules (all compound / sum):
 //  • 5 mins spent in webapp = +2
-//  • every 10 referrals       = +2
+//  • every 5 referrals        = +2   (5 refs = 2)
 //  • each app navigation      = +1
 //  • each successful payment  = +5
-//  • every 10 tasks           = +2  (same as referrals)
+//  • every 10 tasks           = +2
+//  • every 50 dashboard taps  = +1
 export const TRUST_STORAGE_KEY = "tivexx-trust-score";
 export const TRUST_META_KEY = "tivexx-trust-meta";
 export const TRUST_TIME_KEY = "tivexx-trust-time-ms";
@@ -25,13 +26,14 @@ export interface TrustMeta {
   navCount: number;
   payCount: number;
   payAmount: number;    // total paid (for display)
-  taskCount: number;    // completed tasks (+1 each)
+  taskCount: number;    // completed tasks
+  tapCount: number;     // dashboard orb taps (50 = +1)
   lastTimeAwarded: number; // ms threshold already awarded
   bonus: number;        // manual bumps
 }
 
 export function defaultMeta(): TrustMeta {
-  return { timeMs: 0, referralCount: 0, navCount: 0, payCount: 0, payAmount: 0, taskCount: 0, lastTimeAwarded: 0, bonus: 0 };
+  return { timeMs: 0, referralCount: 0, navCount: 0, payCount: 0, payAmount: 0, taskCount: 0, tapCount: 0, lastTimeAwarded: 0, bonus: 0 };
 }
 
 export function loadMeta(): TrustMeta {
@@ -47,11 +49,12 @@ export function saveMeta(m: TrustMeta) {
 
 export function computeScore(m: TrustMeta): number {
   const timePoints = Math.floor(m.timeMs / (5 * 60 * 1000)) * 2; // 5 mins = 2
-  const refPoints = Math.floor(m.referralCount / 10) * 2;        // 10 refs = 2
+  const refPoints = Math.floor(m.referralCount / 5) * 2;         // 5 refs = 2
   const navPoints = m.navCount * 1;                              // 1 per navigate
   const payPoints = m.payCount * 5;                              // 5 per pay
-  const taskPoints = Math.floor((m.taskCount || 0) / 10) * 2;     // 10 tasks = 2 (same as referrals)
-  return timePoints + refPoints + navPoints + payPoints + taskPoints + m.bonus;
+  const taskPoints = Math.floor((m.taskCount || 0) / 10) * 2;     // 10 tasks = 2
+  const tapPoints = Math.floor((m.tapCount || 0) / 50) * 1;       // 50 taps = 1
+  return timePoints + refPoints + navPoints + payPoints + taskPoints + tapPoints + m.bonus;
 }
 
 export function getLevel(score: number) {
