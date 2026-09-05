@@ -215,7 +215,7 @@ function ReferContent() {
     if (!userData) return;
 
     const targetEarnings =
-      userData.referral_balance + (userData.pending_count || 0) * 10000;
+      userData.referral_balance + (userData.pending_count || 0) * 500;
     if (targetEarnings === animatedEarnings) return;
 
     const difference = targetEarnings - animatedEarnings;
@@ -291,7 +291,7 @@ function ReferContent() {
         });
 
         setAnimatedEarnings(
-          data.referral_balance + (data.pending_count || 0) * 10000,
+          data.referral_balance + (data.pending_count || 0) * 500,
         );
       })
       .catch(console.error)
@@ -576,7 +576,7 @@ function ReferContent() {
               {
                 icon: "💰",
                 title: "Earn Rewards",
-                desc: "Get ₦5,000 credited instantly per referral",
+                desc: "Get ₦500 credited instantly per referral",
                 color: "emerald",
               },
               {
@@ -663,7 +663,7 @@ function ReferContent() {
                     Potential earnings
                   </span>
                   <span className="text-sm font-bold text-emerald-400">
-                    {formatCurrency((userData?.pending_count || 0) * 10000)}
+                    {formatCurrency((userData?.pending_count || 0) * 500)}
                   </span>
                 </div>
               </div>
@@ -682,7 +682,7 @@ function ReferContent() {
               <p className="text-sm text-emerald-200/80">
                 Share your link on social media and messaging platforms to
                 maximize your earnings. Each successful referral earns you
-                ₦5,000 instantly!
+                ₦500 instantly!
               </p>
             </div>
           </div>

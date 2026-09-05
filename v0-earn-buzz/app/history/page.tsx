@@ -71,7 +71,7 @@ export default function HistoryPage() {
             type: "credit",
             category: "referral",
             description: "Referral Bonus",
-            amount: 10000,
+            amount: 500,
             date: new Date().toISOString(),
           })
         }

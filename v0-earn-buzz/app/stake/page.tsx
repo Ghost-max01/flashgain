@@ -260,41 +260,6 @@ export default function StakeWinPage() {
               <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${(spinStake * spinResult.amount - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
             </div>
           )}
-          <div className="mt-4 w-full">
-            <div className="flex items-center justify-between"><span className="text-sm font-black flex items-center gap-2"><Coins className="h-4 w-4 text-emerald-400" /> Spin stake</span><span className="text-[11px] font-bold text-white/50">Min ₦200 • 30% win</span></div>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {[500, 1000, 2000, 5000].map(v => (<button key={v} onClick={() => { setSpinStake(v); setSpinCustom(String(v)) }} className={`rounded-2xl border py-2.5 font-black text-sm ${spinStake===v ? "bg-amber-500 text-black border-amber-400" : "bg-white/5 border-white/10 text-white"}`}>₦{v.toLocaleString()}</button>))}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <div className="flex-1 relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-black">₦</span><input inputMode="numeric" value={spinCustom} onChange={e => { const r=e.target.value.replace(/[^0-9]/g,""); setSpinCustom(r); const n=Number(r||0); if(n) setSpinStake(n) }} placeholder="Custom" className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-3 py-3 text-sm font-bold text-white outline-none focus:border-amber-500/40" /></div>
-              <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 to-emerald-500/15 border border-amber-500/20 px-4 flex flex-col justify-center text-center min-w-[110px]"><div className="text-[10px] font-black text-white/60">MAX WIN</div><div className="text-sm font-black text-amber-300">₦{(spinStake*5).toLocaleString()}</div></div>
-            </div>
-            <Button onClick={doSpin} disabled={spinning} className="w-full mt-3 rounded-full hh-btn-primary font-black py-6"><Zap className="h-5 w-5 mr-2" /> {spinning ? "Spinning..." : `Spin Now — ₦${spinStake.toLocaleString()}`}</Button>
-            <p className="text-center text-[11px] text-white/40 mt-2 flex items-center justify-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> 30% win, provably fair RNG. You will tell me what to remove later — additive only.</p>
-          </div>
-        </div>
-
-        {/* How it works */}
-        <div className="hh-card">
-          <h4 className="font-black flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-300" /> How it works</h4>
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            {[
-              { n: "1", t: "Stake", d: "Pick amount, 1 tap. No forms." },
-              { n: "2", t: "Pool grows", d: "Live pool ticks every second." },
-              { n: "3", t: "Win ×2.2", d: "Draw every ~15 min, instant payout." },
-            ].map(s => (
-              <div key={s.n} className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
-                <div className="mx-auto w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-white">{s.n}</div>
-                <div className="text-sm font-black mt-2">{s.t}</div>
-                <div className="text-[11px] text-white/60 leading-tight mt-1">{s.d}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-amber-500/10 border border-emerald-500/20 p-3 flex items-center gap-3">
-            <Gift className="h-5 w-5 text-amber-300" />
-            <div className="text-sm font-bold">New stakers get +5% bonus on first stake</div>
-            <span className="ml-auto text-[11px] font-black px-2 py-1 rounded-full bg-amber-500 text-black">BONUS</span>
-          </div>
         </div>
 
         {/* Social proof */}

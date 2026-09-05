@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       await supabase.from("referrals").insert({
         referrer_id: referrerId,
         referred_id: userId,
-        amount: 5000, // 5,000 naira referral bonus
+        amount: 500, // 500 naira referral bonus
       })
     }
 
