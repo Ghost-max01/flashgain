@@ -26,6 +26,7 @@ export default function WithdrawPage() {
   const [popupCountdown, setPopupCountdown] = useState(20)
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
   const [showTrustRequiredPopup, setShowTrustRequiredPopup] = useState(false)
+  const [showHoursPopup, setShowHoursPopup] = useState(false)
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
@@ -219,6 +220,29 @@ export default function WithdrawPage() {
   }, [showInstantWithdrawBlockedPopup])
 
   const handleCashout = () => {
+    // Withdrawal window: 7:00 AM - 8:00 PM (WAT / Africa/Lagos)
+    try {
+      const now = new Date()
+      // Get hour in Lagos timezone (WAT = UTC+1, no DST)
+      const lagosHourStr = new Intl.DateTimeFormat("en-NG", {
+        timeZone: "Africa/Lagos",
+        hour: "numeric",
+        hour12: false,
+      }).format(now)
+      const lagosHour = parseInt(lagosHourStr, 10)
+      const isOpen = lagosHour >= 7 && lagosHour < 20
+      if (!isOpen) {
+        setShowHoursPopup(true)
+        return
+      }
+    } catch {
+      // Fallback to UTC+1
+      const h = (new Date().getUTCHours() + 1) % 24
+      if (h < 7 || h >= 20) {
+        setShowHoursPopup(true)
+        return
+      }
+    }
     // BYPASSED: Skip all validation checks - go directly to withdrawal modal
     setShowWithdrawalInfoModal(true)
   }
@@ -667,6 +691,42 @@ export default function WithdrawPage() {
         </div>
 
       </div>
+
+      {/* Withdrawal Hours Closed Popup — fine & cool */}
+      {showHoursPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup hh-hours-popup max-w-sm w-full mx-4 relative overflow-hidden">
+            {/* subtle glow */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative">
+              <div className="hh-popup-header flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 flex items-center justify-center">
+                  <Clock className="h-7 w-7 text-amber-400" />
+                </div>
+                <h2 className="text-xl font-black text-white text-center tracking-tight">Withdrawals Closed</h2>
+                <span className="text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">After Hours</span>
+              </div>
+              <p className="text-sm text-white/80 text-center mt-4 leading-relaxed">
+                Withdrawals are open daily from <span className="font-black text-emerald-300">7:00 AM</span> to <span className="font-black text-emerald-300">8:00 PM</span> <span className="text-white/50">(WAT)</span>.
+              </p>
+              <p className="text-xs text-white/50 text-center mt-2">
+                You’ve done the tasks and referrals — nice! Please come back during withdrawal hours to cash out. Your balance is safe.
+              </p>
+              <div className="flex items-center justify-center gap-2 mt-4 text-xs text-white/40">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Current Lagos time is used to check this window.</span>
+              </div>
+              <button
+                onClick={() => setShowHoursPopup(false)}
+                className="hh-popup-btn hh-popup-btn-confirm w-full mt-6"
+              >
+                Got it — I’ll come back at 7 AM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trust Level Required Popup */}
       {showTrustRequiredPopup && (
