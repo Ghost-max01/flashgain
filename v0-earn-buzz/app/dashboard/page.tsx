@@ -35,6 +35,7 @@ import { ScrollingText } from "@/components/scrolling-text";
 import { LiveChat } from "@/components/live-chat";
 import dynamic from "next/dynamic";
 const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").then(m => m.GuidedOnboarding), { ssr: false }) as any;
+import { getBankDetails } from "@/lib/bank-details";
 import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -2016,12 +2017,29 @@ export default function DashboardPage() {
               <span>Task</span>
             </button>
           </Link>
-          <Link href="/withdraw" className="flex-1">
-            <button className="hh-action-btn hh-action-green w-full">
-              <span className="hh-action-icon">💸</span>
-              <span>Withdraw</span>
-            </button>
-          </Link>
+          <button
+            onClick={() => {
+              try {
+                const bd = getBankDetails();
+                if (bd?.accountNumber) {
+                  router.push("/withdraw");
+                } else {
+                  toast({
+                    title: "No payout account set up",
+                    description: "Please add your bank account details first.",
+                    variant: "destructive",
+                  });
+                  setTimeout(() => router.push("/setup-bank"), 1500);
+                }
+              } catch {
+                router.push("/setup-bank");
+              }
+            }}
+            className="hh-action-btn hh-action-green w-full"
+          >
+            <span className="hh-action-icon">💸</span>
+            <span>Withdraw</span>
+          </button>
         </div>
 
         {/* ── TRUST SCORE — compounding, tap for breakdown ── */}
