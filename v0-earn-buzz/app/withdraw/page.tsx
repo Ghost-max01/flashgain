@@ -284,6 +284,44 @@ export default function WithdrawPage() {
     }
   }
 
+  const balanceKey = Number(balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const [balanceWhole, balanceCents = '00'] = balanceKey.split('.')
+  const referralKey = Number(userData?.referral_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const bankLast4 = bankDetails?.accountNumber ? String(bankDetails.accountNumber).slice(-4) : '0000'
+
+  useEffect(() => {
+    const card = document.getElementById('wallet-card')
+    if (!card || !bankDetails?.locked) return
+
+    const handleMove = (event: MouseEvent) => {
+      const rect = card.getBoundingClientRect()
+      const x = (event.clientX - rect.left) / rect.width
+      const y = (event.clientY - rect.top) / rect.height
+
+      const rotateX = (0.5 - y) * 14
+      const rotateY = (x - 0.5) * 16
+
+      card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`
+      card.style.setProperty('--sheen-x', `${x * 130 - 30}%`)
+    }
+
+    const handleLeave = () => {
+      card.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)'
+      card.style.setProperty('--sheen-x', '-30%')
+    }
+
+    const container = card.parentElement
+    if (!container) return
+
+    container.addEventListener('mousemove', handleMove)
+    container.addEventListener('mouseleave', handleLeave)
+
+    return () => {
+      container.removeEventListener('mousemove', handleMove)
+      container.removeEventListener('mouseleave', handleLeave)
+    }
+  }, [bankDetails?.locked])
+
   return (
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
       {/* Animated background bubbles */}
@@ -337,36 +375,46 @@ export default function WithdrawPage() {
 
         {/* Payout Account — shown INSTEAD OF Available Balance when bank details are set */}
         {bankDetails?.locked ? (
-          <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-4">
-                <span className="hh-payout-label">Available to withdraw</span>
-                <button type="button" aria-label="Toggle balance visibility" className="hh-eye-btn">
-                  <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
+          <div className="wallet-card-shell">
+            <div className="wallet-card" id="wallet-card">
+              <div className="row-top">
+                <div className="chip"></div>
+                <svg className="contactless" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M8 11a5 5 0 0 1 8 0" opacity="0.9" />
+                  <path d="M5.5 8.5a9 9 0 0 1 13 0" opacity="0.65" />
+                  <path d="M3 6a13 13 0 0 1 18 0" opacity="0.4" />
+                </svg>
               </div>
 
-              <h2 className="hh-balance-large">
-                <span className="hh-currency-symbol">₦</span>
-                <span>{Number(balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </h2>
+              <div className="label-row">
+                <p className="label">Available to withdraw</p>
+                <p className="amount">
+                  ₦{balanceWhole}
+                  <span className="cents">.{balanceCents}</span>
+                </p>
+              </div>
 
-              <div className="hh-payout-meta">
-                <div className="hh-payout-meta-pill">
-                  <svg className="w-3.5 h-3.5 text-white/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>Referral: ₦{(userData?.referral_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <div className="row-bottom">
+                <div className="meta">
+                  <div className="meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <span>Referral <span className="val">₦{referralKey}</span></span>
+                  </div>
+                  <div className="meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="3" y="9" width="18" height="11" rx="2" />
+                      <path d="M8 9V6a4 4 0 0 1 8 0v3" />
+                    </svg>
+                    <span className="val">•••• {bankLast4}</span>
+                  </div>
                 </div>
-                <div className="hh-payout-meta-pill">
-                  <svg className="w-3.5 h-3.5 text-white/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                  </svg>
-                  <span>{bankDetails.bank} •••• {bankDetails.accountNumber.slice(-4)}</span>
-                </div>
+
+                <div className="brand"><span className="dot"></span>Opay</div>
               </div>
             </div>
           </div>
@@ -391,7 +439,7 @@ export default function WithdrawPage() {
         {/* Requirements Card */}
         <div className="hh-card hh-entry-3">
           <div className="hh-section-title mb-4">Withdrawal Requirements</div>
-
+          
           <div className="space-y-3">
             <div className="hh-req-item">
               <div className="flex items-center gap-3">
@@ -775,6 +823,7 @@ export default function WithdrawPage() {
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
         /* ─── ROOT & BACKGROUND ─── */
         .hh-root {
@@ -1445,6 +1494,206 @@ export default function WithdrawPage() {
           [class*="hh-entry-"] {
             animation: none !important;
           }
+        }
+
+        .wallet-card-shell {
+          position: relative;
+          width: 100%;
+        }
+
+        .wallet-card {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1.586 / 1;
+          border-radius: 22px;
+          padding: 26px 26px 22px;
+          color: #f5f7fb;
+          overflow: hidden;
+          background: linear-gradient(155deg, #244d9d 0%, #1a3d7f 38%, #0c1330 100%);
+          box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05) inset;
+          transform-style: preserve-3d;
+          transition: transform 0.15s ease-out;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+
+        .wallet-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: repeating-linear-gradient(
+            115deg,
+            rgba(255,255,255,0.035) 0px,
+            rgba(255,255,255,0.035) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+          mix-blend-mode: overlay;
+          pointer-events: none;
+        }
+
+        .wallet-card::after {
+          content: "";
+          position: absolute;
+          top: -60%;
+          left: var(--sheen-x, -30%);
+          width: 60%;
+          height: 220%;
+          background: linear-gradient(
+            100deg,
+            transparent 0%,
+            rgba(255,255,255,0.10) 45%,
+            rgba(255,255,255,0.16) 50%,
+            rgba(255,255,255,0.10) 55%,
+            transparent 100%
+          );
+          transform: rotate(8deg);
+          pointer-events: none;
+          transition: left 0.25s ease-out;
+        }
+
+        .row-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          z-index: 2;
+        }
+
+        .chip {
+          width: 42px;
+          height: 32px;
+          border-radius: 6px;
+          background: linear-gradient(155deg, #f6dd93, #c9a227);
+          position: relative;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.4) inset, 0 1px 0 rgba(255,255,255,0.4) inset;
+        }
+
+        .chip::before {
+          content: "";
+          position: absolute;
+          inset: 5px;
+          border: 1px solid rgba(0,0,0,0.25);
+          border-radius: 3px;
+        }
+
+        .chip::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 0;
+          bottom: 0;
+          width: 1px;
+          background: rgba(0,0,0,0.25);
+          box-shadow: 12px 0 0 rgba(0,0,0,0.25), -12px 0 0 rgba(0,0,0,0.25);
+        }
+
+        .contactless {
+          width: 22px;
+          height: 22px;
+          opacity: 0.85;
+          color: rgba(255,255,255,0.86);
+        }
+
+        .label-row {
+          z-index: 2;
+          margin-top: 10px;
+        }
+
+        .label {
+          font-size: 11.5px;
+          letter-spacing: 0.3px;
+          color: rgba(245,247,251,0.56);
+          font-weight: 500;
+          margin: 0 0 8px;
+        }
+
+        .amount {
+          font-family: 'Space Grotesk', sans-serif;
+          font-weight: 600;
+          font-size: 34px;
+          letter-spacing: 0.2px;
+          font-variant-numeric: tabular-nums;
+          margin: 0;
+          text-shadow: 0 1px 0 rgba(0,0,0,0.3);
+        }
+
+        .amount .cents {
+          font-size: 20px;
+          color: rgba(245,247,251,0.56);
+          font-weight: 500;
+        }
+
+        .row-bottom {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          z-index: 2;
+        }
+
+        .meta {
+          display: flex;
+          gap: 18px;
+          flex-wrap: wrap;
+        }
+
+        .meta-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: rgba(245,247,251,0.56);
+          font-weight: 500;
+        }
+
+        .meta-item svg {
+          width: 14px;
+          height: 14px;
+          opacity: 0.75;
+          flex-shrink: 0;
+        }
+
+        .meta-item .val {
+          color: #f5f7fb;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+        }
+
+        .brand {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: 0.4px;
+          color: #f5f7fb;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .brand .dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: linear-gradient(155deg, #f6dd93, #c9a227);
+          display: inline-block;
+        }
+
+        @media (max-width: 380px) {
+          .wallet-card {
+            padding: 22px 20px 18px;
+          }
+
+          .amount {
+            font-size: 30px;
+          }
+
+          .meta {
+            gap: 10px;
+          }
+        }
+
+        .wallet-card-shell:hover .wallet-card {
+          transform: scale(1.02);
         }
       `}</style>
     </div>
