@@ -335,40 +335,44 @@ export default function WithdrawPage() {
         </div>
         */}
 
-        {/* Bank Details (locked) — shown INSTEAD of Available Balance when set after signup */}
+        {/* Payout Account — shown INSTEAD OF Available Balance when bank details are set */}
         {bankDetails?.locked ? (
           <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
             <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
             <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="hh-live-dot"></span>
-                  <span className="text-xs text-emerald-300 font-bold uppercase tracking-wider">Payout Account</span>
-                </div>
-                <span className="flex items-center gap-1 text-xs font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-1 rounded-full">
-                  <Lock className="h-3 w-3" /> Secured
+              {/* Top Row: Label + Eye icon */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-white/70 font-medium">Payout Account</span>
+                <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </div>
+
+              {/* Center: Large Account Number */}
+              <div className="text-center py-3">
+                <span className="text-2xl font-bold text-white tracking-wider font-mono">
+                  {bankDetails.accountNumber}
                 </span>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/50">Bank</span>
-                  <span className="text-sm font-bold text-white">{bankDetails.bank}</span>
+
+              {/* Bottom Pills: Account Name left, Bank + last 4 right */}
+              <div className="flex gap-2">
+                <div className="flex-1 flex items-center justify-center gap-1 bg-white/10 border border-white/20 rounded-full px-3 py-1.5">
+                  <span className="text-[10px] text-white/60 truncate">{bankDetails.accountName}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/50">Account Number</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono font-bold text-white tracking-wide">{bankDetails.accountNumber}</span>
-                    <button onClick={handleEditBankDetails} className="text-xs font-bold text-emerald-300 border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 rounded-full hover:bg-emerald-400/20 transition">Edit now</button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/50">Account Name</span>
-                  <span className="text-sm font-bold text-white text-right max-w-[60%] truncate">{bankDetails.accountName}</span>
+                <div className="flex-1 flex items-center justify-center gap-1 bg-white/10 border border-white/20 rounded-full px-3 py-1.5">
+                  <svg className="w-3 h-3 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                  </svg>
+                  <span className="text-[10px] text-white/80 font-medium">{bankDetails.bank} •••• {bankDetails.accountNumber.slice(-4)}</span>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-amber-200/70 flex items-center gap-1">
-                <Lock className="h-3 w-3" /> Secured after signup — cannot be changed.
+
+              {/* Secured message */}
+              <p className="mt-3 text-[10px] text-white/40 text-center flex items-center justify-center gap-1">
+                <Lock className="h-3 w-3" /> Secured after signup
               </p>
             </div>
           </div>
