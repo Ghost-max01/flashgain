@@ -721,8 +721,8 @@ export default function TapAndEarnPage() {
           <div className="flex items-center justify-center gap-2 mt-3">
             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
             <span className="text-[11px] font-black tracking-widest text-white/80">AUTO TAP</span>
-            <button type="button" onClick={handleAutoToggle} className="hh-toggle" aria-label="Toggle auto tap">
-              <span className="hh-toggle-dot" />
+            <button type="button" onClick={handleAutoToggle} className={`hh-toggle ${autoActive ? 'hh-toggle-active' : ''}`} aria-label="Toggle auto tap">
+              <span className={`hh-toggle-dot ${autoActive ? 'hh-toggle-dot-active' : ''}`} />
             </button>
           </div>
           {autoActive ? (
