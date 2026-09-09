@@ -2017,29 +2017,31 @@ export default function DashboardPage() {
               <span>Task</span>
             </button>
           </Link>
-          <button
-            onClick={() => {
-              try {
-                const bd = getBankDetails();
-                if (bd?.accountNumber) {
-                  router.push("/withdraw");
-                } else {
-                  toast({
-                    title: "No payout account set up",
-                    description: "Please add your bank account details first.",
-                    variant: "destructive",
-                  });
-                  setTimeout(() => router.push("/setup-bank"), 1500);
+          <Link href="/withdraw" className="flex-1">
+            <button
+              onClick={(e) => {
+                try {
+                  const bd = getBankDetails();
+                  if (!bd?.accountNumber) {
+                    e.preventDefault();
+                    toast({
+                      title: "No payout account set up",
+                      description: "Please add your bank account details first.",
+                      variant: "destructive",
+                    });
+                    setTimeout(() => router.push("/setup-bank"), 1500);
+                  }
+                } catch {
+                  e.preventDefault();
+                  router.push("/setup-bank");
                 }
-              } catch {
-                router.push("/setup-bank");
-              }
-            }}
-            className="hh-action-btn hh-action-green w-full"
-          >
-            <span className="hh-action-icon">💸</span>
-            <span>Withdraw</span>
-          </button>
+              }}
+              className="hh-action-btn hh-action-green w-full"
+            >
+              <span className="hh-action-icon">💸</span>
+              <span>Withdraw</span>
+            </button>
+          </Link>
         </div>
 
         {/* ── TRUST SCORE — compounding, tap for breakdown ── */}
