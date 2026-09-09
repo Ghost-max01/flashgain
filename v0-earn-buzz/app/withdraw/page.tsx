@@ -1498,7 +1498,9 @@ export default function WithdrawPage() {
 
         .wallet-card-shell {
           position: relative;
-          width: 100%;
+          width: 380px;
+          max-width: 88vw;
+          margin: 0 auto;
         }
 
         .wallet-card {
@@ -1551,6 +1553,30 @@ export default function WithdrawPage() {
           transform: rotate(8deg);
           pointer-events: none;
           transition: left 0.25s ease-out;
+          animation: ocean-shimmer 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes ocean-shimmer {
+          0% {
+            left: -30%;
+            opacity: 0.2;
+          }
+          30% {
+            left: 20%;
+            opacity: 0.7;
+          }
+          55% {
+            left: 52%;
+            opacity: 1;
+          }
+          75% {
+            left: 78%;
+            opacity: 0.7;
+          }
+          100% {
+            left: 110%;
+            opacity: 0.2;
+          }
         }
 
         .row-top {
