@@ -1499,6 +1499,14 @@ export default function WithdrawPage() {
         .wallet-card-shell {
           position: relative;
           width: 100%;
+          max-width: 380px;
+          margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+          .wallet-card-shell {
+            width: 380px;
+          }
         }
 
         .wallet-card {
@@ -1531,6 +1539,7 @@ export default function WithdrawPage() {
           );
           mix-blend-mode: overlay;
           pointer-events: none;
+          animation: walletRipple 9s ease-in-out infinite alternate;
         }
 
         .wallet-card::after {
@@ -1551,149 +1560,21 @@ export default function WithdrawPage() {
           transform: rotate(8deg);
           pointer-events: none;
           transition: left 0.25s ease-out;
+          animation: walletSheen 5.2s ease-in-out infinite;
         }
 
-        .row-top {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          z-index: 2;
+        @keyframes walletSheen {
+          0%   { left: -35%; opacity: 0.2; }
+          20%  { opacity: 0.8; }
+          50%  { left: 55%; opacity: 1; }
+          80%  { opacity: 0.8; }
+          100% { left: 120%; opacity: 0.2; }
         }
 
-        .chip {
-          width: 42px;
-          height: 32px;
-          border-radius: 6px;
-          background: linear-gradient(155deg, #f6dd93, #c9a227);
-          position: relative;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.4) inset, 0 1px 0 rgba(255,255,255,0.4) inset;
-        }
-
-        .chip::before {
-          content: "";
-          position: absolute;
-          inset: 5px;
-          border: 1px solid rgba(0,0,0,0.25);
-          border-radius: 3px;
-        }
-
-        .chip::after {
-          content: "";
-          position: absolute;
-          left: 50%;
-          top: 0;
-          bottom: 0;
-          width: 1px;
-          background: rgba(0,0,0,0.25);
-          box-shadow: 12px 0 0 rgba(0,0,0,0.25), -12px 0 0 rgba(0,0,0,0.25);
-        }
-
-        .contactless {
-          width: 22px;
-          height: 22px;
-          opacity: 0.85;
-          color: rgba(255,255,255,0.86);
-        }
-
-        .label-row {
-          z-index: 2;
-          margin-top: 10px;
-        }
-
-        .label {
-          font-size: 11.5px;
-          letter-spacing: 0.3px;
-          color: rgba(245,247,251,0.56);
-          font-weight: 500;
-          margin: 0 0 8px;
-        }
-
-        .amount {
-          font-family: 'Space Grotesk', sans-serif;
-          font-weight: 600;
-          font-size: 34px;
-          letter-spacing: 0.2px;
-          font-variant-numeric: tabular-nums;
-          margin: 0;
-          text-shadow: 0 1px 0 rgba(0,0,0,0.3);
-        }
-
-        .amount .cents {
-          font-size: 20px;
-          color: rgba(245,247,251,0.56);
-          font-weight: 500;
-        }
-
-        .row-bottom {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          z-index: 2;
-        }
-
-        .meta {
-          display: flex;
-          gap: 18px;
-          flex-wrap: wrap;
-        }
-
-        .meta-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          color: rgba(245,247,251,0.56);
-          font-weight: 500;
-        }
-
-        .meta-item svg {
-          width: 14px;
-          height: 14px;
-          opacity: 0.75;
-          flex-shrink: 0;
-        }
-
-        .meta-item .val {
-          color: #f5f7fb;
-          font-weight: 600;
-          letter-spacing: 0.3px;
-        }
-
-        .brand {
-          font-family: 'Space Grotesk', sans-serif;
-          font-size: 15px;
-          font-weight: 700;
-          letter-spacing: 0.4px;
-          color: #f5f7fb;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .brand .dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: linear-gradient(155deg, #f6dd93, #c9a227);
-          display: inline-block;
-        }
-
-        @media (max-width: 380px) {
-          .wallet-card {
-            padding: 22px 20px 18px;
-          }
-
-          .amount {
-            font-size: 30px;
-          }
-
-          .meta {
-            gap: 10px;
-          }
-        }
-
-        .wallet-card-shell:hover .wallet-card {
-          transform: scale(1.02);
+        @keyframes walletRipple {
+          0%   { transform: translate3d(-2px, 0, 0) scale(1); opacity: 0.6; }
+          50%  { transform: translate3d(2px, 1px, 0) scale(1.02); opacity: 0.9; }
+          100% { transform: translate3d(-1px, -1px, 0) scale(1.01); opacity: 0.75; }
         }
       `}</style>
     </div>
