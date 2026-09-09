@@ -11,7 +11,31 @@ import {
   Crown,
   Star,
   CircleDollarSign,
+  Clock,
 } from "lucide-react";
+
+// ── Auto Tap constants (same as dashboard) ──
+const AUTO_TAP_KEY = "auto_tap_state";
+type AutoPlanId = "free1h" | "24h" | "2d" | "3d" | "1w";
+const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: number; maxTaps: number; maxEarn: number }[] = [
+  { id: "free1h", label: "20 mins FREE", sub: "First time only", durationMs: 20*60*1000, maxTaps: 200, maxEarn: 20000 },
+  { id: "24h", label: "24 hours: 1500 taps", sub: "max 150,000", durationMs: 24*60*60*1000, maxTaps: 1500, maxEarn: 150000 },
+  { id: "2d", label: "2 days: 3500 taps", sub: "max 350,000", durationMs: 2*24*60*60*1000, maxTaps: 3500, maxEarn: 350000 },
+  { id: "3d", label: "3 days: 5500 taps", sub: "max 550,000", durationMs: 3*24*60*60*1000, maxTaps: 5500, maxEarn: 550000 },
+  { id: "1w", label: "1 week: 10,000 taps", sub: "max 1,000,000", durationMs: 7*24*60*60*1000, maxTaps: 10000, maxEarn: 1000000 },
+];
+const AUTO_TAP_INTERVAL_MS = 800;
+const getAutoIntervalMs = (planId: AutoPlanId) => {
+  const p = AUTO_PLANS.find(x=>x.id===planId);
+  if (!p) return AUTO_TAP_INTERVAL_MS;
+  return Math.max(900, Math.floor(p.durationMs / p.maxTaps));
+};
+const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 30, "3d": 40, "1w": 60 };
+const AUTO_REQ_REF: Record<AutoPlanId, number> = { free1h: 0, "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
+const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
+const AUTO_REF_LINK_KEY = "auto_tap_ref_code";
+const AUTO_PLAN_COOLDOWN_KEY = "auto_tap_plan_cooldowns";
+const AUTO_PLAN_COOLDOWN_MS = 7*24*60*60*1000;
 
 const MAX_ENERGY = 100;
 const EARN_PER_TAP = 100;
@@ -98,6 +122,27 @@ export default function TapAndEarnPage() {
   const [completedTasksCount, setCompletedTasksCount] = useState(0);
   const [hasShownTaskPopup, setHasShownTaskPopup] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // ── Auto Tap state ──
+  const [autoActive, setAutoActive] = useState(false);
+  const [autoPlan, setAutoPlan] = useState<AutoPlanId | null>(null);
+  const [autoExpiresAt, setAutoExpiresAt] = useState<number | null>(null);
+  const [autoTapsDone, setAutoTapsDone] = useState(0);
+  const [autoFirstFreeUsed, setAutoFirstFreeUsed] = useState(false);
+  const [autoLeftMs, setAutoLeftMs] = useState(0);
+  const [showAutoPlans, setShowAutoPlans] = useState(false);
+  const [showAutoFreePopup, setShowAutoFreePopup] = useState(false);
+  const [showAutoReq, setShowAutoReq] = useState(false);
+  const [reqPlan, setReqPlan] = useState<AutoPlanId | null>(null);
+  const [reqChoice, setReqChoice] = useState<"task"|"referral"|"payment"|null>(null);
+  const [autoRefCode, setAutoRefCode] = useState<string>("");
+  const [autoRefCount, setAutoRefCount] = useState(0);
+  const [autoTaskDone, setAutoTaskDone] = useState(0);
+  const [mtTaskDone, setMtTaskDone] = useState(0);
+  const [muTaskDone, setMuTaskDone] = useState(0);
+  const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Global cleanup of stray ad elements (just in case) ──────────────
   // useEffect(() => {
@@ -192,6 +237,71 @@ export default function TapAndEarnPage() {
   useEffect(() => {
     setMounted(true);
     setState(loadState());
+    // Load auto tap state
+    try {
+      const aRaw = localStorage.getItem(AUTO_TAP_KEY);
+      if (aRaw) {
+        const a = JSON.parse(aRaw);
+        setAutoFirstFreeUsed(!!a.firstFreeUsed);
+        if (a.active && a.expiresAt && a.expiresAt > Date.now() && a.tapsDone < (AUTO_PLANS.find(p=>p.id===a.planId)?.maxTaps ?? Infinity)) {
+          setAutoActive(true); setAutoPlan(a.planId); setAutoExpiresAt(a.expiresAt); setAutoTapsDone(a.tapsDone||0);
+        }
+      }
+      const cd = JSON.parse(localStorage.getItem(AUTO_PLAN_COOLDOWN_KEY)||"{}");
+      if (cd && typeof cd==="object") setAutoPlanCooldowns(cd);
+    } catch {}
+  }, []);
+
+  // persist auto tap
+  useEffect(() => {
+    try { localStorage.setItem(AUTO_TAP_KEY, JSON.stringify({ active: autoActive, planId: autoPlan, expiresAt: autoExpiresAt, tapsDone: autoTapsDone, firstFreeUsed: autoFirstFreeUsed })); } catch {}
+  }, [autoActive, autoPlan, autoExpiresAt, autoTapsDone, autoFirstFreeUsed]);
+
+  // auto tap countdown + expire
+  useEffect(() => {
+    if (!autoActive || !autoExpiresAt) { setAutoLeftMs(0); return; }
+    const tick = () => {
+      const left = Math.max(0, autoExpiresAt - Date.now());
+      setAutoLeftMs(left);
+      if (left === 0) { setAutoActive(false); setAutoExpiresAt(null); }
+      const plan = AUTO_PLANS.find(p=>p.id===autoPlan);
+      if (plan && autoTapsDone >= plan.maxTaps) { setAutoActive(false); setAutoExpiresAt(null); }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [autoActive, autoExpiresAt, autoPlan, autoTapsDone]);
+
+  // auto tap interval — duration-matched
+  useEffect(() => {
+    if (!autoActive) { if (autoTimerRef.current) clearInterval(autoTimerRef.current); autoTimerRef.current = null; return; }
+    const plan = AUTO_PLANS.find(p=>p.id===autoPlan);
+    const max = plan?.maxTaps ?? Infinity;
+    const intervalMs = getAutoIntervalMs(autoPlan);
+    autoTimerRef.current = setInterval(() => {
+      if (autoTapsDone >= max) return;
+      if (state.energy <= 0) return;
+      setState((prev) => ({ ...prev, energy: Math.max(0, prev.energy - 1), earned: prev.earned + EARN_PER_TAP }));
+      setAutoTapsDone(p=> p+1);
+      syncToDb(EARN_PER_TAP);
+    }, intervalMs);
+    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
+  }, [autoActive, autoPlan, autoTapsDone, state.energy]);
+
+  // sync tasks count
+  useEffect(()=>{
+    const id=setInterval(()=>{ try{ 
+      const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
+      const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
+      const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+    }catch{} }, 1000);
+    const upd=()=>{ try{ 
+      const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
+      const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
+      const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+    }catch{} };
+    window.addEventListener("focus",upd); window.addEventListener("storage",upd as any);
+    return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
   }, []);
 
   useEffect(() => {
@@ -350,7 +460,7 @@ export default function TapAndEarnPage() {
         setHasShownTaskPopup(true);
         return;
       }
-
+      if (autoActive) return; // locked while auto
       if (state.energy <= 0) {
         setShowPrompt(true);
         return;
@@ -384,8 +494,78 @@ export default function TapAndEarnPage() {
       }));
       syncToDb(EARN_PER_TAP);
     },
-    [state.energy, syncToDb],
+    [state.energy, syncToDb, autoActive],
   );
+
+  // ── Auto Tap handlers ──
+  const handleAutoToggle = useCallback(() => {
+    if (autoActive) { setAutoActive(false); setAutoExpiresAt(null); return; }
+    if (!autoFirstFreeUsed) setShowAutoFreePopup(true);
+    setShowAutoPlans(true);
+  }, [autoActive, autoFirstFreeUsed]);
+
+  const startAutoPlan = useCallback((id: AutoPlanId) => {
+    const cd = autoPlanCooldowns[id];
+    if (cd && cd > Date.now()) return;
+    if (id === "free1h" && autoFirstFreeUsed) return;
+    if (id !== "free1h") {
+      setReqPlan(id); setReqChoice(null); setShowAutoPlans(false); setShowAutoReq(true);
+      try {
+        const stored = localStorage.getItem(AUTO_REF_LINK_KEY);
+        const map = stored ? JSON.parse(stored) : {};
+        if (!map[id]) {
+          const code = `${(localStorage.getItem("tivexx-user")||"").toString().slice(-4)}-AUTO-${id}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+          map[id]=code; localStorage.setItem(AUTO_REF_LINK_KEY, JSON.stringify(map));
+        }
+        const m2 = JSON.parse(localStorage.getItem(AUTO_REF_LINK_KEY)||"{}");
+        setAutoRefCode(m2[id]||"");
+        const cntRaw = localStorage.getItem(`auto_ref_count_${id}`);
+        setAutoRefCount(cntRaw ? Number(cntRaw) : 0);
+      } catch { setAutoRefCode(""); }
+      return;
+    }
+    const plan = AUTO_PLANS.find(p=>p.id===id)!;
+    setAutoPlan(id); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    if (id==="free1h") setAutoFirstFreeUsed(true);
+    if (id !== "free1h") {
+      const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
+      const next = { ...autoPlanCooldowns, [id]: exp };
+      setAutoPlanCooldowns(next);
+      try { localStorage.setItem(AUTO_PLAN_COOLDOWN_KEY, JSON.stringify(next)); } catch {}
+    }
+    setShowAutoPlans(false); setShowAutoFreePopup(false);
+  }, [autoFirstFreeUsed, autoPlanCooldowns]);
+
+  const fulfillRequirement = useCallback(async () => {
+    if (!reqPlan || !reqChoice) return;
+    const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
+    if (reqChoice==="task") {
+      const need = AUTO_REQ_TASK[reqPlan];
+      const isMt = reqPlan==="24h" || reqPlan==="3d";
+      const key = isMt ? "mt-completed-tasks" : "mu-completed-tasks";
+      const completed = JSON.parse(localStorage.getItem(key)||"[]");
+      const done = Array.isArray(completed) ? completed.length : 0;
+      if (done < need) return;
+    }
+    if (reqChoice==="referral") {
+      const need = AUTO_REQ_REF[reqPlan];
+      const cntRaw = localStorage.getItem(`auto_ref_count_${reqPlan}`);
+      const cnt = cntRaw ? Number(cntRaw) : 0;
+      if (cnt < need) return;
+    }
+    if (reqChoice==="payment") {
+      // Payment flow - redirect to payment page
+      return;
+    }
+    setAutoPlan(reqPlan); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    if (reqPlan !== "free1h") {
+      const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
+      const next = { ...autoPlanCooldowns, [reqPlan]: exp };
+      setAutoPlanCooldowns(next);
+      try { localStorage.setItem(AUTO_PLAN_COOLDOWN_KEY, JSON.stringify(next)); } catch {}
+    }
+    setShowAutoReq(false);
+  }, [reqPlan, reqChoice, autoPlanCooldowns]);
 
   const energyPercent = (state.energy / MAX_ENERGY) * 100;
 
@@ -530,10 +710,32 @@ export default function TapAndEarnPage() {
 
           {/* Hint label */}
           <p className="te-tap-hint mt-5">
-            {state.energy > 0
-              ? `${state.energy} taps remaining`
-              : "Energy depleted — wait or complete tasks"}
+            {autoActive
+              ? "Auto tapping — balance rising"
+              : state.energy > 0
+                ? `${state.energy} taps remaining`
+                : "Energy depleted — wait or complete tasks"}
           </p>
+
+          {/* Auto tap toggle + status */}
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${autoActive ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/10 text-white/60 border-white/10"}`}>{autoActive ? "ON" : "OFF"}</span>
+            <span className="text-[11px] font-black tracking-widest text-white/80">AUTO TAP</span>
+            <button type="button" onClick={handleAutoToggle} className="hh-toggle" aria-label="Toggle auto tap">
+              <span className="hh-toggle-dot" />
+            </button>
+          </div>
+          {autoActive ? (
+            <div className="flex items-center gap-2 mt-2">
+              <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${Math.min(100,(autoTapsDone/(AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps||1))*100)}%` }}></div></div>
+              <span className="text-[11px] font-mono font-bold whitespace-nowrap text-emerald-300"><Zap className="inline h-3 w-3 -mt-0.5"/>{state.energy}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mt-2">
+              <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${(state.energy/MAX_ENERGY)*100}%` }}></div></div>
+              <span className={`text-[11px] font-mono font-bold whitespace-nowrap ${state.energy<20 ? 'text-amber-300' : 'text-white/80'}`}><Zap className="inline h-3 w-3 -mt-0.5"/>{state.energy}/{MAX_ENERGY}</span>
+            </div>
+          )}
         </div>
 
         {/* ── Energy Card ── */}
@@ -763,6 +965,115 @@ export default function TapAndEarnPage() {
       )}
 
       {/* ── Global styles ── */}
+      {/* ── AUTO TAP: Eligible popup (20 mins free) ── */}
+      {showAutoFreePopup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowAutoFreePopup(false)}>
+          <div className="te-slideUp w-full max-w-[420px]" onClick={(e) => e.stopPropagation()}>
+            <div className="hh-modal">
+              <div className="te-modal-glow"></div>
+              <div className="relative z-10 text-center">
+                <h2 className="text-xl font-black text-white mb-2">🎉 You are eligible!</h2>
+                <p className="text-gray-300 mb-4">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowAutoFreePopup(false)} className="flex-1 rounded-full border border-white/15 text-white py-2">Later</button>
+                  <button onClick={() => { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full py-2">Start FREE 20 mins</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AUTO TAP: Plan selector ── */}
+      {showAutoPlans && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowAutoPlans(false)}>
+          <div className="te-slideUp w-full max-w-[420px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="hh-modal">
+              <div className="te-modal-glow"></div>
+              <div className="relative z-10">
+                <h2 className="text-lg font-black text-white text-center mb-1">Choose Auto Tap Plan</h2>
+                <p className="text-xs text-gray-400 text-center mb-3">Only first-time users get 20 mins FREE. After that it is crossed out.</p>
+                <div className="space-y-3">
+                  {AUTO_PLANS.map((p, idx) => {
+                    const isFree = p.id === "free1h";
+                    const freeDisabled = isFree && autoFirstFreeUsed;
+                    const cd = autoPlanCooldowns[p.id];
+                    const isLocked = !isFree && cd && cd > nowTick;
+                    const disabled = freeDisabled || !!isLocked;
+                    const lockLeft = isLocked ? cd - nowTick : 0;
+                    const lockDays = Math.floor(lockLeft/86400000);
+                    const lockHours = Math.floor((lockLeft%86400000)/3600000);
+                    return (
+                      <div key={p.id} className="flex items-center gap-2">
+                        <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">{idx+1}</span>
+                        <button disabled={disabled} onClick={() => startAutoPlan(p.id)} className={`flex-1 text-left relative rounded-2xl border p-3 flex items-center justify-between ${disabled ? "bg-white/5 border-white/10 opacity-50" : "bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border-emerald-500/30 hover:border-emerald-400/50"}`}>
+                          <div>
+                            <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{p.label} {isLocked ? "• Locked 1 week" : ""}</div>
+                            <div className="text-xs text-white/60">max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub} {isLocked ? `• ${lockDays}d ${lockHours}h left` : ""}</div>
+                          </div>
+                          <div className={`px-3 py-1 rounded-full text-xs font-black ml-2 shrink-0 ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{isLocked ? "Locked" : disabled ? "Used" : "Start"}</div>
+                          {disabled && <div className="absolute left-3 right-3 top-1/2 h-[2px] bg-gray-400/70 -translate-y-1/2"></div>}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-center text-white/50 mt-3">Auto tap locks the orb (no animation) — balance still rises in real time.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AUTO TAP: Requirement chooser for paid plans ── */}
+      {showAutoReq && reqPlan && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowAutoReq(false)}>
+          <div className="te-slideUp w-full max-w-[420px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="hh-modal">
+              <div className="te-modal-glow"></div>
+              <div className="relative z-10">
+                <h2 className="text-lg font-black text-white text-center mb-1">Requirement for {AUTO_PLANS.find(p=>p.id===reqPlan)?.label}</h2>
+                <p className="text-xs text-gray-400 text-center mb-3">Choose one of 3 options. Referrals use a new tracking link and count to your total.</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">a</span>
+                    <button onClick={() => { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                      <div>
+                        <div className="text-sm font-black text-white">{AUTO_REQ_TASK[reqPlan]} tasks required</div>
+                        <div className="text-xs text-white/70 mt-1">you've only done {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone}/{AUTO_REQ_TASK[reqPlan]}</div>
+                        <div className="mt-1 text-xs text-white/50">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]})</div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">b</span>
+                    <button onClick={() => { setReqChoice("referral"); router.push(`/refer/auto-tap?plan=${reqPlan}`); setShowAutoReq(false); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                      <div>
+                        <div className="text-sm font-black text-white">Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
+                        <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">c</span>
+                    <button onClick={() => setReqChoice("payment")} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                      <div>
+                        <div className="text-sm font-black text-white">Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()} for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} estimated taps</div>
+                        <div className="text-xs text-white/60 mt-1">One-time payment to unlock auto tap for this plan.</div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
+                    </button>
+                  </div>
+                  <button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black py-2">Unlock & Start Auto Tap</button>
+                  <button onClick={() => setShowAutoReq(false)} className="w-full rounded-full border border-white/15 text-white py-2">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
