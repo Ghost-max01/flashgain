@@ -338,48 +338,40 @@ export default function WithdrawPage() {
         {/* Payout Account — shown INSTEAD OF Available Balance when bank details are set */}
         {bankDetails?.locked ? (
           <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
-            <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
-            <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
             <div className="relative z-10">
-              {/* Top Row: Label + Eye icon */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/70 font-medium">Available to withdraw</span>
-                <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+              <div className="flex items-center justify-between mb-4">
+                <span className="hh-payout-label">Available to withdraw</span>
+                <button type="button" aria-label="Toggle balance visibility" className="hh-eye-btn">
+                  <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
               </div>
 
-              {/* Center: Large Balance */}
-              <h2 className="hh-balance-large text-center py-3">
-                <span className="text-xl align-top opacity-80">₦</span>
-                <span className="text-4xl font-black tracking-tight">
-                  {balance.toLocaleString().split('.')[0]}
-                </span>
-                <span className="text-lg opacity-60">.{balance.toFixed(2).split('.')[1] || '00'}</span>
+              <h2 className="hh-balance-large">
+                <span className="hh-currency-symbol">₦</span>
+                <span>{Number(balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </h2>
 
-              {/* Bottom Pills: Referral + Bank */}
-              <div className="flex gap-2">
-                <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1.5">
-                  <svg className="w-3 h-3 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="hh-payout-meta">
+                <div className="hh-payout-meta-pill">
+                  <svg className="w-3.5 h-3.5 text-white/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-[10px] text-white/80 font-medium">Referral: ₦{(userData?.referral_balance || 0).toLocaleString()}</span>
+                  <span>Referral: ₦{(userData?.referral_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1.5">
-                  <svg className="w-3 h-3 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="hh-payout-meta-pill">
+                  <svg className="w-3.5 h-3.5 text-white/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                   </svg>
-                  <span className="text-[10px] text-white/80 font-medium">{bankDetails.bank} •••• {bankDetails.accountNumber.slice(-4)}</span>
+                  <span>{bankDetails.bank} •••• {bankDetails.accountNumber.slice(-4)}</span>
                 </div>
               </div>
             </div>
           </div>
         ) : (
           <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
-            <div className="hh-orb hh-orb-1" aria-hidden="true"></div>
-            <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <span className="hh-live-dot"></span>
@@ -399,7 +391,7 @@ export default function WithdrawPage() {
         {/* Requirements Card */}
         <div className="hh-card hh-entry-3">
           <div className="hh-section-title mb-4">Withdrawal Requirements</div>
-          
+
           <div className="space-y-3">
             <div className="hh-req-item">
               <div className="flex items-center gap-3">
@@ -908,30 +900,101 @@ export default function WithdrawPage() {
         }
 
         .hh-card-balance {
-          background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,13,20,0.9) 50%, rgba(245,158,11,0.1) 100%);
-          border-color: rgba(16,185,129,0.2);
+          background: linear-gradient(180deg, #2d8fe8 0%, #1c6fcd 100%);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 26px;
+          padding: 18px 18px 12px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 16px 30px rgba(18,57,102,0.18);
         }
 
-        /* ─── ORBS ─── */
+        .hh-payout-label {
+          display: inline-block;
+          font-size: 13px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.86);
+          letter-spacing: -0.01em;
+        }
+
+        .hh-eye-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 9999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.2);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255,255,255,0.9);
+        }
+
+        .hh-balance-large {
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 2px;
+          margin: 0;
+          font-family: 'Inter', 'Segoe UI', sans-serif;
+          font-size: 50px;
+          font-weight: 800;
+          color: white;
+          line-height: 1.1;
+          letter-spacing: -0.07em;
+          text-align: center;
+          padding: 8px 0 4px;
+        }
+
+        .hh-currency-symbol {
+          font-size: 0.42em;
+          font-weight: 700;
+          opacity: 0.9;
+          transform: translateY(-6px);
+          display: inline-block;
+        }
+
+        .hh-payout-meta {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .hh-payout-meta-pill {
+          flex: 1;
+          min-height: 32px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          border-radius: 9999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.18);
+          padding: 6px 10px;
+          color: rgba(255,255,255,0.9);
+          font-size: 10px;
+          font-weight: 600;
+          text-align: center;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
         .hh-orb {
           position: absolute;
           border-radius: 50%;
           filter: blur(40px);
           pointer-events: none;
+          opacity: 0;
         }
 
         .hh-orb-1 {
           width: 150px; height: 150px;
-          background: radial-gradient(circle, rgba(16,185,129,0.2), transparent);
-          top: -40px; right: -40px;
-          animation: hh-orb-float 6s ease-in-out infinite;
+          background: radial-gradient(circle, rgba(255,255,255,0.12), transparent);
+          top: -40px; right: -30px;
         }
 
         .hh-orb-2 {
-          width: 100px; height: 100px;
-          background: radial-gradient(circle, rgba(245,158,11,0.15), transparent);
-          bottom: 20px; left: -20px;
-          animation: hh-orb-float 8s ease-in-out infinite reverse;
+          width: 80px; height: 80px;
+          background: radial-gradient(circle, rgba(255,255,255,0.08), transparent);
+          bottom: -10px; left: -10px;
         }
 
         @keyframes hh-orb-float {
@@ -966,15 +1029,6 @@ export default function WithdrawPage() {
         @keyframes hh-live-pulse {
           0%, 100% { box-shadow: 0 0 4px #10b981; transform: scale(1); }
           50%       { box-shadow: 0 0 10px #10b981, 0 0 20px rgba(16,185,129,0.4); transform: scale(1.15); }
-        }
-
-        /* ─── BALANCE LARGE ─── */
-        .hh-balance-large {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 48px;
-          font-weight: 800;
-          color: white;
-          line-height: 1.2;
         }
 
         /* ─── TOGGLE ─── */
