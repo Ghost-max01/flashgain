@@ -342,7 +342,7 @@ export default function WithdrawPage() {
             <div className="hh-orb hh-orb-2" aria-hidden="true"></div>
             <div className="relative z-10">
               {/* Top Row: Label + Eye icon */}
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-white/70 font-medium">Available to withdraw</span>
                 <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -351,7 +351,7 @@ export default function WithdrawPage() {
               </div>
 
               {/* Center: Large Balance */}
-              <h2 className="hh-balance-large text-center py-2">
+              <h2 className="hh-balance-large text-center py-3">
                 <span className="text-xl align-top opacity-80">₦</span>
                 <span className="text-4xl font-black tracking-tight">
                   {balance.toLocaleString().split('.')[0]}
@@ -360,7 +360,7 @@ export default function WithdrawPage() {
               </h2>
 
               {/* Bottom Pills: Referral + Bank */}
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2">
                 <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1.5">
                   <svg className="w-3 h-3 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
