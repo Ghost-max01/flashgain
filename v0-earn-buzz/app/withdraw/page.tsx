@@ -338,7 +338,7 @@ export default function WithdrawPage() {
         {/* Payout Account — shown INSTEAD OF Available Balance when bank details are set */}
         {bankDetails?.locked ? (
           <div className="hh-card hh-card-balance hh-entry-2 relative overflow-hidden">
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <span className="hh-payout-label">Available to withdraw</span>
                 <button type="button" aria-label="Toggle balance visibility" className="hh-eye-btn">
@@ -900,19 +900,20 @@ export default function WithdrawPage() {
         }
 
         .hh-card-balance {
-          background: linear-gradient(180deg, #2d8fe8 0%, #1c6fcd 100%);
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 26px;
+          background: linear-gradient(135deg, #3a9ae5 0%, #2d7fdf 38%, #1d6ece 100%);
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 28px;
           padding: 18px 18px 12px;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 16px 30px rgba(18,57,102,0.18);
+          min-height: 170px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 18px 28px rgba(21,91,179,0.18);
         }
 
         .hh-payout-label {
           display: inline-block;
-          font-size: 13px;
-          font-weight: 600;
-          color: rgba(255,255,255,0.86);
-          letter-spacing: -0.01em;
+          font-size: 14px;
+          font-weight: 700;
+          color: rgba(255,255,255,0.95);
+          letter-spacing: -0.02em;
         }
 
         .hh-eye-btn {
@@ -920,11 +921,12 @@ export default function WithdrawPage() {
           height: 28px;
           border-radius: 9999px;
           background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.2);
+          border: 1px solid rgba(255,255,255,0.22);
           display: inline-flex;
           align-items: center;
           justify-content: center;
           color: rgba(255,255,255,0.9);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
         }
 
         .hh-balance-large {
@@ -932,45 +934,48 @@ export default function WithdrawPage() {
           align-items: baseline;
           justify-content: center;
           gap: 2px;
-          margin: 0;
+          margin: 6px 0 0;
           font-family: 'Inter', 'Segoe UI', sans-serif;
-          font-size: 50px;
-          font-weight: 800;
+          font-size: clamp(2.8rem, 6vw, 4.3rem);
+          font-weight: 900;
           color: white;
-          line-height: 1.1;
-          letter-spacing: -0.07em;
+          line-height: 0.98;
+          letter-spacing: -0.08em;
           text-align: center;
-          padding: 8px 0 4px;
+          padding: 8px 0 2px;
+          text-shadow: 0 2px 12px rgba(8,45,107,0.18);
         }
 
         .hh-currency-symbol {
-          font-size: 0.42em;
-          font-weight: 700;
-          opacity: 0.9;
-          transform: translateY(-6px);
+          font-size: 0.44em;
+          font-weight: 800;
+          opacity: 0.92;
+          transform: translateY(-8px);
           display: inline-block;
+          letter-spacing: -0.04em;
         }
 
         .hh-payout-meta {
           display: flex;
+          align-items: center;
           gap: 8px;
-          margin-top: 10px;
+          margin-top: 14px;
         }
 
         .hh-payout-meta-pill {
           flex: 1;
-          min-height: 32px;
+          min-height: 30px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
           border-radius: 9999px;
-          background: rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.1);
           border: 1px solid rgba(255,255,255,0.18);
-          padding: 6px 10px;
-          color: rgba(255,255,255,0.9);
+          padding: 6px 8px;
+          color: rgba(255,255,255,0.92);
           font-size: 10px;
-          font-weight: 600;
+          font-weight: 700;
           text-align: center;
           white-space: nowrap;
           overflow: hidden;
@@ -982,7 +987,7 @@ export default function WithdrawPage() {
           border-radius: 50%;
           filter: blur(40px);
           pointer-events: none;
-          opacity: 0;
+          opacity: 0.7;
         }
 
         .hh-orb-1 {
