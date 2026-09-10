@@ -2130,7 +2130,7 @@ export default function DashboardPage() {
               <span className="text-2xl">📢</span>
               <div className="flex-1">
                 <div className="text-sm font-bold text-white">FlashGain 9ja Channel</div>
-                <div className="text-xs text-amber-300/80">Join for daily updates &amp; exclusive bonuses — speed: 0.0 (was 0.5)</div>
+                <div className="text-xs text-amber-300/80">Join for daily updates &amp; exclusive bonuses</div>
               </div>
               <span className="text-xs font-black text-amber-300 bg-amber-500/20 px-2 py-1 rounded-full">Join</span>
             </a>
