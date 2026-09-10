@@ -627,13 +627,15 @@ export default function DashboardPage() {
   }, []);
   const handleTapEarn = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     try { (e as any).stopPropagation?.(); } catch {}
+    // While rapid-tap warning active, disable tap input entirely until it finishes
+    if (showRapidTapWarning) return
     if (autoActive) return; // locked while auto
     if (tapExhaustUntil && tapExhaustUntil > Date.now()) { toast({ title: "Exhausted", description: `Wait ${Math.ceil(tapExhaustLeft/60000)}m ${Math.ceil((tapExhaustLeft%60000)/1000)}s to recharge` }); return; }
     if (tapEnergy <= 0) { toast({ title: "Out of energy", description: "Wait 10 mins to recharge or use Auto Tap ⚡" }); return; }
     // Rapid tap detection: >3 taps in 1 second
     const now = Date.now();
     const recentTaps = tapTimestamps.filter(t => now - t < 1000);
-    if (recentTaps.length >= 3 && !showRapidTapWarning) {
+    if (recentTaps.length >= 3) {
       setShowRapidTapWarning(true);
       if (rapidTapWarningRef.current) clearTimeout(rapidTapWarningRef.current);
       rapidTapWarningRef.current = setTimeout(() => {
@@ -1667,7 +1669,7 @@ export default function DashboardPage() {
               <div><div className="text-xs text-white/60 uppercase tracking-wider font-bold">Your Score</div><div className="text-3xl font-black text-white">{trustScore}</div><div className="text-xs font-bold" style={{color: getLevel(trustScore).color}}>{getLevel(trustScore).label} • {getProgress(trustScore)}%</div></div>
               <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center"><span className="text-2xl font-black" style={{color: getLevel(trustScore).color}}>{trustScore}</span></div>
             </div>
-            {(() => { const m = trustMeta || { timeMs:0, referralCount:0, navCount:0, payCount:0, taskCount:0, tapCount:0 }; const timePts=Math.floor(m.timeMs/(5*60*1000))*2; const refPts=Math.floor(m.referralCount/5)*2; const navPts=m.navCount*1; const payPts=m.payCount*5; const taskPts=Math.floor((m.taskCount||0)/10)*2; const tapPts=Math.floor((m.tapCount||0)/50)*1; const rows=[
+            {(() => { const m = trustMeta || { timeMs:0, referralCount:0, navCount:0, payCount:0, taskCount:0, tapCount:0 }; const timePts=Math.floor(m.timeMs/(5*60*1000))*2; const refPts=Math.floor(m.referralCount/5)*2; const navPts=Math.floor(m.navCount/5); const payPts=m.payCount*5; const taskPts=Math.floor((m.taskCount||0)/10)*2; const tapPts=Math.floor((m.tapCount||0)/50)*1; const rows=[
               { label:"Time in app (5m = +2)", value: `${Math.floor(m.timeMs/60000)}m`, pts: timePts, icon: Clock, color:"text-emerald-400" },
               { label:"Referrals (5 = +2)", value: `${m.referralCount}`, pts: refPts, icon: Users, color:"text-violet-400" },
               { label:"Tasks done (10 = +2)", value: `${m.taskCount||0}`, pts: taskPts, icon: Gift, color:"text-emerald-300" },

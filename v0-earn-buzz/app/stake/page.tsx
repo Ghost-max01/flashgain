@@ -97,32 +97,33 @@ export default function StakeWinPage() {
     return `${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
   }
 
-  // Spin & Win state (inside same /stake page, pool untouched)
-  const [spinStake, setSpinStake] = useState(1000)
-  const [spinCustom, setSpinCustom] = useState("1000")
-  const [spinSelectedPct, setSpinSelectedPct] = useState<number | null>(null) // tracks which tier % was selected
+  // Spin & Win state (inside same /stake page, pool untouched) — unified with top stake selector, deduped UI
   const [spinning, setSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [spinResult, setSpinResult] = useState<(typeof SPIN_SEGMENTS)[number] | null>(null)
   const [showSpinResult, setShowSpinResult] = useState(false)
   const [spins, setSpins] = useState(0)
-  // Per-tier cooldown tracking: key = spin_tier_cooldowns, value = { 20: timestamp, 30: timestamp, 40: timestamp }
+  // Per-tier 24h cooldown: Record< tierPct, expiryTimestamp > — per-user via localStorage (per-browser), per-tier timers
   const [spinCooldowns, setSpinCooldowns] = useState<Record<number, number>>({})
 
-  // Recalculate spinStake when balance changes if a tier % is selected
-  useEffect(() => {
-    if (spinSelectedPct !== null && balance > 0) {
-      const amt = Math.floor(balance * spinSelectedPct / 100)
-      if (amt !== spinStake) {
-        setSpinStake(amt)
-        setSpinCustom(String(amt))
-      }
-    }
-  }, [balance, spinSelectedPct])
   useEffect(() => {
     try {
       const raw = localStorage.getItem("spin_tier_cooldowns")
-      if (raw) setSpinCooldowns(JSON.parse(raw))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        // migrate old nested format {20:{userId:ts}} -> flat {20:ts}
+        const flat: Record<number, number> = {}
+        for (const k of [20,30,40]) {
+          const v = parsed[k]
+          if (typeof v === "number") flat[k] = v
+          else if (v && typeof v === "object") {
+            const vals = Object.values(v) as number[]
+            if (vals.length) flat[k] = Math.max(...vals)
+          }
+        }
+        if (Object.keys(flat).length) setSpinCooldowns(flat)
+        else if (parsed && typeof parsed === "object" && !flat[20]) setSpinCooldowns(parsed)
+      }
     } catch {}
   }, [])
 
@@ -139,31 +140,38 @@ export default function StakeWinPage() {
     return 40
   }
 
+  // spin uses the unified top stake selector amount (deduped)
+  const spinStake = amount
+  const spinTierPct = getTierForStake(amount)
+
   const doSpin = useCallback(() => {
     if (spinning) return
     if (spinStake < 200) return toast({ title: "Min stake ₦200", variant: "destructive" })
     if (spinStake > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
 
-    // Determine which tier this stake corresponds to
+    // Determine which tier this stake corresponds to (derived from top selector)
     const tierPct = getTierForStake(spinStake)
     const now = Date.now()
-    const cooldown = spinCooldowns[tierPct]?.[userIdKey] || 0
+    const cooldown = (spinCooldowns as Record<number, number>)[tierPct] || 0
     if (cooldown > now) {
-      const left = Math.ceil((cooldown - now) / 3600000)
-      return toast({ title: `${tierPct}% tier on cooldown`, description: `Wait ${left}h before spinning this tier again`, variant: "destructive" })
+      const leftH = Math.ceil((cooldown - now) / 3600000)
+      const leftM = Math.ceil((cooldown - now) / 60000)
+      const label = leftH >= 1 ? `${leftH}h` : `${leftM}m`
+      return toast({ title: `${tierPct}% tier on cooldown`, description: `Wait ${label} before spinning this tier again`, variant: "destructive" })
     }
 
     // ── RANDOM WIN LOGIC: One tier wins per spin, decided at spin moment ──
-    // Each spin, randomly pick which of the 3 tiers (20/30/40%) is the winner
-    const tiers = [20, 30, 40]
+    // Each spin, randomly pick which of the 3 tiers (20/30/40%) is the winner — genuinely random per attempt
+    const tiers = [20, 30, 40] as const
     const winningTier = tiers[Math.floor(Math.random() * tiers.length)]
     const userPickedWinningTier = (tierPct === winningTier)
 
-    // Set cooldown for this tier (24hr from now)
-    const newCooldowns = { ...spinCooldowns }
-    if (!newCooldowns[tierPct]) newCooldowns[tierPct] = {}
-    newCooldowns[tierPct][userIdKey] = now + 24 * 60 * 60 * 1000
+    // Set 24h cooldown for THIS tier (per-tier timer, max 3 spins/day naturally)
+    const newCooldowns: Record<number, number> = { ...spinCooldowns, [tierPct]: now + 24 * 60 * 60 * 1000 }
     setSpinCooldowns(newCooldowns)
+
+    // Mark daily Spin & Win played for withdrawal requirement (resets via withdraw page's daily check)
+    try { localStorage.setItem("tivexx-spin-played-date", new Date().toDateString()) } catch {}
 
     const target = userPickedWinningTier
       ? SPIN_SEGMENTS.filter(s => s.win)[Math.floor(Math.random() * SPIN_SEGMENTS.filter(s => s.win).length)]
@@ -197,9 +205,6 @@ export default function StakeWinPage() {
       }
     }, 3200)
   }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
-
-  // Stable user key for cooldown storage
-  const userIdKey = typeof window !== "undefined" ? (() => { try { const u = JSON.parse(localStorage.getItem("tivexx-user") || "null"); return u?.id || u?.userId || "guest"; } catch { return "guest"; } })() : "guest"
 
   const onStake = () => {
     const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
@@ -333,9 +338,51 @@ export default function StakeWinPage() {
           <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p>
         </div>
 
-        {/* Spin & Win — commented out per request (pool untouched, section removed from display) */}
+        {/* Spin & Win Wheel — uncommented & deduped: directly after stake selector, no duplicate tier controls (uses top selector) */}
+        <div className="hh-card flex flex-col items-center !py-6 border-amber-500/20">
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-2 font-black tracking-widest text-[11px]"><Crown className="h-4 w-4 text-amber-300" /> SPIN & WIN</div>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">30% WIN</span>
+          </div>
+          <p className="w-full text-left text-[11px] text-white/50 mt-1">Uses your selected stake above (₦{spinStake.toLocaleString()} • {spinTierPct}%). One tier wins at random each spin.</p>
+          {/* Cooldown hint per tier — individual 24h timers */}
+          <div className="mt-2 w-full grid grid-cols-3 gap-2">
+            {[20,30,40].map(pct => {
+              const expiry = (spinCooldowns as Record<number, number>)[pct] || 0
+              const active = expiry > Date.now()
+              const leftMs = Math.max(0, expiry - Date.now())
+              const leftH = Math.ceil(leftMs/3600000)
+              return (
+                <div key={pct} className={`rounded-xl border py-1.5 text-center text-[10px] font-black ${active ? "bg-amber-500/10 border-amber-500/30 text-amber-300" : "bg-white/5 border-white/10 text-white/60"}`}>
+                  {pct}% {active ? `• ${leftH}h lock` : "• ready"}
+                </div>
+              )
+            })}
+          </div>
+          <div className="relative mt-5">
+            <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-amber-500/30 via-emerald-500/20 to-cyan-500/30 blur-xl"></div>
+            <div className="relative rounded-full p-1.5 bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.35)]">
+              <div className="rounded-full p-1 bg-[#0a1620]">
+                <div className="relative rounded-full overflow-hidden" style={{ width: "min(78vw, 300px)", height: "min(78vw, 300px)", transform: `rotate(${rotation}deg)`, transition: spinning ? "transform 3.2s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none" }}>
+                  <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(from -90deg, ${SPIN_SEGMENTS.map((s, i) => { const a = (i / SPIN_SEGMENTS.length) * 360; const b = ((i + 1) / SPIN_SEGMENTS.length) * 360; return `${s.color} ${a}deg ${b}deg` }).join(", ")})` }} />
+                  {SPIN_SEGMENTS.map((s, i) => { const ang = (i + 0.5) * (360 / SPIN_SEGMENTS.length) - 90; return (<div key={i} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-[10px] tracking-widest text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" style={{ transform: `translate(-50%, -50%) rotate(${ang}deg) translateY(-88px) rotate(90deg)` }}>{s.label}</div>) })}
+                  <div className="absolute inset-0 rounded-full border border-white/10"></div>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
+            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>TAP TO</span><span>SPIN</span></>}</button>
+          </div>
+          <div className="mt-2 text-[11px] font-bold text-white/50">Stake ₦{spinStake.toLocaleString()} • Spins {spins} • Max 3/day (one per tier)</div>
+          {showSpinResult && spinResult && (
+            <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
+              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{(spinStake * spinResult.amount).toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, winning tier varies each spin</div>}
+              <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${(spinStake * spinResult.amount - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
+            </div>
+          )}
+        </div>
 
-        {/* Social proof */}
+        {/* Social proof — live stakers (now below wheel, not between stake selector and wheel) */}
         <div className="hh-card">
           <div className="flex items-center justify-between">
             <h4 className="font-black flex items-center gap-2"><Users className="h-4 w-4 text-white" /> Live stakers</h4>

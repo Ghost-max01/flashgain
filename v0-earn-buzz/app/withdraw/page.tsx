@@ -27,6 +27,7 @@ export default function WithdrawPage() {
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
   const [showTrustRequiredPopup, setShowTrustRequiredPopup] = useState(false)
   const [showHoursPopup, setShowHoursPopup] = useState(false)
+  const [spinPlayedToday, setSpinPlayedToday] = useState(false)
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
@@ -155,9 +156,17 @@ export default function WithdrawPage() {
       updateUserFromStorage()
     }
 
+    const updateSpinPlayed = () => {
+      try {
+        const today = new Date().toDateString()
+        const spinDate = localStorage.getItem("tivexx-spin-played-date") || ""
+        setSpinPlayedToday(today === spinDate && spinDate !== "")
+      } catch {}
+    }
     const onFocus = () => {
       updateCompleted()
       updateUserFromStorage()
+      updateSpinPlayed()
       // also refresh locked bank details when page regains focus
       try {
         const bd = getBankDetails()
@@ -178,13 +187,14 @@ export default function WithdrawPage() {
     document.addEventListener("visibilitychange", onFocus)
     window.addEventListener("tivexx:update", onCustomUpdate as EventListener)
 
-    // Poll completed tasks every 500ms to catch updates from same tab
+    // Poll completed tasks + spin-played every 500ms to catch updates from same tab (instant 0/1 -> 1/1)
     const pollInterval = setInterval(() => {
       try {
         const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
         const count = Array.isArray(completed) ? completed.length : 0
         setCompletedTasksCount(count)
         updateBankDetails()
+        updateSpinPlayed()
       } catch (e) {
         // ignore parse errors
       }

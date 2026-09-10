@@ -16,8 +16,8 @@ const STEPS: Step[] = [
   { id: "welcome", title: "Welcome to FlashGain 9ja! 👋", desc: "30-sec moving tour — follow the highlight!", icon: Sparkles, color: "from-emerald-500 to-teal-600" },
   { id: "balance", title: "Your Balance", desc: "Every tap, task & referral lands here instantly.", target: '[data-tour="balance"]', icon: Wallet, color: "from-emerald-500 to-emerald-600" },
   { id: "tap", title: "Tap Orb", desc: "Tap the green orb — 100 energy, ₦100 per tap.", target: '[data-tour="tap-orb"]', icon: Zap, color: "from-emerald-500 to-cyan-600" },
-  { id: "trust", title: "Trust Score", desc: "Earn: 5 mins +2, 10 referrals +2, nav +1, payment +5.", target: '[data-tour="trust"]', icon: Award, color: "from-blue-500 to-violet-600" },
-  { id: "quick", title: "Quick Actions", desc: "Tasks, Investments, Loans — one tap to start.", target: '[data-tour="quick-actions"]', icon: TrendingUp, color: "from-amber-500 to-orange-600" },
+  { id: "trust", title: "Trust Score", desc: "Earn: 5 mins +2, 5 referrals +2, 5 navs +1, 10 tasks +2, 50 taps +1, payment +5.", target: '[data-tour="trust"]', icon: Award, color: "from-blue-500 to-violet-600" },
+  { id: "quick", title: "Quick Actions", desc: "Tasks, Loans — one tap to start.", target: '[data-tour="quick-actions"]', icon: TrendingUp, color: "from-amber-500 to-orange-600" },
   { id: "playwin", title: "Play & Win", desc: "Stake & Spin wheel — live pool + 30% win.", target: '[data-tour="play-win"]', icon: Gift, color: "from-amber-500 to-emerald-600" },
   { id: "referral", title: "Refer & Earn", desc: "Share link → ₦5,000 per friend!", target: '[data-tour="referral"]', icon: Users, color: "from-violet-500 to-blue-600" },
 ];
