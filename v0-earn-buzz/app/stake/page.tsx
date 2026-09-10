@@ -13,6 +13,8 @@ const STAKE_TIERS = [
   { pct: 40, label: "40%", desc: "Aggressive" },
 ]
 const MULTIPLIER = 2.2
+const STAKE_TIERS_MAP: Record<number, (typeof STAKE_TIERS)[number]> = {}
+STAKE_TIERS.forEach(t => { STAKE_TIERS_MAP[t.pct] = t })
 
 // Spin & Win — 30% win = 3 wins / 10 segments (additive inside /stake)
 const SPIN_SEGMENTS = [
@@ -98,6 +100,7 @@ export default function StakeWinPage() {
   // Spin & Win state (inside same /stake page, pool untouched)
   const [spinStake, setSpinStake] = useState(1000)
   const [spinCustom, setSpinCustom] = useState("1000")
+  const [spinSelectedPct, setSpinSelectedPct] = useState<number | null>(null) // tracks which tier % was selected
   const [spinning, setSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [spinResult, setSpinResult] = useState<(typeof SPIN_SEGMENTS)[number] | null>(null)
@@ -106,7 +109,16 @@ export default function StakeWinPage() {
   // Per-tier cooldown tracking: key = spin_tier_cooldowns, value = { 20: timestamp, 30: timestamp, 40: timestamp }
   const [spinCooldowns, setSpinCooldowns] = useState<Record<number, number>>({})
 
-  // Load cooldowns on mount
+  // Recalculate spinStake when balance changes if a tier % is selected
+  useEffect(() => {
+    if (spinSelectedPct !== null && balance > 0) {
+      const amt = Math.floor(balance * spinSelectedPct / 100)
+      if (amt !== spinStake) {
+        setSpinStake(amt)
+        setSpinCustom(String(amt))
+      }
+    }
+  }, [balance, spinSelectedPct])
   useEffect(() => {
     try {
       const raw = localStorage.getItem("spin_tier_cooldowns")
@@ -337,9 +349,9 @@ export default function StakeWinPage() {
           <div className="mt-3 w-full grid grid-cols-3 gap-2">
             {STAKE_TIERS.map(t => {
               const stakeAmt = Math.floor(balance * t.pct / 100)
-              const active = spinStake === stakeAmt
+              const active = spinSelectedPct === t.pct
               return (
-                <button key={t.pct} onClick={() => { setSpinStake(stakeAmt); setSpinCustom(String(stakeAmt)) }} className={`rounded-2xl border p-2.5 text-center font-black transition ${active ? "bg-amber-500 text-white border-amber-400 shadow-[0_6px_16px_rgba(245,158,11,0.3)]" : "bg-white/5 border-white/10 text-white hover:border-amber-500/30"}`}>
+                <button key={t.pct} onClick={() => { setSpinStake(stakeAmt); setSpinCustom(String(stakeAmt)); setSpinSelectedPct(t.pct) }} className={`rounded-2xl border p-2.5 text-center font-black transition ${active ? "bg-amber-500 text-white border-amber-400 shadow-[0_6px_16px_rgba(245,158,11,0.3)]" : "bg-white/5 border-white/10 text-white hover:border-amber-500/30"}`}>
                   <div className="text-sm font-black">{t.label}</div>
                   <div className="text-[10px] text-white/50">{t.desc}</div>
                   <div className="text-xs font-bold text-amber-300 mt-0.5">₦{stakeAmt.toLocaleString()}</div>
@@ -423,7 +435,7 @@ export default function StakeWinPage() {
         <div className="max-w-md mx-auto px-4 pb-4 pt-2 bg-gradient-to-t from-[#050d14] via-[#050d14]/95 to-transparent">
           <div className="rounded-[20px] bg-white/5 backdrop-blur-xl border border-white/10 p-2 flex gap-2">
             <div className="flex-1 rounded-full bg-black/30 border border-white/10 px-4 py-3 flex items-center justify-between">
-              <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[selectedTier]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
+              <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[getTierForStake(amount)]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
               <span className="text-sm font-black text-amber-300">→ Win ₦{win.toLocaleString()}</span>
             </div>
             <Button onClick={onStake} className="rounded-full hh-btn-primary font-black px-6">Tap to Spin</Button>
