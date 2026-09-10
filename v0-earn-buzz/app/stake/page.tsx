@@ -333,74 +333,7 @@ export default function StakeWinPage() {
           <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p>
         </div>
 
-        {/* Spin & Win — 30% win, cool wheel, inside /stake as requested (pool left as is) */}
-        <div className="hh-card flex flex-col items-center !py-6 border-amber-500/20">
-          <div className="w-full flex items-center justify-between">
-            <div className="flex items-center gap-2 font-black tracking-widest text-[12px]"><Crown className="h-4 w-4 text-amber-300" /> SPIN & WIN</div>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">30% WIN</span>
-          </div>
-          <p className="w-full text-left text-xs text-white/60 mt-1">Stake, spin, win up to ×5. Cool neon wheel, 30% win rate, instant payout. Pool above stays.</p>
-          <div className="mt-1 w-full grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-2.5 text-center"><div className="text-[10px] font-black text-white/50">YOUR BALANCE</div><div className="text-sm font-black">₦{balance.toLocaleString()}</div></div>
-            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-center"><div className="text-[10px] font-black text-amber-300">WIN RATE</div><div className="text-lg font-black text-amber-300">30%</div></div>
-            <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-center"><div className="text-[10px] font-black text-emerald-300">SPINS</div><div className="text-lg font-black text-emerald-300">{spins}</div></div>
-          </div>
-          {/* Spin stake tier selector — percentage-based */}
-          <div className="mt-3 w-full grid grid-cols-3 gap-2">
-            {STAKE_TIERS.map(t => {
-              const stakeAmt = Math.floor(balance * t.pct / 100)
-              const active = spinSelectedPct === t.pct
-              return (
-                <button key={t.pct} onClick={() => { setSpinStake(stakeAmt); setSpinCustom(String(stakeAmt)); setSpinSelectedPct(t.pct) }} className={`rounded-2xl border p-2.5 text-center font-black transition ${active ? "bg-amber-500 text-white border-amber-400 shadow-[0_6px_16px_rgba(245,158,11,0.3)]" : "bg-white/5 border-white/10 text-white hover:border-amber-500/30"}`}>
-                  <div className="text-sm font-black">{t.label}</div>
-                  <div className="text-[10px] text-white/50">{t.desc}</div>
-                  <div className="text-xs font-bold text-amber-300 mt-0.5">₦{stakeAmt.toLocaleString()}</div>
-                </button>
-              )
-            })}
-          </div>
-          <div className="mt-2 flex gap-2 w-full">
-            <div className="flex-1 relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-black text-xs">₦</span>
-              <input
-                inputMode="numeric"
-                placeholder={`Custom spin stake`}
-                value={spinCustom}
-                onChange={e => {
-                  const raw = e.target.value.replace(/[^0-9]/g, "")
-                  setSpinCustom(raw)
-                  const n = Number(raw || 0)
-                  if (n >= 200) setSpinStake(n)
-                }}
-                className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-3 py-2.5 text-sm font-bold text-white placeholder:text-white/30 outline-none focus:border-amber-500/40"
-              />
-            </div>
-            <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/20 px-3 flex flex-col justify-center text-center min-w-[100px]">
-              <div className="text-[9px] tracking-widest font-black text-white/60">YOU COULD WIN</div>
-              <div className="text-base font-black text-amber-300">₦{Math.floor(spinStake * MULTIPLIER).toLocaleString()}</div>
-            </div>
-          </div>
-          <div className="relative mt-5">
-            <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-amber-500/30 via-emerald-500/20 to-cyan-500/30 blur-xl"></div>
-            <div className="relative rounded-full p-1.5 bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.35)]">
-              <div className="rounded-full p-1 bg-[#0a1620]">
-                <div className="relative rounded-full overflow-hidden" style={{ width: "min(78vw, 300px)", height: "min(78vw, 300px)", transform: `rotate(${rotation}deg)`, transition: spinning ? "transform 3.2s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none" }}>
-                  <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(from -90deg, ${SPIN_SEGMENTS.map((s, i) => { const a = (i / SPIN_SEGMENTS.length) * 360; const b = ((i + 1) / SPIN_SEGMENTS.length) * 360; return `${s.color} ${a}deg ${b}deg` }).join(", ")})` }} />
-                  {SPIN_SEGMENTS.map((s, i) => { const ang = (i + 0.5) * (360 / SPIN_SEGMENTS.length) - 90; return (<div key={i} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-[10px] tracking-widest text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" style={{ transform: `translate(-50%, -50%) rotate(${ang}deg) translateY(-88px) rotate(90deg)` }}>{s.label}</div>) })}
-                  <div className="absolute inset-0 rounded-full border border-white/10"></div>
-                </div>
-              </div>
-            </div>
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
-            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>TAP TO</span><span>SPIN</span></>}</button>
-          </div>
-          {showSpinResult && spinResult && (
-            <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
-              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{(spinStake * spinResult.amount).toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, 30% win each spin</div>}
-              <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${(spinStake * spinResult.amount - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
-            </div>
-          )}
-        </div>
+        {/* Spin & Win — commented out per request (pool untouched, section removed from display) */}
 
         {/* Social proof */}
         <div className="hh-card">
