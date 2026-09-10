@@ -24,9 +24,17 @@ export default function SetupBankAfterSignupPage() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [bankSearchInput, setBankSearchInput] = useState("")
 
-  const filteredBanks = banksList.filter((bankItem) =>
-    bankItem.name.toLowerCase().includes(bankSearchInput.toLowerCase())
-  )
+  const filteredBanks = (() => {
+    const q = bankSearchInput.trim().toLowerCase()
+    if (!q) return banksList
+    const filtered = banksList.filter((bankItem) => bankItem.name.toLowerCase().includes(q))
+    // Rank: exact match first, then startsWith, then direct substring, so e.g. "palmpay" shows PalmPay at top not Bankit/Kolomoni
+    return filtered.sort((a, b) => {
+      const an = a.name.toLowerCase(), bn = b.name.toLowerCase()
+      const score = (n: string) => n === q ? 0 : n.startsWith(q) ? 1 : n.includes(` ${q}`) ? 2 : 3
+      return score(an) - score(bn)
+    })
+  })()
 
   // If already completed bank setup, show locked view / skip to welcome
   useEffect(() => {

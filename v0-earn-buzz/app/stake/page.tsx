@@ -287,11 +287,27 @@ export default function StakeWinPage() {
           <div className="grid grid-cols-3 gap-2 mt-3">
             {STAKE_TIERS.map(t => {
               const stakeAmt = Math.floor(balance * t.pct / 100)
+              const expiry = (spinCooldowns as Record<number, number>)[t.pct] || 0
+              const isUsed = expiry > Date.now()
               return (
-                <button key={t.pct} onClick={() => { setAmount(stakeAmt); setCustom(String(stakeAmt)) }} className={`rounded-2xl border p-3 text-center font-black transition ${amount===stakeAmt ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_8px_20px_rgba(16,185,129,0.35)]" : "bg-white/5 border-white/10 text-white hover:border-emerald-500/30"}`}>
-                  <div className="text-lg font-black">{t.label}</div>
-                  <div className="text-[10px] text-white/50 mt-0.5">{t.desc}</div>
-                  <div className="text-xs font-bold text-emerald-300 mt-1">₦{stakeAmt.toLocaleString()}</div>
+                <button
+                  key={t.pct}
+                  disabled={isUsed}
+                  onClick={() => {
+                    if (isUsed) {
+                      const leftH = Math.ceil((expiry - Date.now()) / 3600000)
+                      const leftM = Math.ceil((expiry - Date.now()) / 60000)
+                      const label = leftH >= 1 ? `${leftH}h` : `${leftM}m`
+                      toast({ title: `${t.pct}% already used`, description: `This tier is locked for ${label}. Choose a remaining tier.`, variant: "destructive" })
+                      return
+                    }
+                    setAmount(stakeAmt); setCustom(String(stakeAmt))
+                  }}
+                  className={`rounded-2xl border p-3 text-center font-black transition relative overflow-hidden ${isUsed ? "bg-white/5 border-white/10 text-white/35 cursor-not-allowed opacity-60" : amount===stakeAmt ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_8px_20px_rgba(16,185,129,0.35)]" : "bg-white/5 border-white/10 text-white hover:border-emerald-500/30"}`}>
+                  <div className="text-lg font-black flex items-center justify-center gap-1">{t.label} {isUsed && <Lock className="h-3 w-3 opacity-60" />}</div>
+                  <div className={`text-[10px] mt-0.5 ${isUsed ? "text-white/30" : "text-white/50"}`}>{isUsed ? "Used • 24h lock" : t.desc}</div>
+                  <div className={`text-xs font-bold mt-1 ${isUsed ? "text-white/30" : "text-emerald-300"}`}>₦{stakeAmt.toLocaleString()}</div>
+                  {isUsed && <div className="absolute inset-0 bg-black/20 pointer-events-none" />}
                 </button>
               )
             })}
@@ -336,16 +352,18 @@ export default function StakeWinPage() {
           <Button onClick={onStake} className="w-full mt-4 rounded-full hh-btn-primary font-black text-base py-6 shadow-[0_10px_30px_rgba(16,185,129,0.35)]">
             <Zap className="h-5 w-5 mr-2" /> Stake ₦{amount.toLocaleString()} — Win ₦{win.toLocaleString()}
           </Button>
-          <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p>
+          {/* Thumb-zone design text — commented out per request: next element after Stake→Win button is now 20%/30%/40% pills */}
+          {/* <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p> */}
         </div>
 
-        {/* Spin & Win Wheel — uncommented & deduped: directly after stake selector, no duplicate tier controls (uses top selector) */}
+        {/* Spin & Win Wheel — directly after stake selector: next sibling after Stake→Win is 20%/30%/40% pills */}
         <div className="hh-card flex flex-col items-center !py-6 border-amber-500/20">
-          <div className="w-full flex items-center justify-between">
+          {/* SPIN & WIN header + description — commented out per request (20%/30%/40% is now immediate next after stake button) */}
+          {/* <div className="w-full flex items-center justify-between">
             <div className="flex items-center gap-2 font-black tracking-widest text-[11px]"><Crown className="h-4 w-4 text-amber-300" /> SPIN & WIN</div>
             <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">30% WIN</span>
           </div>
-          <p className="w-full text-left text-[11px] text-white/50 mt-1">Uses your selected stake above (₦{spinStake.toLocaleString()} • {spinTierPct}%). One tier wins at random each spin.</p>
+          <p className="w-full text-left text-[11px] text-white/50 mt-1">Uses your selected stake above (₦{spinStake.toLocaleString()} • {spinTierPct}%). One tier wins at random each spin.</p> */}
           {/* Cooldown hint per tier — individual 24h timers */}
           <div className="mt-2 w-full grid grid-cols-3 gap-2">
             {[20,30,40].map(pct => {

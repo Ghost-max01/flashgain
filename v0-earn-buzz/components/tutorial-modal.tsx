@@ -50,7 +50,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
       icon: Gift,
       title: "Welcome to FlashGain 9ja!",
       description:
-        "Earn welcome bonus and daily cash by completing easy tasks. But first, join our Telegram channel for updates!",
+        "Earn welcome bonus and daily cash by completing easy tasks. But first, join our WhatsApp channel for updates!",
       color: "emerald",
       gradient: "from-emerald-500 to-emerald-600",
     },
@@ -85,7 +85,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
 
   const handleNext = () => {
     if (currentStep === 0 && !joinedChannel) {
-      setMessage("Please join the Telegram channel first before proceeding.");
+      setMessage("Please join the WhatsApp channel first before proceeding.");
       return;
     }
 
@@ -105,7 +105,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
   };
 
   const handleJoinChannel = () => {
-    window.open("https://t.me/flashgain9janews", "_self");
+    window.open("https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", "_blank");
     setJoinedChannel(true);
     setMessage("");
     localStorage.setItem("joined_community", "true");
@@ -162,7 +162,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
                   {!joinedChannel && (
                     <button onClick={handleJoinChannel} className="hh-join-btn">
                       <Send className="h-4 w-4" />
-                      <span>Join Telegram Channel</span>
+                      <span>Join WhatsApp Channel</span>
                       <Sparkles className="h-3 w-3 text-amber-300 animate-pulse" />
                     </button>
                   )}

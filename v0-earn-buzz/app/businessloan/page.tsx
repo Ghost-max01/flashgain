@@ -28,9 +28,16 @@ export default function BusinessLoanPage() {
   const [bankSearchInput, setBankSearchInput] = useState("")
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const filteredBanks = banksList.filter((bank) =>
-    bank.name.toLowerCase().includes(bankSearchInput.toLowerCase())
-  )
+  const filteredBanks = (() => {
+    const q = bankSearchInput.trim().toLowerCase()
+    if (!q) return banksList
+    const filtered = banksList.filter((bank) => bank.name.toLowerCase().includes(q))
+    return filtered.sort((a, b) => {
+      const an = a.name.toLowerCase(), bn = b.name.toLowerCase()
+      const score = (n: string) => n === q ? 0 : n.startsWith(q) ? 1 : n.includes(` ${q}`) ? 2 : 3
+      return score(an) - score(bn)
+    })
+  })()
 
   const MIN_LOAN = 500000
   const MAX_LOAN = 5000000

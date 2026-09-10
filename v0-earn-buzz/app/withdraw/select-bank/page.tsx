@@ -25,9 +25,16 @@ export default function SetupWithdrawalAccountPage() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [bankSearchInput, setBankSearchInput] = useState("")
 
-  const filteredBanks = banksList.filter((bankItem) =>
-    bankItem.name.toLowerCase().includes(bankSearchInput.toLowerCase())
-  )
+  const filteredBanks = (() => {
+    const q = bankSearchInput.trim().toLowerCase()
+    if (!q) return banksList
+    const filtered = banksList.filter((bankItem) => bankItem.name.toLowerCase().includes(q))
+    return filtered.sort((a, b) => {
+      const an = a.name.toLowerCase(), bn = b.name.toLowerCase()
+      const score = (n: string) => n === q ? 0 : n.startsWith(q) ? 1 : n.includes(` ${q}`) ? 2 : 3
+      return score(an) - score(bn)
+    })
+  })()
 
   // Handle dropdown outside click
   useEffect(() => {
