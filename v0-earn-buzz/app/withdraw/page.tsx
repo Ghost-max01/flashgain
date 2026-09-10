@@ -48,14 +48,18 @@ export default function WithdrawPage() {
     const today = new Date().toDateString()
     
     if (lastResetDate !== today) {
-      // Reset completed tasks for the new day
+      // Reset completed tasks and spin play for the new day
       localStorage.setItem("tivexx-completed-tasks", "[]")
       localStorage.setItem("tivexx-last-reset-date", today)
       setCompletedTasksCount(0)
+      localStorage.setItem("tivexx-spin-played-date", "") // reset daily spin requirement
+      setSpinPlayedToday(false)
     } else {
       // Get completed tasks for the current day
       const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
       setCompletedTasksCount(completedTasks.length)
+      const spinDate = localStorage.getItem("tivexx-spin-played-date") || ""
+      setSpinPlayedToday(today === spinDate)
     }
 
     fetchReferralCount(user.id || user.userId)
@@ -602,6 +606,28 @@ export default function WithdrawPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Spin & Win daily play requirement */}
+                <div
+                  className={`hh-req-detail-item ${spinPlayedToday ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
+                  onClick={() => router.push('/stake')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`hh-req-detail-icon ${spinPlayedToday ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      <Trophy className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-white">Spin & Win Today</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {spinPlayedToday
+                          ? '✓ Played today'
+                          : `0/1 — Play Spin & Win once today`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Daily tasks requirement */}
                 <div

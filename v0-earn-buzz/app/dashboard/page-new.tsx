@@ -314,14 +314,6 @@ export default function DashboardPage() {
       color: "text-amber-400",
       bgColor: "bg-amber-500/10",
     },
-    {
-      name: "FlashGain 9ja Channel",
-      emoji: "📢",
-      link: "https://t.me/flashgain9janews",
-      external: true,
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/10",
-    },
   ];
 
   useEffect(() => {

@@ -72,7 +72,7 @@ const AUTO_PLANS: { id: AutoPlanId; label: string; sub: string; durationMs: numb
   { id: "3d", label: "3 days: 5500 taps", sub: "max 550,000", durationMs: 3*24*60*60*1000, maxTaps: 5500, maxEarn: 550000 },
   { id: "1w", label: "1 week: 10,000 taps", sub: "max 1,000,000", durationMs: 7*24*60*60*1000, maxTaps: 10000, maxEarn: 1000000 },
 ];
-const AUTO_TAP_INTERVAL_MS = 800;
+const AUTO_TAP_INTERVAL_MS = 300; // was 800 (0.8s), reduced by 0.5s per task spec
 const getAutoIntervalMs = (planId: AutoPlanId) => {
   const p = AUTO_PLANS.find(x=>x.id===planId);
   if (!p) return AUTO_TAP_INTERVAL_MS;
@@ -142,6 +142,10 @@ export default function DashboardPage() {
   const tapSyncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tapExhaustUntil, setTapExhaustUntil] = useState<number | null>(null);
   const [tapExhaustLeft, setTapExhaustLeft] = useState(0);
+  // Rapid tap detection — >3 taps in 1 sec triggers warning
+  const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
+  const [showRapidTapWarning, setShowRapidTapWarning] = useState(false);
+  const rapidTapWarningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // auto tap
   const [autoActive, setAutoActive] = useState(false);
   const [autoPlan, setAutoPlan] = useState<AutoPlanId | null>(null);
@@ -162,6 +166,14 @@ export default function DashboardPage() {
   const [muTaskDone, setMuTaskDone] = useState(0);
   const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
+  // Auto-tap toggle-off warning
+  const [showAutoToggleWarning, setShowAutoToggleWarning] = useState(false);
+  const confirmAutoToggleOff = useCallback(() => {
+    setShowAutoToggleWarning(false);
+    setAutoActive(false);
+    setAutoExpiresAt(null);
+    toast({ title: "Auto tap OFF" });
+  }, [toast]);
   // ── Trust Score (compounding) ──
   const [trustScore, setTrustScore] = useState(0);
   const [trustMeta, setTrustMeta] = useState<any>(null);
@@ -618,6 +630,21 @@ export default function DashboardPage() {
     if (autoActive) return; // locked while auto
     if (tapExhaustUntil && tapExhaustUntil > Date.now()) { toast({ title: "Exhausted", description: `Wait ${Math.ceil(tapExhaustLeft/60000)}m ${Math.ceil((tapExhaustLeft%60000)/1000)}s to recharge` }); return; }
     if (tapEnergy <= 0) { toast({ title: "Out of energy", description: "Wait 10 mins to recharge or use Auto Tap ⚡" }); return; }
+    // Rapid tap detection: >3 taps in 1 second
+    const now = Date.now();
+    const recentTaps = tapTimestamps.filter(t => now - t < 1000);
+    if (recentTaps.length >= 3 && !showRapidTapWarning) {
+      setShowRapidTapWarning(true);
+      if (rapidTapWarningRef.current) clearTimeout(rapidTapWarningRef.current);
+      rapidTapWarningRef.current = setTimeout(() => {
+        setShowRapidTapWarning(false);
+        setTapTimestamps([]);
+      }, 2000); // slower: 2 sec display (vs "100" popup which is faster)
+      return;
+    }
+    // Record this tap timestamp
+    setTapTimestamps(prev => [...prev.slice(-10), now]); // keep last 10
+
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     let cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
     if ("touches" in (e as any) && (e as any).touches?.[0]) { cx = (e as any).touches[0].clientX; cy = (e as any).touches[0].clientY; }
@@ -633,9 +660,13 @@ export default function DashboardPage() {
     syncTapToBalance(TAP_EARN_PER);
     // trust: 50 taps = +1
     try { const m = loadMeta(); m.tapCount = (m.tapCount || 0) + 1; saveMeta(m); setTrustScore(computeScore(m)); setTrustMeta({ ...m }); } catch {}
-  }, [tapEnergy, toast, syncTapToBalance, autoActive, tapExhaustUntil, tapExhaustLeft]);
+  }, [tapEnergy, toast, syncTapToBalance, autoActive, tapExhaustUntil, tapExhaustLeft, tapTimestamps, showRapidTapWarning]);
   const handleAutoToggle = useCallback(() => {
-    if (autoActive) { setAutoActive(false); setAutoExpiresAt(null); toast({ title: "Auto tap OFF" }); return; }
+    if (autoActive) {
+      // Show warning popup before disabling
+      setShowAutoToggleWarning(true)
+      return
+    }
     if (!autoFirstFreeUsed) setShowAutoFreePopup(true);
     setShowAutoPlans(true);
   }, [autoActive, autoFirstFreeUsed, toast]);
@@ -1130,25 +1161,10 @@ export default function DashboardPage() {
       bgColor: "",
     },
     {
-      name: "Investments",
-      emoji: "📈",
-      link: "/investment",
-      color: "text-violet-400",
-      bgColor: "",
-    },
-    {
       name: "Loans",
       emoji: "💳",
       link: "/loan",
       color: "text-purple-400",
-      bgColor: "",
-    },
-    {
-      name: "FlashGain 9ja Channel",
-      emoji: "📢",
-      link: "https://t.me/flashgain9janews",
-      external: true,
-      color: "text-blue-400",
       bgColor: "",
     },
   ];
@@ -1656,7 +1672,7 @@ export default function DashboardPage() {
               { label:"Referrals (5 = +2)", value: `${m.referralCount}`, pts: refPts, icon: Users, color:"text-violet-400" },
               { label:"Tasks done (10 = +2)", value: `${m.taskCount||0}`, pts: taskPts, icon: Gift, color:"text-emerald-300" },
               { label:"Dashboard taps (50 = +1)", value: `${m.tapCount||0}`, pts: tapPts, icon: Zap, color:"text-cyan-400" },
-              { label:"App navigations (+1 each)", value: `${m.navCount}`, pts: navPts, icon: TrendingUp, color:"text-amber-400" },
+              { label:"App navigations (5 = +1)", value: `${m.navCount}`, pts: navPts, icon: TrendingUp, color:"text-amber-400" },
               { label:"Payments into app (+5 each)", value: `${m.payCount}`, pts: payPts, icon: CreditCard, color:"text-blue-400" },
             ]; return rows.map(r=> { const Ico: any = (r as any).icon || CreditCard; return (<div key={r.label} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5"><div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center ${r.color}`}><Ico className="h-4 w-4"/></div><div><div className="text-xs font-bold text-white">{r.label}</div><div className="text-[11px] text-white/50">{r.value} → +{r.pts}</div></div></div><span className="text-sm font-black text-white">+{r.pts}</span></div>); }); })()}
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200 leading-relaxed">💡 Tip: Stay 5 mins, do tasks (10=+2), invite 5 friends (=+2), tap 50× (=+1), explore, and fund once — you instantly jump to <b>Trusted</b>. Everything compounds.</div>
@@ -1682,6 +1698,23 @@ export default function DashboardPage() {
           <div className="flex gap-3 mt-4">
             <Button variant="outline" onClick={()=> setShowAutoFreePopup(false)} className="flex-1 rounded-full border-white/15 text-white">Later</Button>
             <Button onClick={()=> { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full">Start FREE 20 mins</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* ── AUTO TAP: Toggle-off warning popup ── */}
+      <Dialog open={showAutoToggleWarning} onOpenChange={setShowAutoToggleWarning}>
+        <DialogContent className="hh-dialog max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl text-white">⚠️ Turn Off Auto Tap?</DialogTitle>
+            <DialogDescription className="text-center pt-2 text-gray-300 space-y-3">
+              Turning off auto-tap while it is still running will <span className="font-bold text-amber-300">forfeit the remaining time and progress</span>.
+              <br />
+              Your balance will stop increasing and any unused taps will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button variant="outline" onClick={()=> setShowAutoToggleWarning(false)} className="flex-1 rounded-full border-white/15 text-white">Cancel — Keep Running</Button>
+            <Button onClick={confirmAutoToggleOff} className="flex-1 hh-btn-primary rounded-full" style={{ background: "#dc2626", hover: "#b91c1c" }}>End Auto Tap</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1981,6 +2014,15 @@ export default function DashboardPage() {
                     <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : "TAP"}</span></div>
                   </button>
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
+                  {/* Rapid tap warning — same design as "100" popup but red, slower */}
+                  {showRapidTapWarning && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="rounded-full bg-red-600/90 border-4 border-red-400 px-6 py-3 text-center animate-pulse" style={{ animationDuration: "2s", boxShadow: "0 0 40px rgba(239,68,68,0.6)" }}>
+                        <div className="text-white font-black text-xl">⚠ TOO FAST</div>
+                        <div className="text-white/80 text-xs mt-1">Slow down! Tap again in a moment</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Auto tap toggle — compact row: ON/OFF in front of button */}
@@ -2077,6 +2119,16 @@ export default function DashboardPage() {
         <div data-tour="quick-actions" className="hh-card hh-entry-4">
           <div className="hh-section-title">Quick Actions</div>
           <div className="space-y-3 mt-3">
+            {/* Flashgain9ja channel banner — full-width, flat, above Daily Tasks & Loans */}
+            <a href="https://t.me/flashgain9janews" className="block w-full mb-3 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 p-3 flex items-center gap-3 hover:from-amber-500/15 hover:via-orange-500/15 hover:to-amber-500/15 transition cursor-pointer">
+              <span className="text-2xl">📢</span>
+              <div className="flex-1">
+                <div className="text-sm font-bold text-white">FlashGain 9ja Channel</div>
+                <div className="text-xs text-amber-300/80">Join for daily updates &amp; exclusive bonuses — speed: 0.0 (was 0.5)</div>
+              </div>
+              <span className="text-xs font-black text-amber-300 bg-amber-500/20 px-2 py-1 rounded-full">Join</span>
+            </a>
+
             {/* Main 2-column grid for first 4 items */}
             <div className="grid grid-cols-2 gap-3">
               {menuItems.map((item, idx) => {

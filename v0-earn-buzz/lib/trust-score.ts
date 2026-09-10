@@ -50,7 +50,7 @@ export function saveMeta(m: TrustMeta) {
 export function computeScore(m: TrustMeta): number {
   const timePoints = Math.floor(m.timeMs / (5 * 60 * 1000)) * 2; // 5 mins = 2
   const refPoints = Math.floor(m.referralCount / 5) * 2;         // 5 refs = 2
-  const navPoints = m.navCount * 1;                              // 1 per navigate
+  const navPoints = Math.floor(m.navCount / 5);                      // 5 navs = 1 point
   const payPoints = m.payCount * 5;                              // 5 per pay
   const taskPoints = Math.floor((m.taskCount || 0) / 10) * 2;     // 10 tasks = 2
   const tapPoints = Math.floor((m.tapCount || 0) / 50) * 1;       // 50 taps = 1

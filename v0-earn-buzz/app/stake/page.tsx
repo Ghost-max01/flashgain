@@ -7,7 +7,11 @@ import { ArrowLeft, Sparkles, Zap, Trophy, Clock, Users, Flame, Crown, Gift, Tre
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 
-const STAKE_OPTIONS = [500, 1000, 2000, 5000, 10000, 20000]
+const STAKE_TIERS = [
+  { pct: 20, label: "20%", desc: "Conservative" },
+  { pct: 30, label: "30%", desc: "Balanced" },
+  { pct: 40, label: "40%", desc: "Aggressive" },
+]
 const MULTIPLIER = 2.2
 
 // Spin & Win — 30% win = 3 wins / 10 segments (additive inside /stake)
@@ -39,6 +43,40 @@ export default function StakeWinPage() {
     { name: "Amaka ***", won: 22000, staked: 10000 },
   ])
 
+  // Live stakers ticker — random Nigerian names + amounts (min ₦200,000), rotate every 5 min
+  const NIGERIAN_NAMES = [
+    "Adebayo", "Chioma", "Emeka", "Fatima", "Grace", "Ibrahim", "Jennifer", "Kelechi",
+    "Mercy", "Ngozi", "Obinna", "Chinedu", "Zainab", "Amina", "Babatunde", "Cynthia",
+    "Danjuma", "Ebele", "Funke", "Hadiza", "Idris", "Jumai", "Kemi", "Leke",
+    "Modupe", "Nkechi", "Oluwaseun", "Titilayo", "Uche", "Yewande", "Zara", "Bola",
+    "Dapo", "Esi", "Folake", "Gbenga", "Hauwa", "Ifedolapo", "Jide", "Kola",
+    "Ada", "Blessing", "Chika", "Ekanem", "Ijeoma", "Nana", "Olumide", "Tomi",
+  ]
+  const [liveTicker, setLiveTicker] = useState<{ name: string; staked: number; won: number; ago: string }[]>([])
+  useEffect(() => {
+    const generateTicker = () => {
+      const names: any[] = []
+      for (let i = 0; i < 4; i++) {
+        const nameIdx = Math.floor(Math.random() * NIGERIAN_NAMES.length)
+        const baseName = NIGERIAN_NAMES[nameIdx]
+        const suffix = ["***", "**", "*", ""][Math.floor(Math.random() * 4)]
+        const staked = Math.floor(Math.random() * (400000 - 200000) + 200000)
+        const won = Math.floor(staked * (1.5 + Math.random() * 4))
+        const agoMin = Math.floor(Math.random() * 28 + 2)
+        names.push({
+          name: baseName + " " + suffix,
+          staked,
+          won,
+          ago: agoMin + "m ago",
+        })
+      }
+      setLiveTicker(names)
+    }
+    generateTicker()
+    const id = setInterval(generateTicker, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+
   useEffect(() => {
     try {
       const u = JSON.parse(localStorage.getItem("tivexx-user") || "null")
@@ -65,15 +103,60 @@ export default function StakeWinPage() {
   const [spinResult, setSpinResult] = useState<(typeof SPIN_SEGMENTS)[number] | null>(null)
   const [showSpinResult, setShowSpinResult] = useState(false)
   const [spins, setSpins] = useState(0)
+  // Per-tier cooldown tracking: key = spin_tier_cooldowns, value = { 20: timestamp, 30: timestamp, 40: timestamp }
+  const [spinCooldowns, setSpinCooldowns] = useState<Record<number, number>>({})
+
+  // Load cooldowns on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("spin_tier_cooldowns")
+      if (raw) setSpinCooldowns(JSON.parse(raw))
+    } catch {}
+  }, [])
+
+  // Persist cooldowns on change
+  useEffect(() => {
+    try { localStorage.setItem("spin_tier_cooldowns", JSON.stringify(spinCooldowns)) } catch {}
+  }, [spinCooldowns])
+
+  const getTierForStake = (stake: number) => {
+    if (balance === 0) return 20
+    const pct = Math.round((stake / balance) * 100)
+    if (pct <= 22) return 20
+    if (pct <= 33) return 30
+    return 40
+  }
 
   const doSpin = useCallback(() => {
     if (spinning) return
     if (spinStake < 200) return toast({ title: "Min stake ₦200", variant: "destructive" })
     if (spinStake > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
-    const isWinRoll = Math.random() < 0.30
-    const winPool = SPIN_SEGMENTS.filter(s => s.win)
-    const losePool = SPIN_SEGMENTS.filter(s => !s.win)
-    const target = isWinRoll ? winPool[Math.floor(Math.random() * winPool.length)] : losePool[Math.floor(Math.random() * losePool.length)]
+
+    // Determine which tier this stake corresponds to
+    const tierPct = getTierForStake(spinStake)
+    const now = Date.now()
+    const cooldown = spinCooldowns[tierPct]?.[userIdKey] || 0
+    if (cooldown > now) {
+      const left = Math.ceil((cooldown - now) / 3600000)
+      return toast({ title: `${tierPct}% tier on cooldown`, description: `Wait ${left}h before spinning this tier again`, variant: "destructive" })
+    }
+
+    // ── RANDOM WIN LOGIC: One tier wins per spin, decided at spin moment ──
+    // Each spin, randomly pick which of the 3 tiers (20/30/40%) is the winner
+    const tiers = [20, 30, 40]
+    const winningTier = tiers[Math.floor(Math.random() * tiers.length)]
+    const userPickedWinningTier = (tierPct === winningTier)
+
+    // Set cooldown for this tier (24hr from now)
+    const newCooldowns = { ...spinCooldowns }
+    if (!newCooldowns[tierPct]) newCooldowns[tierPct] = {}
+    newCooldowns[tierPct][userIdKey] = now + 24 * 60 * 60 * 1000
+    setSpinCooldowns(newCooldowns)
+
+    const target = userPickedWinningTier
+      ? SPIN_SEGMENTS.filter(s => s.win)[Math.floor(Math.random() * SPIN_SEGMENTS.filter(s => s.win).length)]
+      : SPIN_SEGMENTS.filter(s => !s.win)[Math.floor(Math.random() * SPIN_SEGMENTS.filter(s => !s.win).length)]
+
     const targetIdx = SPIN_SEGMENTS.indexOf(target)
     const segAngle = 360 / SPIN_SEGMENTS.length
     const targetAngle = 360 - (targetIdx * segAngle + segAngle / 2)
@@ -93,17 +176,22 @@ export default function StakeWinPage() {
         const newBal = balance + winAmt
         setBalance(newBal)
         try { const raw = localStorage.getItem("tivexx-user"); if (raw) { const u = JSON.parse(raw); u.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u)) } } catch {}
-        toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${target.label} on ₦${spinStake.toLocaleString()} stake` })
+        toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${target.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% was the winner` })
       } else {
         const newBal = Math.max(0, balance - spinStake)
         setBalance(newBal)
         try { const raw = localStorage.getItem("tivexx-user"); if (raw) { const u = JSON.parse(raw); u.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u)) } } catch {}
+        toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% was not the winner this spin. The winning tier was ${winningTier}%.` })
       }
     }, 3200)
-  }, [spinning, spinStake, balance, rotation, toast])
+  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
+
+  // Stable user key for cooldown storage
+  const userIdKey = typeof window !== "undefined" ? (() => { try { const u = JSON.parse(localStorage.getItem("tivexx-user") || "null"); return u?.id || u?.userId || "guest"; } catch { return "guest"; } })() : "guest"
 
   const onStake = () => {
-    if (amount < 500) return toast({ title: "Minimum stake is ₦500", variant: "destructive" })
+    const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
+    if (amount < minStake) return toast({ title: `Minimum stake is ₦${minStake.toLocaleString()}`, variant: "destructive" })
     if (amount > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
     toast({ title: `Staked ₦${amount.toLocaleString()} 🎯`, description: `Potential win ₦${win.toLocaleString()} — draw in ${fmtTime(nextDrawMs)}` })
   }
@@ -163,7 +251,7 @@ export default function StakeWinPage() {
           </div>
           {/* Winners marquee */}
           <div className="border-t border-white/10 bg-black/20 px-3 py-2 overflow-hidden">
-            <div className="flex gap-2 animate-[hh-marquee_18s_linear_infinite] whitespace-nowrap">
+            <div className="flex gap-2 animate-[hh-marquee_30s_linear_infinite] whitespace-nowrap">
               {[...recentWins, ...recentWins].map((w, i) => (
                 <span key={i} className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-3 py-1 text-[11px] font-bold">
                   <Trophy className="h-3 w-3 text-amber-300" /> {w.name} won ₦{w.won.toLocaleString()} <span className="text-white/50">staked ₦{w.staked.toLocaleString()}</span>
@@ -177,21 +265,26 @@ export default function StakeWinPage() {
         <div className="hh-card">
           <div className="flex items-center justify-between">
             <h3 className="font-black flex items-center gap-2"><Coins className="h-4 w-4 text-emerald-400" /> Choose stake</h3>
-            <span className="text-[11px] font-bold text-white/50">Min ₦500</span>
+            <span className="text-[11px] font-bold text-white/50">Min 20% of balance</span>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-3">
-            {STAKE_OPTIONS.map(v => (
-              <button key={v} onClick={() => { setAmount(v); setCustom(String(v)) }} className={`rounded-2xl border p-3 text-center font-black transition ${amount===v ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_8px_20px_rgba(16,185,129,0.35)]" : "bg-white/5 border-white/10 text-white hover:border-emerald-500/30"}`}>
-                ₦{v.toLocaleString()}
-              </button>
-            ))}
+            {STAKE_TIERS.map(t => {
+              const stakeAmt = Math.floor(balance * t.pct / 100)
+              return (
+                <button key={t.pct} onClick={() => { setAmount(stakeAmt); setCustom(String(stakeAmt)) }} className={`rounded-2xl border p-3 text-center font-black transition ${amount===stakeAmt ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_8px_20px_rgba(16,185,129,0.35)]" : "bg-white/5 border-white/10 text-white hover:border-emerald-500/30"}`}>
+                  <div className="text-lg font-black">{t.label}</div>
+                  <div className="text-[10px] text-white/50 mt-0.5">{t.desc}</div>
+                  <div className="text-xs font-bold text-emerald-300 mt-1">₦{stakeAmt.toLocaleString()}</div>
+                </button>
+              )
+            })}
           </div>
           <div className="mt-3 flex gap-2">
             <div className="flex-1 relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-black">₦</span>
               <input
                 inputMode="numeric"
-                placeholder="Custom amount"
+                placeholder={`Custom (${balance > 0 ? Math.floor(balance * 0.2).toLocaleString() : "0"} min)`}
                 value={custom}
                 onChange={e => {
                   const raw = e.target.value.replace(/[^0-9]/g, "")
@@ -205,7 +298,7 @@ export default function StakeWinPage() {
             <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/20 px-4 flex flex-col justify-center text-center min-w-[124px]">
               <div className="text-[10px] tracking-widest font-black text-white/60">YOU COULD WIN</div>
               <div className="text-lg font-black text-amber-300">₦{win.toLocaleString()}</div>
-              <div className="text-[11px] font-bold text-emerald-300">+₦{profit.toLocaleString()} profit</div>
+              <div className="text-[11px] font-bold text-emerald-300">+{profit.toLocaleString()} profit</div>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -214,8 +307,8 @@ export default function StakeWinPage() {
               <div className="text-sm font-black">₦{amount.toLocaleString()}</div>
             </div>
             <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 py-2">
-              <div className="text-[10px] font-black tracking-widest text-emerald-300">MULTIPLIER</div>
-              <div className="text-sm font-black text-emerald-300">×{MULTIPLIER}</div>
+              <div className="text-[10px] font-black tracking-widest text-emerald-300">OF BALANCE</div>
+              <div className="text-sm font-black text-emerald-300">{balance > 0 ? Math.round((amount / balance) * 100) : 0}%</div>
             </div>
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 py-2">
               <div className="text-[10px] font-black tracking-widest text-amber-300">PAYOUT</div>
@@ -240,6 +333,41 @@ export default function StakeWinPage() {
             <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-center"><div className="text-[10px] font-black text-amber-300">WIN RATE</div><div className="text-lg font-black text-amber-300">30%</div></div>
             <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-center"><div className="text-[10px] font-black text-emerald-300">SPINS</div><div className="text-lg font-black text-emerald-300">{spins}</div></div>
           </div>
+          {/* Spin stake tier selector — percentage-based */}
+          <div className="mt-3 w-full grid grid-cols-3 gap-2">
+            {STAKE_TIERS.map(t => {
+              const stakeAmt = Math.floor(balance * t.pct / 100)
+              const active = spinStake === stakeAmt
+              return (
+                <button key={t.pct} onClick={() => { setSpinStake(stakeAmt); setSpinCustom(String(stakeAmt)) }} className={`rounded-2xl border p-2.5 text-center font-black transition ${active ? "bg-amber-500 text-white border-amber-400 shadow-[0_6px_16px_rgba(245,158,11,0.3)]" : "bg-white/5 border-white/10 text-white hover:border-amber-500/30"}`}>
+                  <div className="text-sm font-black">{t.label}</div>
+                  <div className="text-[10px] text-white/50">{t.desc}</div>
+                  <div className="text-xs font-bold text-amber-300 mt-0.5">₦{stakeAmt.toLocaleString()}</div>
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-2 flex gap-2 w-full">
+            <div className="flex-1 relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-black text-xs">₦</span>
+              <input
+                inputMode="numeric"
+                placeholder={`Custom spin stake`}
+                value={spinCustom}
+                onChange={e => {
+                  const raw = e.target.value.replace(/[^0-9]/g, "")
+                  setSpinCustom(raw)
+                  const n = Number(raw || 0)
+                  if (n >= 200) setSpinStake(n)
+                }}
+                className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-3 py-2.5 text-sm font-bold text-white placeholder:text-white/30 outline-none focus:border-amber-500/40"
+              />
+            </div>
+            <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/20 px-3 flex flex-col justify-center text-center min-w-[100px]">
+              <div className="text-[9px] tracking-widest font-black text-white/60">YOU COULD WIN</div>
+              <div className="text-base font-black text-amber-300">₦{Math.floor(spinStake * MULTIPLIER).toLocaleString()}</div>
+            </div>
+          </div>
           <div className="relative mt-5">
             <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-amber-500/30 via-emerald-500/20 to-cyan-500/30 blur-xl"></div>
             <div className="relative rounded-full p-1.5 bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.35)]">
@@ -252,7 +380,7 @@ export default function StakeWinPage() {
               </div>
             </div>
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
-            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>SPIN</span><span>NOW</span></>}</button>
+            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>TAP TO</span><span>SPIN</span></>}</button>
           </div>
           {showSpinResult && spinResult && (
             <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
@@ -269,7 +397,7 @@ export default function StakeWinPage() {
             <span className="text-xs font-bold text-emerald-300 flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> 1,247 online</span>
           </div>
           <div className="mt-3 space-y-2">
-            {recentWins.map((w, i) => (
+            {liveTicker.map((w, i) => (
               <div key={i} className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 px-3 py-2.5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center font-black text-xs">{w.name[0]}</div>
@@ -280,7 +408,7 @@ export default function StakeWinPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-black text-amber-300">+₦{w.won.toLocaleString()}</div>
-                  <div className="text-[11px] text-emerald-300">won • {Math.floor(Math.random()*30+2)}m ago</div>
+                  <div className="text-[11px] text-emerald-300">won • {w.ago}</div>
                 </div>
               </div>
             ))}
@@ -295,16 +423,17 @@ export default function StakeWinPage() {
         <div className="max-w-md mx-auto px-4 pb-4 pt-2 bg-gradient-to-t from-[#050d14] via-[#050d14]/95 to-transparent">
           <div className="rounded-[20px] bg-white/5 backdrop-blur-xl border border-white/10 p-2 flex gap-2">
             <div className="flex-1 rounded-full bg-black/30 border border-white/10 px-4 py-3 flex items-center justify-between">
-              <span className="text-sm font-black">Stake ₦{amount.toLocaleString()}</span>
+              <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[selectedTier]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
               <span className="text-sm font-black text-amber-300">→ Win ₦{win.toLocaleString()}</span>
             </div>
-            <Button onClick={onStake} className="rounded-full hh-btn-primary font-black px-6">Stake Now</Button>
+            <Button onClick={onStake} className="rounded-full hh-btn-primary font-black px-6">Tap to Spin</Button>
           </div>
         </div>
       </div>
 
       <style jsx global>{`
         @keyframes hh-marquee { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
+        .hh-marquee { animation: hh-marquee 30s linear infinite; }
       `}</style>
     </div>
   )
