@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock } from "lucide-react"
+import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 import { getBankDetails, type BankDetails } from "@/lib/bank-details"
@@ -523,6 +523,29 @@ export default function WithdrawPage() {
                     style={{ width: progressWidth }}
                   />
                 </div>
+              </div>
+
+              {/* Spin & Win — 4th requirement: 0/1 → 1/1 daily */}
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push('/stake')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-violet-400" />
+                    <span className="text-sm font-medium text-white">Spin & Win Today</span>
+                  </div>
+                  <span className={`text-sm font-bold ${spinPlayedToday ? 'text-emerald-400' : 'text-amber-300'}`}>{spinPlayedToday ? '1/1' : '0/1'}</span>
+                </div>
+                <div className="hh-progress-track">
+                  <div 
+                    className={`hh-progress-fill ${spinPlayedToday ? '!bg-emerald-500' : 'hh-progress-spin'}`} 
+                    style={{ width: spinPlayedToday ? '100%' : '0%' }}
+                  />
+                </div>
+                <p className="text-[11px] text-white/50 mt-1">{spinPlayedToday ? '✓ Played today' : 'Play Spin & Win once today to unlock'}</p>
               </div>
             </div>
           </div>
@@ -1216,6 +1239,11 @@ export default function WithdrawPage() {
 
         .hh-progress-tasks {
           background: linear-gradient(90deg, #fbbf24, #d97706);
+        }
+
+        .hh-progress-spin {
+          background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+          box-shadow: 0 0 10px rgba(139,92,246,0.5);
         }
 
         /* ─── WITHDRAW BUTTONS ─── */

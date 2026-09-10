@@ -303,14 +303,15 @@ export default function StakeWinPage() {
                 inputMode="numeric"
                 placeholder={`Custom (${balance > 0 ? Math.floor(balance * 0.2).toLocaleString() : "0"} min)`}
                 value={custom}
-                onChange={e => {
-                  const raw = e.target.value.replace(/[^0-9]/g, "")
-                  setCustom(raw)
-                  const n = Number(raw || 0)
-                  if (n) setAmount(n)
-                }}
-                className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-3 py-3 text-sm font-bold text-white placeholder:text-white/30 outline-none focus:border-emerald-500/40"
+                readOnly
+                tabIndex={-1}
+                aria-readonly="true"
+                title="Custom amount is locked — use 20% / 30% / 40% buttons"
+                className="w-full rounded-2xl bg-black/30 border border-white/10 pl-7 pr-9 py-3 text-sm font-bold text-white placeholder:text-white/30 outline-none cursor-not-allowed opacity-80 select-none"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
+                <Lock className="h-4 w-4" />
+              </span>
             </div>
             <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/20 px-4 flex flex-col justify-center text-center min-w-[124px]">
               <div className="text-[10px] tracking-widest font-black text-white/60">YOU COULD WIN</div>
@@ -371,7 +372,7 @@ export default function StakeWinPage() {
               </div>
             </div>
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
-            <button onClick={doSpin} disabled={spinning} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>TAP TO</span><span>SPIN</span></>}</button>
+            <button onClick={doSpin} disabled={spinning} className="hh-spin-glow absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>TAP TO</span><span>SPIN</span></>}</button>
           </div>
           <div className="mt-2 text-[11px] font-bold text-white/50">Stake ₦{spinStake.toLocaleString()} • Spins {spins} • Max 3/day (one per tier)</div>
           {showSpinResult && spinResult && (
@@ -418,7 +419,7 @@ export default function StakeWinPage() {
               <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[getTierForStake(amount)]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
               <span className="text-sm font-black text-amber-300">→ Win ₦{win.toLocaleString()}</span>
             </div>
-            <Button onClick={onStake} className="rounded-full hh-btn-primary font-black px-6">Tap to Spin</Button>
+            <Button onClick={onStake} className="rounded-full hh-btn-primary hh-spin-glow font-black px-6">Tap to Spin</Button>
           </div>
         </div>
       </div>
@@ -426,6 +427,18 @@ export default function StakeWinPage() {
       <style jsx global>{`
         @keyframes hh-marquee { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
         .hh-marquee { animation: hh-marquee 30s linear infinite; }
+        @keyframes hh-spin-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.55), 0 6px 20px rgba(245,158,11,0.45); transform: translate(-50%, -50%) scale(1); }
+          50% { box-shadow: 0 0 0 10px rgba(245,158,11,0), 0 8px 28px rgba(245,158,11,0.7), 0 0 36px rgba(251,191,36,0.55); transform: translate(-50%, -50%) scale(1.03); }
+        }
+        .hh-spin-glow { animation: hh-spin-glow 1.6s ease-in-out infinite; }
+        .hh-spin-glow:disabled { animation: none; opacity: 0.6; }
+        /* thumb-zone button is not centered with translate, so override to keep glow without translate */
+        .hh-spin-glow.hh-btn-primary { animation: hh-spin-glow-btn 1.6s ease-in-out infinite; }
+        @keyframes hh-spin-glow-btn {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.45), 0 6px 20px rgba(16,185,129,0.35); }
+          50% { box-shadow: 0 0 0 8px rgba(16,185,129,0), 0 8px 28px rgba(16,185,129,0.55), 0 0 26px rgba(52,211,153,0.45); }
+        }
       `}</style>
     </div>
   )

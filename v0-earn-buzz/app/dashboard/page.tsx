@@ -627,7 +627,7 @@ export default function DashboardPage() {
   }, []);
   const handleTapEarn = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     try { (e as any).stopPropagation?.(); } catch {}
-    // While rapid-tap warning active, disable tap input entirely until it finishes
+    // While rapid-tap warning active, block all tap input until popup clears
     if (showRapidTapWarning) return
     if (autoActive) return; // locked while auto
     if (tapExhaustUntil && tapExhaustUntil > Date.now()) { toast({ title: "Exhausted", description: `Wait ${Math.ceil(tapExhaustLeft/60000)}m ${Math.ceil((tapExhaustLeft%60000)/1000)}s to recharge` }); return; }
@@ -2011,19 +2011,23 @@ export default function DashboardPage() {
                   <div className={`te-halo ${tapEnergy > 0 && !autoActive ? "te-halo-active" : "te-halo-inactive"}`}></div>
                   <div className="te-ring te-ring-outer" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
                   <div className="te-ring te-ring-inner" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
-                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0)} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive ? "te-orb-tap" : ""} ${autoActive ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
+                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0) || showRapidTapWarning} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
                     <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : "TAP"}</span></div>
                   </button>
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
-                  {/* Rapid tap warning — same design as "100" popup but red, slower */}
+                  {/* Rapid tap warning — same design as "100" popup but red, slower. Blocks tapping until it clears. */}
                   {showRapidTapWarning && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10 rounded-full" aria-hidden="false">
                       <div className="rounded-full bg-red-600/90 border-4 border-red-400 px-6 py-3 text-center animate-pulse" style={{ animationDuration: "2s", boxShadow: "0 0 40px rgba(239,68,68,0.6)" }}>
                         <div className="text-white font-black text-xl">⚠ TOO FAST</div>
                         <div className="text-white/80 text-xs mt-1">Slow down! Tap again in a moment</div>
                       </div>
                     </div>
+                  )}
+                  {/* Invisible tap-block overlay while warning is active — prevents orb clicks */}
+                  {showRapidTapWarning && (
+                    <div className="absolute inset-0 z-[5] cursor-not-allowed" aria-hidden="true" onClick={(e)=> e.preventDefault()} onTouchStart={(e)=> e.preventDefault()} />
                   )}
                 </div>
               </div>
@@ -2552,19 +2556,17 @@ export default function DashboardPage() {
         }
 
         .hh-card-balance {
+          /* Task & Loan hero parity: amber accent (not blue), no scale transform — natural size */
           background: linear-gradient(
             135deg,
             rgba(16, 185, 129, 0.15) 0%,
             rgba(5, 13, 20, 0.9) 50%,
-            rgba(59, 130, 246, 0.1) 100%
+            rgba(245, 158, 11, 0.1) 100%
           );
           border-color: rgba(16, 185, 129, 0.2);
           box-shadow:
             0 0 40px rgba(16, 185, 129, 0.08),
             inset 0 0 40px rgba(0, 0, 0, 0.3);
-          /* reduce height by 32% total (20% + 12%) to make box shorter */
-          transform: scaleY(0.58);
-          transform-origin: top;
         }
 
         .hh-card-profile {
@@ -3233,7 +3235,8 @@ export default function DashboardPage() {
           transform: translateX(3px);
         }
         .hh-tap-earn-round-wrap {
-          background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(5,150,105,0.14));
+          /* Matches task/loan card palette — same amber-tinted edge, natural size (no scale) */
+          background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,13,20,0.5) 50%, rgba(245,158,11,0.08) 100%);
           border: 1px solid rgba(16,185,129,0.22);
           border-radius: 16px;
           padding: 9px 11px;

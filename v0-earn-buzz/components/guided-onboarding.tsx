@@ -68,38 +68,52 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
           try {
             const r = el.getBoundingClientRect();
             setRect(r);
-            // compute tooltip position — keep compact like other steps and never hide Next
+            // compute tooltip position — keep compact and never hide Next behind fixed bottom nav
             const vw = window.innerWidth;
             const vh = window.innerHeight;
             const cardW = 268;
             const cardH = 156; // compact height matching actual card (fixes 2/7)
             const gap = 12;
-            const safeBottomPad = 10; // keep Next inside viewport
-            const spaceBelow = vh - r.bottom;
+            // Reserve space for fixed bottom nav (Home / About / Refer) + safe padding
+            const bottomNavHeight = 72;
+            const safeBottomPad = bottomNavHeight + 10; // keep Next above nav
+            const safeTopPad = 10;
+            const spaceBelow = vh - r.bottom - bottomNavHeight;
             const spaceAbove = r.top;
             let top: number;
             let placement: "top" | "bottom";
-            if (spaceBelow >= cardH + gap + safeBottomPad) {
+            // For 2/7 (balance) and any target low on screen, force top placement so nav never covers it
+            const isSecondStep = idx === 1;
+            const lowTarget = r.top > vh * 0.45;
+            if (isSecondStep || lowTarget) {
+              // Push up / keep up — always show above target when near bottom
+              if (spaceAbove >= cardH + gap) {
+                top = r.top - cardH - gap;
+                placement = "top";
+              } else {
+                // Not enough above, pin to top safe area above nav
+                top = Math.max(safeTopPad, Math.min(vh - cardH - safeBottomPad, r.top - cardH - gap));
+                placement = "top";
+              }
+            } else if (spaceBelow >= cardH + gap) {
               top = r.bottom + gap;
               placement = "bottom";
-            } else if (spaceAbove >= cardH + gap + safeBottomPad) {
+            } else if (spaceAbove >= cardH + gap) {
               top = r.top - cardH - gap;
               placement = "top";
             } else {
-              // not enough room either side — pin inside viewport and let target scroll away
-              // prefer bottom but clamp hard so Next is always visible
               if (spaceBelow >= spaceAbove) {
                 top = Math.min(vh - cardH - safeBottomPad, r.bottom + gap);
-                top = Math.max(safeBottomPad, top);
+                top = Math.max(safeTopPad, top);
                 placement = "bottom";
               } else {
-                top = Math.max(safeBottomPad, r.top - cardH - gap);
+                top = Math.max(safeTopPad, r.top - cardH - gap);
                 top = Math.min(vh - cardH - safeBottomPad, top);
                 placement = "top";
               }
             }
-            // final safety clamp
-            top = Math.max(safeBottomPad, Math.min(vh - cardH - safeBottomPad, top));
+            // final safety clamp — always stays above bottom nav
+            top = Math.max(safeTopPad, Math.min(vh - cardH - safeBottomPad, top));
             let left = r.left + r.width / 2 - cardW / 2;
             left = Math.max(8, Math.min(vw - cardW - 8, left));
             setTipPos({ top, left, placement });
