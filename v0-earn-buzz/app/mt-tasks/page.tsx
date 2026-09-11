@@ -580,6 +580,18 @@ function MtTaskPageInner() {
   const [userId, setUserId] = useState<string>("")
   const searchParams = useSearchParams()
   const needParam = Number(searchParams.get("need") || searchParams.get("count") || "0")
+  const planParam = (searchParams.get("plan") || "") as string
+  // per-plan isolation: mt tasks for 24h (20) vs 3d (40) track separately starting at 0
+  const resolvedPlan = (() => {
+    if (planParam === "24h" || planParam === "3d") return planParam
+    if (needParam === 20) return "24h"
+    if (needParam === 40) return "3d"
+    if (needParam > 30) return "3d"
+    if (needParam > 0) return "24h"
+    return ""
+  })()
+  const taskStorageKey = resolvedPlan ? `mt-completed-tasks-${resolvedPlan}` : "mt-completed-tasks"
+  const cooldownStorageKey = resolvedPlan ? `mt-task-cooldowns-${resolvedPlan}` : "mt-task-cooldowns"
   const displayTasks = needParam > 0 ? AVAILABLE_TASKS.slice(0, Math.min(needParam, AVAILABLE_TASKS.length)) : AVAILABLE_TASKS
 
 
@@ -595,12 +607,12 @@ function MtTaskPageInner() {
     setBalance(user.balance || 0)
     setUserId(user.id || user.userId || user.user_id || "")
 
-    const completed = JSON.parse(localStorage.getItem("mt-completed-tasks") || "[]")
+    const completed = JSON.parse(localStorage.getItem(taskStorageKey) || "[]")
     setCompletedTasks(Array.isArray(completed) ? completed : [])
 
-    const savedCooldowns = JSON.parse(localStorage.getItem("mt-task-cooldowns") || "{}")
+    const savedCooldowns = JSON.parse(localStorage.getItem(cooldownStorageKey) || "{}")
     setCooldowns(savedCooldowns)
-  }, [router])
+  }, [router, taskStorageKey, cooldownStorageKey])
 
   // Initialize task timer hook
   const { attachFocusListener, startTaskTimer } = useTaskTimer()
@@ -728,11 +740,11 @@ function MtTaskPageInner() {
 
       if (changed) {
         setCooldowns({ ...updated })
-        localStorage.setItem("mt-task-cooldowns", JSON.stringify(updated))
+        localStorage.setItem(cooldownStorageKey, JSON.stringify(updated))
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [cooldowns])
+  }, [cooldowns, cooldownStorageKey])
 
   const getNextResetBoundary = (date: Date) => {
     // Add exactly 12 hours from now
@@ -783,13 +795,13 @@ function MtTaskPageInner() {
 
     const newCompleted = [...completedTasks, task.id]
     setCompletedTasks(newCompleted)
-    localStorage.setItem("mt-completed-tasks", JSON.stringify(newCompleted))
+    localStorage.setItem(taskStorageKey, JSON.stringify(newCompleted))
 
     const now = new Date()
     const nextReset = getNextResetBoundary(now).getTime()
     const newCooldowns = { ...cooldowns, [task.id]: nextReset }
     setCooldowns(newCooldowns)
-    localStorage.setItem("mt-task-cooldowns", JSON.stringify(newCooldowns))
+    localStorage.setItem(cooldownStorageKey, JSON.stringify(newCooldowns))
 
     // Remove from verifying tasks
     setVerifyingTasks(prev => {

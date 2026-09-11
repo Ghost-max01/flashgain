@@ -25,7 +25,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/wJDlKkPZm8s?si=8l1UpB6OIORbcbK4",
     icon: "▶️",
   },
   {
@@ -34,7 +34,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/g0b1HspPeJw?si=GmG2gr91hablAokc",
     icon: "▶️",
   },
   {
@@ -43,7 +43,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/MD6_iHD96_8?si=CH0f3BxgItxJ1Wbe",
     icon: "▶️",
   },
   {
@@ -52,7 +52,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/pG8hd7ZFG-U?si=hADihB_YLLFql8XP",
     icon: "▶️",
   },
   {
@@ -61,7 +61,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/1nlfEit54As?si=nXSsFVx3aTkf88sc",
     icon: "▶️",
   },
   {
@@ -70,7 +70,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/4bCryWFn7UE?si=bwiUrHFrhb19iek7",
     icon: "▶️",
   },
   {
@@ -79,7 +79,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/81QbhCN-diw?si=00wmeZtAzdboWcaV",
     icon: "▶️",
   },
   {
@@ -88,7 +88,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/io04d6QMkrY?si=hw37f1Xw0zFCOcPj",
     icon: "▶️",
   },
   {
@@ -97,7 +97,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/p1vGmah86q0?si=8LfZnmH7xtrm6hwD",
     icon: "▶️",
   },
   {
@@ -106,7 +106,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/AEaDeJpiGCk?si=JMvMugGm6SiFaRJu",
     icon: "▶️",
   },
   {
@@ -115,7 +115,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/-FGfmljWElc?si=wthpVDqSElCO9GUu",
+    link: "https://youtu.be/9aBMl0GU3YA?si=2eAXobStxviMCgTu",
     icon: "▶️",
   },
   {
@@ -124,7 +124,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/OjaS7E3HzD0?si=9qOyCZU_admVUdiM",
+    link: "https://youtu.be/tn57hPj6RT4?si=fl8TbNdVY8DXIIjO",
     icon: "▶️",
   },
   {
@@ -133,7 +133,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/D_mYAWMX3mU?si=_zArdgB8TWOVtTlO",
+    link: "https://youtu.be/JO7gijywQZ4?si=fSmLNWXqhGsgUY7W",
     icon: "▶️",
   },
   {
@@ -142,7 +142,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/FmDHm8qe9KY?si=uH7rdMXZS1B2WJ7U",
+    link: "https://youtu.be/A0S8kyopSDo?si=_Rpp_4Arc--1yPPC",
     icon: "▶️",
   },
   {
@@ -151,7 +151,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/Gfea_ISaXps?si=PjrHpPRIM9lvo6Q3",
+    link: "https://youtu.be/qTc6o-qj-sA?si=iN4lOudwXg5ngG4M",
     icon: "▶️",
   },
   {
@@ -160,7 +160,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/esxdmyrqt-I?si=FBnzbUw9zS4NKG3i",
     icon: "▶️",
   },
   {
@@ -169,7 +169,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/m3lrfT6YEZ4?si=ZFcwvPiDei3fxR_Z",
     icon: "▶️",
   },
   {
@@ -178,7 +178,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/IeSHze5fo9Y?si=C8c3Ij_jrk00WB3D",
     icon: "▶️",
   },
   {
@@ -187,7 +187,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/CaAmwkUniYI?si=KWyiMs5Vub9wtn1v",
     icon: "▶️",
   },
   {
@@ -196,7 +196,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/s7g5vdGGUY4?si=XxyQwhX3l_hcV0h4",
     icon: "▶️",
   },
   {
@@ -205,7 +205,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/8BAU6UHblLs?si=pHlSIeVrUdVeNDZO",
     icon: "▶️",
   },
   {
@@ -214,7 +214,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/HyS-PADnSr4?si=6E2R9m4p8BDN5tqa",
     icon: "▶️",
   },
   {
@@ -223,7 +223,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/yX6rqARzYag?si=sgHTX6b37BZC9Q4o",
     icon: "▶️",
   },
   {
@@ -232,7 +232,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/0Sf4Nxw1X2E?si=IwKuq5TUtlctH7co",
     icon: "▶️",
   },
   {
@@ -241,7 +241,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/k5GDy0FNF58?si=7aJwFcFd-zibSt-w",
     icon: "▶️",
   },
   {
@@ -250,7 +250,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/-FGfmljWElc?si=wthpVDqSElCO9GUu",
+    link: "https://youtu.be/9HZmKMCKBQE?si=s1r_ULt2MCI4e7nF",
     icon: "▶️",
   },
   {
@@ -259,7 +259,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/OjaS7E3HzD0?si=9qOyCZU_admVUdiM",
+    link: "https://youtu.be/IeSHze5fo9Y?si=C8c3Ij_jrk00WB3D",
     icon: "▶️",
   },
   {
@@ -268,7 +268,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/D_mYAWMX3mU?si=_zArdgB8TWOVtTlO",
+    link: "https://youtu.be/m5rTEqeUtLg?si=DxZz5YzEuqyyZgMh",
     icon: "▶️",
   },
   {
@@ -277,7 +277,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/FmDHm8qe9KY?si=uH7rdMXZS1B2WJ7U",
+    link: "https://youtu.be/RxcB4DW5G9Q?si=BODVVYtYGw86dvhq",
     icon: "▶️",
   },
   {
@@ -286,7 +286,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/Gfea_ISaXps?si=PjrHpPRIM9lvo6Q3",
+    link: "https://youtu.be/UADOHGDUPNg?si=8zjXe8ZMEBNP3ZX9",
     icon: "▶️",
   },
   {
@@ -295,7 +295,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/AYPuX-ofDDY?si=gRREwdep1s-fQV9E",
     icon: "▶️",
   },
   {
@@ -304,7 +304,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/6eYDRrYbMl0?si=tFyX7aUvuxCPKont",
     icon: "▶️",
   },
   {
@@ -313,7 +313,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/skWJ3M9x_tU?si=EtGqjwFVVwKlyp73",
     icon: "▶️",
   },
   {
@@ -322,7 +322,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/JnQ9RKzfjOA?si=yqPWiMAL7kXVTB2r",
     icon: "▶️",
   },
   {
@@ -331,7 +331,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/ewKErF3maEk?si=Q0y4fCH2TCiNBJFM",
     icon: "▶️",
   },
   {
@@ -340,7 +340,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/Iw1AOaRAoMI?si=OfrDXIWONpXljUhr",
     icon: "▶️",
   },
   {
@@ -349,7 +349,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/QnVDnKxNHwc?si=5qMESgX5-EIzqvNF",
     icon: "▶️",
   },
   {
@@ -358,7 +358,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/NVMiEmLOzMY?si=idxQsj3E3MHEnMYg",
     icon: "▶️",
   },
   {
@@ -367,7 +367,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/FtnOwax7LQ4?si=r7yt74_MpAu7knHn",
     icon: "▶️",
   },
   {
@@ -376,7 +376,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/4i4H914B5kg?si=WdGFodHCTbmE6Bcw",
     icon: "▶️",
   },
   {
@@ -385,7 +385,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/-FGfmljWElc?si=wthpVDqSElCO9GUu",
+    link: "https://youtu.be/DdnqntEcEj0?si=w_yqhKb3M8QMwucC",
     icon: "▶️",
   },
   {
@@ -394,7 +394,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/OjaS7E3HzD0?si=9qOyCZU_admVUdiM",
+    link: "https://youtu.be/EfoMHhhHdLA?si=aNfJWP-eL_WyiQm_",
     icon: "▶️",
   },
   {
@@ -403,7 +403,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/D_mYAWMX3mU?si=_zArdgB8TWOVtTlO",
+    link: "https://youtu.be/eAWhQ5lajrg?si=2YANBPpaU2cxpPVx",
     icon: "▶️",
   },
   {
@@ -412,7 +412,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/FmDHm8qe9KY?si=uH7rdMXZS1B2WJ7U",
+    link: "https://youtu.be/2E0c_9JBAiQ?si=2tHYtXd1i72WUAo4",
     icon: "▶️",
   },
   {
@@ -421,7 +421,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/Gfea_ISaXps?si=PjrHpPRIM9lvo6Q3",
+    link: "https://youtu.be/9iZ3cTj_S60?si=bkS-e1fGbnYLYLw3",
     icon: "▶️",
   },
   {
@@ -430,7 +430,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/JS1CHRlSl3Y?si=Sqk3ri2PhFNDFZqU",
     icon: "▶️",
   },
   {
@@ -439,7 +439,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/DZwG7Fgl1hw?si=HX-L5pZJY_ERSKG8",
     icon: "▶️",
   },
   {
@@ -448,7 +448,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/j9zq_RENFIA?si=uL3HQYqSNY5VXr-X",
     icon: "▶️",
   },
   {
@@ -457,7 +457,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/JEbIRhQWmX8?si=eiIyTfz_eWjCEfLM",
     icon: "▶️",
   },
   {
@@ -466,7 +466,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/4XCBuqnyq6s?si=DYJQPB7H2ap-4_MF",
     icon: "▶️",
   },
   {
@@ -475,7 +475,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/e4W2A7uXzo8?si=q5J08NVaDasAEEOo",
     icon: "▶️",
   },
   {
@@ -484,7 +484,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/k01W_ls8740?si=FRjYrAjSOZt8Rkt_",
     icon: "▶️",
   },
   {
@@ -493,7 +493,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/xtg2m32Oq7M?si=ZeLcO6RXgnjnq9jl",
     icon: "▶️",
   },
   {
@@ -502,7 +502,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/xl5D1-gZhBQ?si=PdiG__KZIg1Xafjx",
     icon: "▶️",
   },
   {
@@ -511,7 +511,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/RglCbkCWWPY?si=gU7IDhUC4j6f4np8",
     icon: "▶️",
   },
   {
@@ -520,7 +520,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/-FGfmljWElc?si=wthpVDqSElCO9GUu",
+    link: "https://youtu.be/l4Q_sEMh0Xc?si=gtAMdqNf_Hs7s8UG",
     icon: "▶️",
   },
   {
@@ -529,7 +529,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/OjaS7E3HzD0?si=9qOyCZU_admVUdiM",
+    link: "https://youtu.be/b8kb6NikuOk?si=UhP3AFqUIvy9UkHA",
     icon: "▶️",
   },
   {
@@ -538,7 +538,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/D_mYAWMX3mU?si=_zArdgB8TWOVtTlO",
+    link: "https://youtu.be/xwG44xOF-_k?si=4q5jtgX1PyeLKkxa",
     icon: "▶️",
   },
   {
@@ -547,7 +547,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/FmDHm8qe9KY?si=uH7rdMXZS1B2WJ7U",
+    link: "https://youtu.be/eKp1b3lgNfg?si=-GEP0wNIzPsb93ui",
     icon: "▶️",
   },
   {
@@ -556,7 +556,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/Gfea_ISaXps?si=PjrHpPRIM9lvo6Q3",
+    link: "https://youtu.be/KtMI4VmTyYI?si=mvgMSQ7RdJYw9JSc",
     icon: "▶️",
   },
   {
@@ -565,7 +565,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/F0MDfQdS7zo?si=LDMBSylvr0csK60z",
     icon: "▶️",
   },
   {
@@ -574,7 +574,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/Uy3maaBpQaw?si=XPpHtJiTbXwQ1npT",
     icon: "▶️",
   },
   {
@@ -583,7 +583,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/zMxw7D-xZpI?si=iVTOEGIQrQBPyB_x",
     icon: "▶️",
   },
   {
@@ -592,7 +592,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/bs_cAeFmTyc?si=iJd0q15Pkd7f_U7p",
     icon: "▶️",
   },
   {
@@ -601,7 +601,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/dEeWorUbdZI?si=jNO23iTwb_QgTqq-",
     icon: "▶️",
   },
   {
@@ -610,7 +610,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/OxSYPRWlzSU?si=TdNysB23xCoUr7Gx",
     icon: "▶️",
   },
   {
@@ -619,7 +619,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/x0z2hT_ROXk?si=BhSKGsyDxYUYBnpV",
     icon: "▶️",
   },
   {
@@ -628,7 +628,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/G1oNEmB53SE?si=-Fyptekvl9m5l-e_",
     icon: "▶️",
   },
   {
@@ -637,7 +637,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/tIedmsVDqi4?si=AyisJzz8xCd1vfEU",
     icon: "▶️",
   },
   {
@@ -646,7 +646,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/YqVIXX8i6bU?si=_C5taePma6Yemn7y",
     icon: "▶️",
   },
   {
@@ -655,7 +655,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/-FGfmljWElc?si=wthpVDqSElCO9GUu",
+    link: "https://youtu.be/CxbS-DeeCL8?si=F6GUyG2tsS9vvSyB",
     icon: "▶️",
   },
   {
@@ -664,7 +664,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/OjaS7E3HzD0?si=9qOyCZU_admVUdiM",
+    link: "https://youtu.be/DZwG7Fgl1hw?si=Bg-EoNBiylb1b1eE",
     icon: "▶️",
   },
   {
@@ -673,7 +673,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/D_mYAWMX3mU?si=_zArdgB8TWOVtTlO",
+    link: "https://youtu.be/j9zq_RENFIA?si=H_tlzsDCf3kZ_Y4_",
     icon: "▶️",
   },
   {
@@ -682,7 +682,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/FmDHm8qe9KY?si=uH7rdMXZS1B2WJ7U",
+    link: "https://youtu.be/JEbIRhQWmX8?si=xD0IAecFGC03vbro",
     icon: "▶️",
   },
   {
@@ -691,7 +691,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/Gfea_ISaXps?si=PjrHpPRIM9lvo6Q3",
+    link: "https://youtu.be/4XCBuqnyq6s?si=-dssf81jU0SC4VqX",
     icon: "▶️",
   },
   {
@@ -700,7 +700,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/MPPBYPcd8A8?si=XuuZIWJT3Vr-iiMN",
     icon: "▶️",
   },
   {
@@ -709,7 +709,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/k01W_ls8740?si=wCIe_69oXatvPb8R",
     icon: "▶️",
   },
   {
@@ -718,7 +718,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/xtg2m32Oq7M?si=My2hkLtSfSMirPZ2",
     icon: "▶️",
   },
   {
@@ -727,7 +727,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/xl5D1-gZhBQ?si=gUpC1WrEXmQeIO9k",
     icon: "▶️",
   },
   {
@@ -736,7 +736,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/RglCbkCWWPY?si=3YcjOB31bEHtOMsh",
     icon: "▶️",
   },
   {
@@ -745,7 +745,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/RglCbkCWWPY?si=3YcjOB31bEHtOMsh",
     icon: "▶️",
   },
   {
@@ -754,7 +754,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/JS1CHRlSl3Y?si=bGQbKA2_h9OCQVSo",
     icon: "▶️",
   },
   {
@@ -763,7 +763,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/wVelVGA1M-s?si=ghAt8x3njzYLYwLJ",
     icon: "▶️",
   },
   {
@@ -772,7 +772,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/P8RCcT8ccQw?si=H5fLE0wFMLIr7eSR",
     icon: "▶️",
   },
   {
@@ -781,7 +781,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/FHDGOQA3FPM?si=Ro5OvPcDgbJVN_Bw",
     icon: "▶️",
   },
   {
@@ -790,7 +790,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/-FGfmljWElc?si=wthpVDqSElCO9GUu",
+    link: "https://youtu.be/8HAwdM_VJuY?si=CgyqPvzgV_bvkcCC",
     icon: "▶️",
   },
   {
@@ -799,7 +799,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/OjaS7E3HzD0?si=9qOyCZU_admVUdiM",
+    link: "https://youtu.be/e4W2A7uXzo8?si=1tcEAykLgHZG9UBe",
     icon: "▶️",
   },
   {
@@ -808,7 +808,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/D_mYAWMX3mU?si=_zArdgB8TWOVtTlO",
+    link: "https://youtu.be/qiYI8kO5ZDA?si=aMpkDD0yynKmaB3d",
     icon: "▶️",
   },
   {
@@ -817,7 +817,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/FmDHm8qe9KY?si=uH7rdMXZS1B2WJ7U",
+    link: "https://youtu.be/MtRwAHuHrgs?si=HQ7szzxzg8Fj-0j8",
     icon: "▶️",
   },
   {
@@ -826,7 +826,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/Gfea_ISaXps?si=PjrHpPRIM9lvo6Q3",
+    link: "https://youtu.be/fLepGcMfXGQ?si=IcUQ1erCg_-bZU4g",
     icon: "▶️",
   },
   {
@@ -835,7 +835,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/xChQpG7dBcg?si=JUplR1P6l6225TF1",
+    link: "https://youtu.be/JmyFq1fAjm0?si=dGydUN_KNXDDMmTC",
     icon: "▶️",
   },
   {
@@ -844,7 +844,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/F3PCwtOQU4Q?si=T8TDeOG7b5ERiVFw",
+    link: "https://youtu.be/dHRiVq92nMk?si=pDi4MXBq0UkWXBgX",
     icon: "▶️",
   },
   {
@@ -853,7 +853,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/iQ7sgm7iLDc?si=ccMs1uJy0LRDFGoc",
+    link: "https://youtu.be/vtYInevmAmI?si=7K9fxo4FZfsnnwIH",
     icon: "▶️",
   },
   {
@@ -862,7 +862,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/G6S2QG_xSi0?si=8_uWFLVGpcihxQ9L",
+    link: "https://youtu.be/HP6FdegtH7k?si=Mf3soLH02PtBwlFs",
     icon: "▶️",
   },
   {
@@ -871,7 +871,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/yx7M38lmMYk?si=rHjSPdKuPdD0n8sR",
+    link: "https://youtu.be/uf7UmOOojyo?si=SyQ7xzY0JgNNbliA",
     icon: "▶️",
   },
   {
@@ -880,7 +880,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/MIPkBEOwiaY?si=Qp88Pn2T9u5R1o_d",
+    link: "https://youtu.be/_aDpgzYQjRI?si=73K6RBMOfx7W9GTp",
     icon: "▶️",
   },
   {
@@ -889,7 +889,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/7vCqiRarIbQ?si=jkPs46Lj4bKW-huS",
+    link: "https://youtu.be/HbfrBfSKKME?si=_QbMSdZgrFWEt9oe",
     icon: "▶️",
   },
   {
@@ -898,7 +898,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/TWpJp5Y8r7U?si=JiAyZRBSHxoPGyXa",
+    link: "https://youtu.be/n46fISr7JNc?si=Qs5HBxaZhfCxNBjb",
     icon: "▶️",
   },
   {
@@ -907,7 +907,7 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/c8lLmsQJOVA?si=YTRqcMce7Jr67SWw",
+    link: "https://youtu.be/oP1d8nccj4A?si=F4HOZ1icD1EGIZdE",
     icon: "▶️",
   },
   {
@@ -916,9 +916,9 @@ const AVAILABLE_TASKS: Task[] = [
     description: "Watch and complete this YouTube task for auto tap.",
     category: "MU",
     reward: 1000,
-    link: "https://youtu.be/9LMNaMA7KIY?si=OMrxp3pwqQoRCE4W",
+    link: "https://youtu.be/ODDd_fGf8qI?si=QtqTPhBb8wAqbvBe",
     icon: "▶️",
-  }
+  },
 ];
 
 export default function MuTaskPage() {
@@ -940,6 +940,18 @@ function MuTaskPageInner() {
   const [userId, setUserId] = useState<string>("")
   const searchParams = useSearchParams()
   const needParam = Number(searchParams.get("need") || searchParams.get("count") || "0")
+  const planParam = (searchParams.get("plan") || "") as string
+  // per-plan isolation: mu tasks for 2d (30) vs 1w (100) track separately starting at 0
+  const resolvedPlan = (() => {
+    if (planParam === "2d" || planParam === "1w") return planParam
+    if (needParam === 30) return "2d"
+    if (needParam === 100) return "1w"
+    if (needParam > 50) return "1w"
+    if (needParam > 0) return "2d"
+    return ""
+  })()
+  const taskStorageKey = resolvedPlan ? `mu-completed-tasks-${resolvedPlan}` : "mu-completed-tasks"
+  const cooldownStorageKey = resolvedPlan ? `mu-task-cooldowns-${resolvedPlan}` : "mu-task-cooldowns"
   const displayTasks = needParam > 0 ? AVAILABLE_TASKS.slice(0, Math.min(needParam, AVAILABLE_TASKS.length)) : AVAILABLE_TASKS
 
 
@@ -955,12 +967,12 @@ function MuTaskPageInner() {
     setBalance(user.balance || 0)
     setUserId(user.id || user.userId || user.user_id || "")
 
-    const completed = JSON.parse(localStorage.getItem("mu-completed-tasks") || "[]")
+    const completed = JSON.parse(localStorage.getItem(taskStorageKey) || "[]")
     setCompletedTasks(Array.isArray(completed) ? completed : [])
 
-    const savedCooldowns = JSON.parse(localStorage.getItem("mu-task-cooldowns") || "{}")
+    const savedCooldowns = JSON.parse(localStorage.getItem(cooldownStorageKey) || "{}")
     setCooldowns(savedCooldowns)
-  }, [router])
+  }, [router, taskStorageKey, cooldownStorageKey])
 
   // Initialize task timer hook
   const { attachFocusListener, startTaskTimer } = useTaskTimer()
@@ -1088,11 +1100,11 @@ function MuTaskPageInner() {
 
       if (changed) {
         setCooldowns({ ...updated })
-        localStorage.setItem("mu-task-cooldowns", JSON.stringify(updated))
+        localStorage.setItem(cooldownStorageKey, JSON.stringify(updated))
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [cooldowns])
+  }, [cooldowns, cooldownStorageKey])
 
   const getNextResetBoundary = (date: Date) => {
     // Add exactly 12 hours from now
@@ -1143,13 +1155,13 @@ function MuTaskPageInner() {
 
     const newCompleted = [...completedTasks, task.id]
     setCompletedTasks(newCompleted)
-    localStorage.setItem("mu-completed-tasks", JSON.stringify(newCompleted))
+    localStorage.setItem(taskStorageKey, JSON.stringify(newCompleted))
 
     const now = new Date()
     const nextReset = getNextResetBoundary(now).getTime()
     const newCooldowns = { ...cooldowns, [task.id]: nextReset }
     setCooldowns(newCooldowns)
-    localStorage.setItem("mu-task-cooldowns", JSON.stringify(newCooldowns))
+    localStorage.setItem(cooldownStorageKey, JSON.stringify(newCooldowns))
 
     // Remove from verifying tasks
     setVerifyingTasks(prev => {

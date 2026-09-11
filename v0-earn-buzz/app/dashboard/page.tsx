@@ -78,7 +78,7 @@ const getAutoIntervalMs = (planId: AutoPlanId) => {
   if (!p) return AUTO_TAP_INTERVAL_MS;
   return Math.max(900, Math.floor(p.durationMs / p.maxTaps));
 };
-const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 30, "3d": 40, "1w": 60 };
+const AUTO_REQ_TASK: Record<AutoPlanId, number> = { free1h: 0, "24h": 20, "2d": 30, "3d": 40, "1w": 100 };
 const AUTO_REQ_REF: Record<AutoPlanId, number> = { free1h: 0, "24h": 10, "2d": 20, "3d": 30, "1w": 50 };
 const AUTO_REQ_PAY: Record<AutoPlanId, number> = { free1h: 0, "24h": 15000, "2d": 20000, "3d": 30000, "1w": 50000 };
 const AUTO_REF_LINK_KEY = "auto_tap_ref_code";
@@ -164,6 +164,19 @@ export default function DashboardPage() {
   const [autoTaskDone, setAutoTaskDone] = useState(0);
   const [mtTaskDone, setMtTaskDone] = useState(0);
   const [muTaskDone, setMuTaskDone] = useState(0);
+  // per-plan isolated counts — each AutoPlanId tracks its own tasks from 0 (no carry-over)
+  const [perPlanTaskDone, setPerPlanTaskDone] = useState<Record<string, number>>({});
+  const getPerPlanTaskKey = useCallback((planId: AutoPlanId) => {
+    if (planId === "24h") return "mt-completed-tasks-24h";
+    if (planId === "3d") return "mt-completed-tasks-3d";
+    if (planId === "2d") return "mu-completed-tasks-2d";
+    if (planId === "1w") return "mu-completed-tasks-1w";
+    return "auto-tap-completed-tasks";
+  }, []);
+  const getPerPlanDone = useCallback((planId: AutoPlanId | null) => {
+    if (!planId) return 0;
+    return perPlanTaskDone[planId] ?? 0;
+  }, [perPlanTaskDone]);
   const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
   // Auto-tap toggle-off warning
@@ -383,6 +396,10 @@ export default function DashboardPage() {
         const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
         // legacy
         const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+        // per-plan isolated counts — start at 0 per plan, no carry-over between 2d/1w or 24h/3d
+        const per: Record<string, number> = {};
+        (["24h","2d","3d","1w"] as AutoPlanId[]).forEach(pid=>{ try{ const k = getPerPlanTaskKey(pid); const arr = JSON.parse(localStorage.getItem(k)||"[]"); per[pid]=Array.isArray(arr)?arr.length:0; }catch{ per[pid]=0; }});
+        setPerPlanTaskDone(per);
         try { const cd = JSON.parse(localStorage.getItem(AUTO_PLAN_COOLDOWN_KEY)||"{}"); if (cd && typeof cd==="object") setAutoPlanCooldowns(cd); } catch {}
       } catch {}
     } catch {}
@@ -392,11 +409,17 @@ export default function DashboardPage() {
       const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
       const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
       const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+      const per: Record<string, number> = {};
+      (["24h","2d","3d","1w"] as AutoPlanId[]).forEach(pid=>{ try{ const k = getPerPlanTaskKey(pid); const arr = JSON.parse(localStorage.getItem(k)||"[]"); per[pid]=Array.isArray(arr)?arr.length:0; }catch{ per[pid]=0; }});
+      setPerPlanTaskDone(per);
     }catch{} }, 1000);
     const upd=()=>{ try{ 
       const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
       const cMu = JSON.parse(localStorage.getItem("mu-completed-tasks")||"[]"); setMuTaskDone(Array.isArray(cMu)?cMu.length:0);
       const c = JSON.parse(localStorage.getItem("auto-tap-completed-tasks")||"[]"); setAutoTaskDone(Array.isArray(c)?c.length:0);
+      const per: Record<string, number> = {};
+      (["24h","2d","3d","1w"] as AutoPlanId[]).forEach(pid=>{ try{ const k = getPerPlanTaskKey(pid); const arr = JSON.parse(localStorage.getItem(k)||"[]"); per[pid]=Array.isArray(arr)?arr.length:0; }catch{ per[pid]=0; }});
+      setPerPlanTaskDone(per);
     }catch{} };
     window.addEventListener("focus",upd); window.addEventListener("storage",upd as any);
     return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
@@ -719,10 +742,10 @@ export default function DashboardPage() {
     if (reqChoice==="task") {
       const need = AUTO_REQ_TASK[reqPlan];
       const isMt = reqPlan==="24h" || reqPlan==="3d";
-      const key = isMt ? "mt-completed-tasks" : "mu-completed-tasks";
+      const key = getPerPlanTaskKey(reqPlan);
       const completed = JSON.parse(localStorage.getItem(key)||"[]");
       const done = Array.isArray(completed) ? completed.length : 0;
-      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to ${isMt ? "MT" : "MU"} Tasks.` }); return; }
+      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to ${isMt ? "MT" : "MU"} Tasks — progress for each plan is separate (starts at 0).` }); return; }
     }
     if (reqChoice==="referral") {
       const need = AUTO_REQ_REF[reqPlan];
@@ -1766,10 +1789,10 @@ export default function DashboardPage() {
             <div className="space-y-3 mt-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">a</span>
-                <button onClick={()=> { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}`:`/mu-tasks?need=${need}`; router.push(path); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <button onClick={()=> { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}&plan=${reqPlan}`:`/mu-tasks?need=${need}&plan=${reqPlan}`; router.push(path); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                   <div>
                     <div className="text-sm font-black text-white">{AUTO_REQ_TASK[reqPlan]} tasks required</div>
-                    <div className="text-xs text-white/70 mt-1">you've only done {(reqPlan==="24h"||reqPlan==="3d") ? mtTaskDone : muTaskDone}/{AUTO_REQ_TASK[reqPlan]}</div>
+                    <div className="text-xs text-white/70 mt-1">you've only done {getPerPlanDone(reqPlan)}/{AUTO_REQ_TASK[reqPlan]} — this plan counts separately from others</div>
                     <div className="mt-1 text-xs text-white/50">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]})</div>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
