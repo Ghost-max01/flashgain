@@ -97,6 +97,44 @@ function CallbackInner() {
           } catch {}
         }
 
+        // Loan: credit full loanAmount to balance (fee was paid via Paystack)
+        if (type === "loan" && (metadata as any).loanAmount) {
+          try {
+            const pendingRaw = localStorage.getItem("pending_loan")
+            const pending = pendingRaw ? JSON.parse(pendingRaw) : null
+            const loanAmt = Number((metadata as any).loanAmount) || Number(pending?.loanAmount) || 0
+            const seenKey = `paystack_ref_${reference}`
+            if (loanAmt > 0 && !localStorage.getItem(seenKey + "_loan")) {
+              const rawLoan = localStorage.getItem("tivexx-user")
+              if (rawLoan) {
+                const uLoan = JSON.parse(rawLoan)
+                const uidLoan = uLoan.id || uLoan.userId
+                // Prefer server balance, fallback to local increment of loanAmt
+                if (uidLoan) {
+                  try {
+                    const rLoan = await fetch(`/api/user-balance?userId=${uidLoan}`)
+                    const jLoan: any = await rLoan.json().catch(()=>({}))
+                    if (jLoan?.success && typeof jLoan.balance === "number") uLoan.balance = jLoan.balance
+                    else uLoan.balance = Number(uLoan.balance || 0) + loanAmt
+                  } catch { uLoan.balance = Number(uLoan.balance || 0) + loanAmt }
+                } else {
+                  uLoan.balance = Number(uLoan.balance || 0) + loanAmt
+                }
+                localStorage.setItem("tivexx-user", JSON.stringify(uLoan))
+                persistUserSession(uLoan)
+                // Log transaction
+                try {
+                  const tx = JSON.parse(localStorage.getItem("tivexx-transactions") || "[]")
+                  tx.unshift({ id: Date.now(), type: "credit", description: `Loan Disbursed — ₦${loanAmt.toLocaleString()}`, amount: loanAmt, date: new Date().toISOString(), reference })
+                  localStorage.setItem("tivexx-transactions", JSON.stringify(tx))
+                } catch {}
+                localStorage.setItem(seenKey + "_loan", "1")
+                localStorage.removeItem("pending_loan")
+              }
+            }
+          } catch {}
+        }
+
         // Payment into app = +5 Trust Score (compounding) — once per ref
         try {
           if (!localStorage.getItem(`paystack_ref_${reference}_trust`)) {
@@ -113,10 +151,12 @@ function CallbackInner() {
 
         if (!cancelled) {
           setStatus("success")
-          const extra = type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+5 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+5 Trust)` : `₦${amount.toLocaleString()} added to balance! (+5 Trust)`
+          const isLoan = type === "loan"
+          const loanAmt = isLoan ? Number((metadata as any).loanAmount || 0) : 0
+          const extra = isLoan ? `Loan ₦${loanAmt.toLocaleString()} disbursed to your balance! (+5 Trust)` : type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+5 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+5 Trust)` : `₦${amount.toLocaleString()} added to balance! (+5 Trust)`
           setMsg(extra)
           toast({ title: "Payment verified ✓", description: extra })
-          setTimeout(() => router.replace(type === "investment" ? "/dashboard" : "/dashboard"), 2500)
+          setTimeout(() => router.replace(isLoan ? "/dashboard" : type === "investment" ? "/dashboard" : "/dashboard"), 2500)
         }
       } catch (e) {
         if (!cancelled) { setStatus("failed"); setMsg("Verification error — contact support with ref " + reference) }

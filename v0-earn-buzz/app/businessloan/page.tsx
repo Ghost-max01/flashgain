@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
 import {
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ import Link from "next/link"
 
 export default function BusinessLoanPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loanAmount, setLoanAmount] = useState("")
   const [accountNumber, setAccountNumber] = useState("")
   const [selectedBank, setSelectedBank] = useState("")
@@ -98,7 +100,7 @@ export default function BusinessLoanPage() {
       .format(n)
       .replace("NGN", "₦")
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     setError(null)
     const loanAmountNum = Math.floor(numericValue(loanAmount))
 
@@ -118,16 +120,51 @@ export default function BusinessLoanPage() {
     }
 
     const fee = Math.ceil(loanAmountNum * PROCESSING_RATE)
-    const url = new URL("/withdraw/bank-transfer", window.location.origin)
-    url.searchParams.set("amount", fee.toString())
-    url.searchParams.set("loanAmount", loanAmountNum.toString())
-    url.searchParams.set("accountNumber", accountNumber.replace(/\D/g, ""))
-    url.searchParams.set("selectedBank", selectedBank)
-    url.searchParams.set("accountName", accountName)
     setSubmitting(true)
-    setTimeout(() => {
-      router.push(url.toString())
-    }, 450)
+    try {
+      // Get user email/id for Paystack
+      const raw = localStorage.getItem("tivexx-user")
+      const user = raw ? JSON.parse(raw) : null
+      const email = user?.email || ""
+      const userId = user?.id || user?.userId || user?.user_id || ""
+      if (!email) {
+        setError("Add your email in profile first — needed for Paystack receipt.")
+        toast({ title: "Email required", description: "Add your email to receive Paystack receipt", variant: "destructive" })
+        setSubmitting(false)
+        return
+      }
+      toast({ title: "Processing fee via Paystack", description: `${formatCurrency(fee)} fee for ${formatCurrency(loanAmountNum)} loan — redirecting...` })
+      const res = await fetch("/api/paystack/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          amount: fee,
+          callbackUrl: `${window.location.origin}/paystack/callback`,
+          metadata: {
+            type: "loan",
+            loanAmount: loanAmountNum,
+            fee,
+            selectedBank,
+            accountNumber: accountNumber.replace(/\D/g, ""),
+            accountName,
+            userId,
+          },
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.authorization_url) {
+        throw new Error(data?.error || "Could not start Paystack")
+      }
+      try {
+        localStorage.setItem("pending_loan", JSON.stringify({ loanAmount: loanAmountNum, fee, selectedBank, accountNumber: accountNumber.replace(/\D/g, ""), accountName, reference: data.reference, at: Date.now() }))
+      } catch {}
+      window.location.href = data.authorization_url
+    } catch (e: any) {
+      setError(e?.message || "Failed to start payment")
+      toast({ title: "Payment failed", description: e?.message || "Try again", variant: "destructive" })
+      setSubmitting(false)
+    }
   }
 
   // Auto-verify account when 10-digit account number and bank code is found

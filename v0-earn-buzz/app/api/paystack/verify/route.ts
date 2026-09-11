@@ -49,10 +49,12 @@ export async function GET(req: Request) {
     if (userId && amountNaira > 0) {
       try {
         const supabase = await createClient()
-        // Read current balance and increment (simple, not race-proof but ok for now)
+        // For loans, credit the full loanAmount (not just the 3% fee)
+        const isLoan = type === "loan" && metadata.loanAmount
+        const creditAmount = isLoan ? Number(metadata.loanAmount) : Number(amountNaira)
         const { data: user } = await supabase.from("users").select("balance").eq("id", userId).single()
         if (user) {
-          const newBalance = Number(user.balance || 0) + Number(amountNaira)
+          const newBalance = Number(user.balance || 0) + creditAmount
           await supabase.from("users").update({ balance: newBalance }).eq("id", userId)
         }
         // Also log to transactions if table exists (ignore error)
@@ -60,7 +62,7 @@ export async function GET(req: Request) {
           await supabase.from("transactions").insert({
             user_id: userId,
             type: type || "deposit",
-            amount: amountNaira,
+            amount: creditAmount,
             reference,
             status: "success",
             metadata,
@@ -115,9 +117,11 @@ export async function POST(req: Request) {
     if (userId && amountNaira > 0) {
       try {
         const supabase = await createClient()
+        const isLoan = type === "loan" && (metadata as any).loanAmount
+        const creditAmount = isLoan ? Number((metadata as any).loanAmount) : Number(amountNaira)
         const { data: user } = await supabase.from("users").select("balance").eq("id", userId).single()
         if (user) {
-          const newBalance = Number(user.balance || 0) + Number(amountNaira)
+          const newBalance = Number(user.balance || 0) + creditAmount
           await supabase.from("users").update({ balance: newBalance }).eq("id", userId)
         }
       } catch {}

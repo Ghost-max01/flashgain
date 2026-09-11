@@ -363,16 +363,15 @@ export default function DashboardPage() {
     };
   }, [toast]);
 
-  // ── Tap-to-Earn: load + regen + persist + exhaust 10min + auto tap ──
+  // ── Tap-to-Earn: load + persist + exhaust 10min + auto tap (NO gradual refill) ──
   useEffect(() => {
     try {
       const raw = localStorage.getItem(TAP_STORAGE_KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        const elapsed = Date.now() - (s.lastTime || Date.now());
-        const regen = Math.floor(elapsed / TAP_ENERGY_REGEN_MS);
-        const energy = Math.min(TAP_MAX_ENERGY, (s.energy ?? TAP_MAX_ENERGY) + regen);
-        setTapEnergy(energy);
+        // No gradual refill: keep exact stored energy; only exhaust countdown refills to 100
+        const energy = s.energy ?? TAP_MAX_ENERGY;
+        setTapEnergy(Math.min(TAP_MAX_ENERGY, Math.max(0, energy)));
         setTapEarned(s.earned || 0);
       }
       const ex = localStorage.getItem(TAP_EXHAUST_KEY);

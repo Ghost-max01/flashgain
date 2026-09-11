@@ -234,30 +234,38 @@ export default function WithdrawPage() {
   }, [showInstantWithdrawBlockedPopup])
 
   const handleCashout = () => {
-    // Withdrawal window: 7:00 AM - 8:00 PM (WAT / Africa/Lagos)
-    try {
-      const now = new Date()
-      // Get hour in Lagos timezone (WAT = UTC+1, no DST)
-      const lagosHourStr = new Intl.DateTimeFormat("en-NG", {
-        timeZone: "Africa/Lagos",
-        hour: "numeric",
-        hour12: false,
-      }).format(now)
-      const lagosHour = parseInt(lagosHourStr, 10)
-      const isOpen = lagosHour >= 7 && lagosHour < 20
-      if (!isOpen) {
-        setShowHoursPopup(true)
-        return
-      }
-    } catch {
-      // Fallback to UTC+1
-      const h = (new Date().getUTCHours() + 1) % 24
-      if (h < 7 || h >= 20) {
-        setShowHoursPopup(true)
-        return
-      }
+    // 1) First check withdrawal requirements (faint/blur -> show requirements popup)
+    const missingBalance = balance < 200000
+    const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
+    const missingReferrals = referralCount < REQUIRED_REFERRALS
+    const missingSpin = !spinPlayedToday
+    const meetsRequirements = toggleActive
+      ? (!missingBalance && !missingTasks && !missingSpin)
+      : (!missingBalance && !missingTasks && !missingReferrals && !missingSpin)
+    if (!meetsRequirements) {
+      setShowRequirementsModal(true)
+      return
     }
-    // BYPASSED: Skip all validation checks - go directly to withdrawal modal
+    // 2) Only when button is glowing (requirements met) check time window
+    const isOpen = (() => {
+      try {
+        const now = new Date()
+        const lagosHourStr = new Intl.DateTimeFormat("en-NG", {
+          timeZone: "Africa/Lagos",
+          hour: "numeric",
+          hour12: false,
+        }).format(now)
+        const lagosHour = parseInt(lagosHourStr, 10)
+        return lagosHour >= 7 && lagosHour < 20
+      } catch {
+        const h = (new Date().getUTCHours() + 1) % 24
+        return h >= 7 && h < 20
+      }
+    })()
+    if (!isOpen) {
+      setShowHoursPopup(true)
+      return
+    }
     setShowWithdrawalInfoModal(true)
   }
 
@@ -557,9 +565,10 @@ export default function WithdrawPage() {
             const missingBalance = balance < 200000
             const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
             const missingReferrals = referralCount < 5
+            const missingSpin = !spinPlayedToday
             const meetsRequirements = toggleActive
-              ? (!missingBalance && !missingTasks)
-              : (!missingBalance && !missingTasks && !missingReferrals)
+              ? (!missingBalance && !missingTasks && !missingSpin)
+              : (!missingBalance && !missingTasks && !missingReferrals && !missingSpin)
 
             return (
               <>
