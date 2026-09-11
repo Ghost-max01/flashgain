@@ -87,9 +87,16 @@ export default function SetupWithdrawalAccountPage() {
         if (!res.ok) return
         const data = await res.json()
         if (mounted && data && data.banks) {
-          const filteredList = data.banks.filter(
-            (bankItem: any) => !bankItem.name.toLowerCase().includes("goodnews microfinance")
-          )
+          const filteredList = data.banks.filter((bankItem: any) => {
+            const n = bankItem.name.toLowerCase()
+            return (
+              !n.includes("goodnews microfinance") &&
+              !n.includes("kolomoni") &&
+              !n.includes("bankit") &&
+              !n.includes("u and c") &&
+              !n.includes("u&c")
+            )
+          })
           setBanksList(filteredList)
         }
       } catch (err) {
