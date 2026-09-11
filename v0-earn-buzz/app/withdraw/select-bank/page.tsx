@@ -94,7 +94,8 @@ export default function SetupWithdrawalAccountPage() {
               !n.includes("kolomoni") &&
               !n.includes("bankit") &&
               !n.includes("u and c") &&
-              !n.includes("u&c")
+              !n.includes("u&c") &&
+              !n.includes("stella")
             )
           })
           setBanksList(filteredList)
