@@ -39,7 +39,9 @@ const AUTO_PLAN_COOLDOWN_MS = 7*24*60*60*1000;
 
 const MAX_ENERGY = 100;
 const EARN_PER_TAP = 100;
-const ENERGY_REGEN_MS = 6000; // 6 seconds per energy point = 100 energy in 10 minutes
+const ENERGY_REGEN_MS = 6000; // kept for reference but gradual regen is disabled per requirement
+const TAP_EXHAUST_COOLDOWN_MS = 10 * 60 * 1000;
+const TAP_EXHAUST_KEY = "tap_exhaust_until";
 const STORAGE_KEY = "tap_earn_state";
 
 interface TapParticle {
@@ -78,9 +80,8 @@ const loadState = () => {
     }
 
     const s = JSON.parse(raw);
-    const elapsed = Date.now() - (s.lastTime || Date.now());
-    const regen = Math.floor(elapsed / ENERGY_REGEN_MS);
-    const energy = Math.min(MAX_ENERGY, (s.energy || 0) + regen);
+    // No gradual refill — keep stored energy exactly; exhaust countdown handles full refill to 100
+    const energy = Math.min(MAX_ENERGY, Math.max(0, s.energy ?? MAX_ENERGY));
 
     return {
       energy,
@@ -122,6 +123,12 @@ export default function TapAndEarnPage() {
   const [completedTasksCount, setCompletedTasksCount] = useState(0);
   const [hasShownTaskPopup, setHasShownTaskPopup] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Rapid tap warning (same as dashboard) & exhaust (no refill until 10m)
+  const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
+  const [showRapidTapWarning, setShowRapidTapWarning] = useState(false);
+  const rapidTapWarningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tapExhaustUntil, setTapExhaustUntil] = useState<number | null>(null);
+  const [tapExhaustLeft, setTapExhaustLeft] = useState(0);
 
   // ── Auto Tap state ──
   const [autoActive, setAutoActive] = useState(false);
@@ -245,10 +252,28 @@ export default function TapAndEarnPage() {
     };
   }, [pathname]);
 
-  // ─── Rest of the component (unchanged) ───────────────────────────────
+  // ─── Rest of the component ───────────────────────────────
   useEffect(() => {
     setMounted(true);
-    setState(loadState());
+    const loaded = loadState();
+    setState(loaded);
+    // Load exhaust state — if still in cooldown, stay at 0 and not tappable
+    try {
+      const ex = localStorage.getItem(TAP_EXHAUST_KEY);
+      if (ex) {
+        const until = Number(ex);
+        if (until > Date.now()) {
+          setTapExhaustUntil(until);
+          setState((prev) => ({ ...prev, energy: 0 }));
+        } else localStorage.removeItem(TAP_EXHAUST_KEY);
+      }
+      // If loaded state has 0 energy and no exhaust yet, start exhaust
+      if (loaded.energy <= 0 && !localStorage.getItem(TAP_EXHAUST_KEY)) {
+        const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
+        setTapExhaustUntil(until);
+        try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
+      }
+    } catch {}
     // Load auto tap state
     try {
       const aRaw = localStorage.getItem(AUTO_TAP_KEY);
@@ -324,11 +349,33 @@ export default function TapAndEarnPage() {
     return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
   }, []);
 
+  // Exhaust countdown — snaps to 100 when done, stays 0 until then (no gradual refill)
+  useEffect(() => {
+    if (!tapExhaustUntil) { setTapExhaustLeft(0); return; }
+    const tick = () => {
+      const left = Math.max(0, tapExhaustUntil - Date.now());
+      setTapExhaustLeft(left);
+      if (left === 0) {
+        setTapExhaustUntil(null);
+        try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+        setState((prev) => ({ ...prev, energy: MAX_ENERGY }));
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [tapExhaustUntil]);
+
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ ...state, lastTime: Date.now() }),
     );
+    if (state.energy === 0 && !tapExhaustUntil) {
+      const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
+      setTapExhaustUntil(until);
+      try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
+    }
   }, [state]);
 
   useEffect(() => {
@@ -369,15 +416,7 @@ export default function TapAndEarnPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setState((prev) => {
-        if (prev.energy >= MAX_ENERGY) return prev;
-        return { ...prev, energy: Math.min(MAX_ENERGY, prev.energy + 1) };
-      });
-    }, ENERGY_REGEN_MS);
-    return () => clearInterval(interval);
-  }, []);
+  // Removed gradual ENERGY_REGEN_MS interval — energy does not refill until 10-min exhaust finishes
 
   const syncToDb = useCallback((earnedAmount: number) => {
     accumulatedEarned.current += earnedAmount;
@@ -474,17 +513,27 @@ export default function TapAndEarnPage() {
         | React.MouseEvent<HTMLButtonElement>
         | React.TouchEvent<HTMLButtonElement>,
     ) => {
-      // Check if user has completed all tasks (10 tasks required)
-      if (completedTasksCount < 10 && !hasShownTaskPopup) {
-        setShowTaskPopup(true);
-        setHasShownTaskPopup(true);
-        return;
-      }
+      // No task gate — user can tap immediately (requirement removed)
+      if (showRapidTapWarning) return;
       if (autoActive) return; // locked while auto
+      if (tapExhaustUntil && tapExhaustUntil > Date.now()) return;
       if (state.energy <= 0) {
         setShowPrompt(true);
         return;
       }
+      // Rapid tap detection — >3 taps in 1 sec triggers warning (same as dashboard)
+      const now = Date.now();
+      const recentTaps = tapTimestamps.filter((t) => now - t < 1000);
+      if (recentTaps.length >= 3) {
+        setShowRapidTapWarning(true);
+        if (rapidTapWarningRef.current) clearTimeout(rapidTapWarningRef.current);
+        rapidTapWarningRef.current = setTimeout(() => {
+          setShowRapidTapWarning(false);
+          setTapTimestamps([]);
+        }, 2000);
+        return;
+      }
+      setTapTimestamps((prev) => [...prev.slice(-10), now]);
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       let clientX: number, clientY: number;
       if ("touches" in e) {
@@ -514,7 +563,7 @@ export default function TapAndEarnPage() {
       }));
       syncToDb(EARN_PER_TAP);
     },
-    [state.energy, syncToDb, autoActive],
+    [state.energy, syncToDb, autoActive, tapExhaustUntil, tapTimestamps, showRapidTapWarning],
   );
 
   // ── Auto Tap handlers ──
@@ -666,23 +715,24 @@ export default function TapAndEarnPage() {
           </div>
         </div>
 
-        {/* ── Orb Zone ── */}
-        <div className="hh-entry-2 flex flex-col items-center py-6">
-          {/* Outer glow ring */}
-          <div className="te-orb-stage">
-            {/* Pulsing halo */}
+        {/* ── Orb Zone — matched to dashboard (small round orb, no gradual refill, not tappable till full) ── */}
+        <div className="hh-entry-2 flex flex-col items-center py-4 hh-tap-earn-round-wrap !py-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
+            <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
+            <span className="hh-tap-badge">₦{EARN_PER_TAP}/tap</span>
+          </div>
+          <div className="hh-orb-stage-sm">
             <div
-              className={`te-halo ${state.energy > 0 ? "te-halo-active" : "te-halo-inactive"}`}
+              className={`te-halo ${state.energy > 0 && !autoActive && !showRapidTapWarning ? "te-halo-active" : "te-halo-inactive"}`}
+              style={autoActive ? { animationPlayState: "paused" } : undefined}
             ></div>
-
-            {/* Rotating rings */}
-            <div className="te-ring te-ring-outer"></div>
-            <div className="te-ring te-ring-inner"></div>
-
-            {/* The main tap button */}
+            <div className="te-ring te-ring-outer" style={autoActive ? { animationPlayState: "paused" } : undefined}></div>
+            <div className="te-ring te-ring-inner" style={autoActive ? { animationPlayState: "paused" } : undefined}></div>
             <button
               onClick={handleTap}
-              className={`te-orb ${state.energy > 0 ? "te-orb-active" : "te-orb-depleted"} ${tapping ? "te-orb-tap" : ""}`}
+              disabled={autoActive || (tapExhaustUntil !== null && tapExhaustLeft > 0) || showRapidTapWarning || state.energy <= 0}
+              className={`te-orb hh-orb-sm ${state.energy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`}
               title="Tap to earn coins"
             >
               {/* Glass shine */}
@@ -724,16 +774,37 @@ export default function TapAndEarnPage() {
                   <span className="te-particle-emoji">{p.emoji}</span>
                 </div>
               ))}
+              {/* Rapid tap warning — same as dashboard */}
+              {showRapidTapWarning && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10 rounded-full">
+                  <div className="rounded-full bg-red-600/90 border-4 border-red-400 px-6 py-3 text-center animate-pulse" style={{ animationDuration: "2s", boxShadow: "0 0 40px rgba(239,68,68,0.6)" }}>
+                    <div className="text-white font-black text-xl">⚠ TOO FAST</div>
+                    <div className="text-white/80 text-xs mt-1">Slow down! Tap again in a moment</div>
+                  </div>
+                </div>
+              )}
+              {showRapidTapWarning && (
+                <div className="absolute inset-0 z-[5] cursor-not-allowed" aria-hidden="true" onClick={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} />
+              )}
             </button>
+            {tapExhaustUntil && tapExhaustLeft > 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="rounded-full bg-black/70 border border-amber-400/30 px-3 py-1.5 text-center">
+                  <div className="text-amber-300 font-black text-[10px] flex items-center justify-center gap-1"><Clock className="h-3 w-3" /> {Math.floor(tapExhaustLeft/60000)}:{String(Math.floor((tapExhaustLeft%60000)/1000)).padStart(2,"0")}</div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Hint label */}
-          <p className="te-tap-hint mt-5">
+          {/* Hint label — not refillable until 10-min countdown */}
+          <p className="te-tap-hint mt-3">
             {autoActive
               ? "Auto tapping — balance rising"
-              : state.energy > 0
-                ? `${state.energy} taps remaining`
-                : "Energy depleted — wait or complete tasks"}
+              : tapExhaustUntil && tapExhaustLeft > 0
+                ? `Exhausted 100/100 — wait ${Math.floor(tapExhaustLeft/60000)}:${String(Math.floor((tapExhaustLeft%60000)/1000)).padStart(2,"0")} to recharge`
+                : state.energy > 0
+                  ? `${state.energy} taps remaining • not refilling until exhausted`
+                  : "Energy depleted — wait 10 mins to recharge"}
           </p>
 
           {/* Auto tap toggle + status */}
@@ -1803,6 +1874,19 @@ export default function TapAndEarnPage() {
           font-weight: 700;
           color: #fbbf24;
         }
+        .hh-tap-earn-round-wrap { background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,13,20,0.5) 50%, rgba(245,158,11,0.08) 100%); border: 1px solid rgba(16,185,129,0.22); border-radius: 16px; padding: 9px 11px; }
+        .hh-tap-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(16,185,129,0.25); flex-shrink: 0; }
+        .hh-tap-badge { font-size: 9px; font-weight: 900; letter-spacing: 0.08em; background: rgba(16,185,129,0.18); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 6px; }
+        .hh-orb-stage-sm { position: relative; width: 135px; height: 135px; display: flex; align-items: center; justify-content: center; margin: 2px 0; }
+        .hh-orb-stage-sm .te-halo { inset: -18px; }
+        .hh-orb-stage-sm .te-ring-outer { inset: -22px; }
+        .hh-orb-stage-sm .te-ring-inner { inset: -12px; }
+        .hh-orb-sm { width: 118px !important; height: 118px !important; }
+        .te-orb-locked { cursor: not-allowed; filter: brightness(0.85); }
+        .hh-toggle { position: relative; width: 52px; height: 28px; border-radius: 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.3s ease; flex-shrink: 0; }
+        .hh-toggle-active { background: linear-gradient(135deg, #10b981, #059669); border-color: rgba(16,185,129,0.3); }
+        .hh-toggle-dot { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: transform 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .hh-toggle-dot-active { transform: translateX(24px); }
 
         /* ─── ORB EFFECTS ─── */
         .hh-orb {

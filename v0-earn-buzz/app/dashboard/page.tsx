@@ -441,14 +441,8 @@ export default function DashboardPage() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [tapExhaustUntil]);
-  // regen (blocked while exhausted)
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (tapExhaustUntil && tapExhaustUntil > Date.now()) return;
-      setTapEnergy((prev) => (prev >= TAP_MAX_ENERGY ? prev : Math.min(TAP_MAX_ENERGY, prev + 1)));
-    }, TAP_ENERGY_REGEN_MS);
-    return () => clearInterval(id);
-  }, [tapExhaustUntil]);
+  // No gradual regen — energy stays depleted until 10-min exhaust countdown finishes, then snaps to 100 (handled in exhaust countdown effect)
+  // (Removed TAP_ENERGY_REGEN_MS interval per requirement)
   useEffect(() => {
     try { localStorage.setItem(TAP_STORAGE_KEY, JSON.stringify({ energy: tapEnergy, earned: tapEarned, lastTime: Date.now() })); } catch {}
     if (tapEnergy === 0 && !tapExhaustUntil) {
