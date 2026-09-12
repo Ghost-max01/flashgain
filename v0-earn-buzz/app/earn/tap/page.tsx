@@ -363,14 +363,29 @@ export default function TapAndEarnPage() {
           localStorage.setItem("tivexx-user", JSON.stringify(u2));
         }
       } catch {}
-      await reconcileServerBalance(uid);
+      // Server-wins refresh (inlined: reconcileServerBalance is declared
+      // below this block, so it can't be referenced in this closure's deps).
+      try {
+        const r = await fetch(`/api/user-balance?userId=${encodeURIComponent(uid)}&t=${Date.now()}`);
+        const b = await r.json().catch(() => ({}));
+        if (b?.success && typeof b.balance === "number") {
+          try {
+            const raw3 = localStorage.getItem("tivexx-user");
+            if (raw3) {
+              const u3 = JSON.parse(raw3);
+              u3.balance = b.balance;
+              localStorage.setItem("tivexx-user", JSON.stringify(u3));
+            }
+          } catch {}
+        }
+      } catch {}
       if (now >= s.expiresAt || earnedTotal >= plan.maxTaps) finish();
     } catch {
       // tapsDone unchanged — next tick retries, nothing lost.
     } finally {
       accruingRef.current = false;
     }
-  }, [newAccrualId, reconcileServerBalance]);
+  }, [newAccrualId]);
   useEffect(() => {
     void accrueAuto();
     const id = setInterval(() => { void accrueAuto(); }, 5000);
