@@ -32,6 +32,25 @@ export default function WithdrawPage() {
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
+  // REVIEW MODE (today only): open /withdraw?review=1 once and all withdrawal
+  // requirements show as met for the rest of today. Date-stamped — expires
+  // automatically tomorrow. For demo/review walkthroughs, NOT real eligibility.
+  const [reviewMode, setReviewMode] = useState(false)
+  useEffect(() => {
+    try {
+      const today = new Date().toDateString()
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("review") === "1") {
+        localStorage.setItem("tivexx-review-mode", today)
+        params.delete("review")
+        const clean = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
+        window.history.replaceState(null, "", clean)
+        setReviewMode(true)
+      } else {
+        setReviewMode(localStorage.getItem("tivexx-review-mode") === today)
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user")
@@ -245,10 +264,12 @@ export default function WithdrawPage() {
 
   // Real withdraw gates: referral_count >= 5 && balance >= 200000 (per copy).
   // Only enable cashout when server-synced requirements are met.
+  // Review mode (today only) forces eligible for demo walkthroughs.
   useEffect(() => {
+    if (reviewMode) { setShowCashout(true); return }
     const eligible = (serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS
     setShowCashout(eligible)
-  }, [balance, serverBalance, referralCount, completedTasksCount, toggleActive])
+  }, [balance, serverBalance, referralCount, completedTasksCount, toggleActive, reviewMode])
 
   // Auto-close blocked popup after 20 seconds with countdown and reset toggle
   useEffect(() => {
@@ -271,19 +292,21 @@ export default function WithdrawPage() {
 
   const handleCashout = () => {
     // 1) First check withdrawal requirements (faint/blur -> show requirements popup)
-    const missingBalance = balance < 200000
-    const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
-    const missingReferrals = referralCount < REQUIRED_REFERRALS
-    const missingSpin = !spinPlayedToday
-    const meetsRequirements = toggleActive
+    // Review mode (today only): requirements count as met for the demo.
+    const missingBalance = !reviewMode && balance < 200000
+    const missingTasks = !reviewMode && completedTasksCount < TOTAL_DAILY_TASKS
+    const missingReferrals = !reviewMode && referralCount < REQUIRED_REFERRALS
+    const missingSpin = !reviewMode && !spinPlayedToday
+    const meetsRequirements = reviewMode || (toggleActive
       ? (!missingBalance && !missingTasks && !missingSpin)
-      : (!missingBalance && !missingTasks && !missingReferrals && !missingSpin)
+      : (!missingBalance && !missingTasks && !missingReferrals && !missingSpin))
     if (!meetsRequirements) {
       setShowRequirementsModal(true)
       return
     }
     // 2) Only when button is glowing (requirements met) check time window
-    const isOpen = (() => {
+    // (skipped in review mode so the demo works any time of day).
+    const isOpen = reviewMode || (() => {
       try {
         const now = new Date()
         const lagosHourStr = new Intl.DateTimeFormat("en-NG", {
@@ -308,8 +331,9 @@ export default function WithdrawPage() {
   const handleProceedToWithdrawal = () => {
     setShowWithdrawalInfoModal(false)
     // Enforce real gates before proceeding — otherwise show requirements modal.
+    // (Review mode today only: treated as met for the demo.)
     const effectiveBalance = serverBalance ?? balance
-    if (referralCount < REQUIRED_REFERRALS || effectiveBalance < 200000) {
+    if (!reviewMode && (referralCount < REQUIRED_REFERRALS || effectiveBalance < 200000)) {
       setShowRequirementsModal(true)
       return
     }
@@ -321,7 +345,8 @@ export default function WithdrawPage() {
     setShowUpgradePopup(false)
     setToggleActive(false)
     // Re-evaluate real gates instead of force-showing cashout.
-    const eligible = (serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS
+    // (Review mode today only: stays eligible for the demo.)
+    const eligible = reviewMode || (serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS
     setShowCashout(eligible)
   }
 
@@ -603,13 +628,13 @@ export default function WithdrawPage() {
         {/* Buttons Section */}
         <div className="space-y-3 hh-entry-5">
           {(() => {
-            const missingBalance = balance < 200000
-            const missingTasks = completedTasksCount < TOTAL_DAILY_TASKS
-            const missingReferrals = referralCount < 5
-            const missingSpin = !spinPlayedToday
-            const meetsRequirements = toggleActive
+            const missingBalance = !reviewMode && balance < 200000
+            const missingTasks = !reviewMode && completedTasksCount < TOTAL_DAILY_TASKS
+            const missingReferrals = !reviewMode && referralCount < 5
+            const missingSpin = !reviewMode && !spinPlayedToday
+            const meetsRequirements = reviewMode || (toggleActive
               ? (!missingBalance && !missingTasks && !missingSpin)
-              : (!missingBalance && !missingTasks && !missingReferrals && !missingSpin)
+              : (!missingBalance && !missingTasks && !missingReferrals && !missingSpin))
 
             return (
               <>
@@ -757,7 +782,7 @@ export default function WithdrawPage() {
         {/* Withdrawal Info Modal */}
         <WithdrawalInfoModal
           isOpen={showWithdrawalInfoModal}
-          isEligible={(serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS}
+                isEligible={reviewMode || ((serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS)}
           completedTasksCount={completedTasksCount}
           referralCount={referralCount}
           onClose={() => setShowWithdrawalInfoModal(false)}
