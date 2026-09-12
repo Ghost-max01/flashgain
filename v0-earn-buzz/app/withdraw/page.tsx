@@ -316,7 +316,8 @@ export default function WithdrawPage() {
       setShowHoursPopup(true)
       return
     }
-    setShowWithdrawalInfoModal(true)
+    // Requirements met — go straight to the next page, no popups.
+    router.push("/withdraw/select-bank")
   }
 
   const handleProceedToWithdrawal = () => {
