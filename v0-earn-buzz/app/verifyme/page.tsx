@@ -25,16 +25,39 @@ export default function VerifyMePage() {
   }, [])
 
   const handleProceed = () => {
-    // Modified: Show Opay warning, then navigate after 4 seconds with 10s interval enforcement
+    // Show Opay warning, then go straight to Paystack checkout for the
+    // ₦5,500 verification fee (no manual bank-transfer step).
+    setVerifyError(null)
     setShowOpayWarning(true)
-    const t = window.setTimeout(() => {
-      setShowOpayWarning(false)
-      if (typeof window !== "undefined") {
-        window.location.href = "/withdraw/bank-transfer"
-      } else {
-        router.push("/withdraw/bank-transfer")
+    const t = window.setTimeout(async () => {
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("tivexx-user") : null
+        const u = raw ? JSON.parse(raw) : null
+        const email = u?.email || ""
+        const userId = u?.id || u?.userId || ""
+        if (!email || !userId) {
+          throw new Error("Please sign in first to continue verification.")
+        }
+        setVerifying(true)
+        const res = await fetch("/api/paystack/initialize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, amount: 5500, type: "deposit", userId }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data?.authorization_url) {
+          throw new Error(data?.error || "Could not start Paystack checkout.")
+        }
+        try {
+          localStorage.setItem("pending_verification", JSON.stringify({ fee: 5500, reference: data.reference, at: Date.now() }))
+        } catch {}
+        window.location.href = data.authorization_url
+      } catch (e: any) {
+        setShowOpayWarning(false)
+        setVerifying(false)
+        setVerifyError(e?.message || "Could not start payment. Try again.")
       }
-    }, 6000) // Show popup for 4 seconds before navigation
+    }, 6000) // Show popup for 6 seconds before Paystack
     // ensure timer is cleared if component unmounts
     timersRef.current.push(t)
   }
@@ -92,6 +115,8 @@ export default function VerifyMePage() {
   }, [])
 
   const [showOpayWarning, setShowOpayWarning] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
 
   return (
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
@@ -209,11 +234,15 @@ export default function VerifyMePage() {
             {/* Proceed Button */}
             <button
               onClick={handleProceed}
-              className="hh-proceed-btn hh-proceed-active w-full"
+              disabled={verifying}
+              className="hh-proceed-btn hh-proceed-active w-full disabled:opacity-60"
             >
-              <span>Proceed to Verification</span>
+              <span>{verifying ? "Opening Paystack..." : "Proceed to Verification"}</span>
               <ArrowRight className="h-5 w-5" />
             </button>
+            {verifyError && (
+              <p className="text-xs text-red-400 text-center">{verifyError}</p>
+            )}
 
             <p className="text-xs text-emerald-300 text-center">
               The ₦5,500 verification payment will be added back to your dashboard balance after verification.
