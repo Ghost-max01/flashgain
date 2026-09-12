@@ -560,7 +560,7 @@ export default function SetupWithdrawalAccountPage() {
             </div>
             
             <p className="text-white/80 text-sm">
-              {isLocked ? "Your bank details are secured after signup and will be shown on the Withdraw page instead of Available Balance. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected."}
+              {isLocked ? "Your bank details are secured after signup. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected."}
             </p>
           </div>
         </div>
