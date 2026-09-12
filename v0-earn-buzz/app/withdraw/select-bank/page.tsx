@@ -570,7 +570,7 @@ export default function SetupWithdrawalAccountPage() {
           <div className="space-y-5">
             {isLocked && (
               <div className="flex items-center gap-2 bg-amber-400/10 border border-amber-400/20 rounded-xl px-3 py-2 text-xs text-amber-300">
-                <Lock className="h-4 w-4" /> Bank details secured — cannot be edited. Showing on Withdraw page instead of balance.
+                <Lock className="h-4 w-4" /> Bank details secured — cannot be edited.  .
               </div>
             )}
             {/* Bank Dropdown */}
