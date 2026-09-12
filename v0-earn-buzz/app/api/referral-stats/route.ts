@@ -58,13 +58,27 @@ export async function GET(request: Request) {
 
     const user = { referral_code: userCode }
 
-    // Fetch all referrals for this referrer (paginate up to 2000 for now)
-    const { data: allRefs, error: refsError } = await supabase
-      .from("referrals")
-      .select("referred_id, amount, processed")
-      .eq("referrer_id", userId)
-      .limit(2000)
-    if (refsError) throw refsError
+    // Fetch all referrals for this referrer (paginate up to 2000 for now).
+    // Exclude consumed (already-withdrawn) rows so a withdrawal isn't undone
+    // by the next recompute; fall back if the 008 migration isn't applied yet.
+    let allRefs: any[] | null = null
+    try {
+      const r = await supabase
+        .from("referrals")
+        .select("referred_id, amount, processed, consumed")
+        .eq("referrer_id", userId)
+        .limit(2000)
+      if (r.error) throw r.error
+      allRefs = (r.data ?? []).filter((x: any) => x.consumed !== true)
+    } catch {
+      const r2 = await supabase
+        .from("referrals")
+        .select("referred_id, amount, processed")
+        .eq("referrer_id", userId)
+        .limit(2000)
+      if (r2.error) throw r2.error
+      allRefs = r2.data ?? []
+    }
 
     const totalCount = allRefs?.length ?? 0
 
@@ -103,7 +117,8 @@ export async function GET(request: Request) {
         const sc = scoreMap.get(r.referred_id) ?? 0
         if (sc >= 30) {
           approved++
-          approvedSum += Number(r.amount || 500)
+          // Normalize legacy ₦10,000 rows down to the ₦500 tier.
+          approvedSum += Math.min(Number(r.amount || 500), 500)
         } else {
           pending++
         }

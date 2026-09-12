@@ -108,7 +108,7 @@ export default function WithdrawPage() {
           setServerBalance(b.balance)
           setBalance(b.balance)
         }
-        if (typeof b?.referral_count === "number") setReferralCount(b.referral_count)
+        if (b?.success && typeof b?.referral_count === "number") setReferralCount(b.referral_count)
       } catch {}
       try {
         await fetch(`/api/user-trust?userId=${userId}`).catch(() => null)

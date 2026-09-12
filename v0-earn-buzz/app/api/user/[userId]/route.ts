@@ -38,7 +38,17 @@ export async function GET(request: NextRequest, { params }: { params: { userId: 
     let approvedCount = 0
 
     try {
-      const { data: allRefs } = await supabase.from("referrals").select("referred_id, amount").eq("referrer_id", userId).limit(2000)
+      // Exclude consumed (already-withdrawn) rows; fall back if 008 isn't applied.
+      let allRefs: any[] | null = null
+      try {
+        const r = await supabase.from("referrals").select("referred_id, amount, consumed").eq("referrer_id", userId).limit(2000)
+        if (r.error) throw r.error
+        allRefs = (r.data ?? []).filter((x: any) => x.consumed !== true)
+      } catch {
+        const r2 = await supabase.from("referrals").select("referred_id, amount").eq("referrer_id", userId).limit(2000)
+        if (r2.error) throw r2.error
+        allRefs = r2.data ?? []
+      }
       const total = allRefs?.length ?? 0
       referralCount = total
       if (total > 0) {
@@ -50,7 +60,7 @@ export async function GET(request: NextRequest, { params }: { params: { userId: 
         for (const r of allRefs as any[]) {
           if ((scoreMap.get(r.referred_id) ?? 0) >= 30) {
             approved++
-            sum += Number((r as any).amount || 500)
+            sum += Math.min(Number((r as any).amount || 500), 500)
           }
         }
         approvedCount = approved

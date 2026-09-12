@@ -53,12 +53,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ ...ZERO_STATS })
     }
 
-    // Ownership required — else return non-sensitive zeros (no enumeration).
-    const authed = await getOwnedUid(request, userId)
-    if (!authed) {
-      return NextResponse.json({ ...ZERO_STATS }, { status: 401 })
-    }
-
+    // Public counts (no PII): the frontend uses localStorage sessions and
+    // sends no JWT, so gating GET on a JWT would brick every caller.
+    // Sensitive writes stay behind ownership checks in POST.
     let supabase: any
     try {
       supabase = getSupabaseAdmin()
@@ -82,7 +79,19 @@ export async function GET(request: Request) {
     let approvedCount = 0
 
     try {
-      const { data: allRefs } = await supabase.from("referrals").select("referred_id, amount").eq("referrer_id", userId).limit(2000)
+      // Exclude consumed (already-withdrawn) rows; fall back gracefully if the
+      // `consumed` column / 008 migration hasn't been applied yet.
+      let rows: any[] | null = null
+      try {
+        const r = await supabase.from("referrals").select("referred_id, amount, consumed").eq("referrer_id", userId).limit(2000)
+        if (r.error) throw r.error
+        rows = (r.data ?? []).filter((x: any) => x.consumed !== true)
+      } catch {
+        const r2 = await supabase.from("referrals").select("referred_id, amount").eq("referrer_id", userId).limit(2000)
+        if (r2.error) throw r2.error
+        rows = r2.data ?? []
+      }
+      const allRefs = rows
       const total = allRefs?.length ?? 0
       referralCount = total
       if (total > 0) {
@@ -94,7 +103,8 @@ export async function GET(request: Request) {
         for (const r of allRefs as any[]) {
           if ((scoreMap.get(r.referred_id) ?? 0) >= 30) {
             approved++
-            sum += Number((r as any).amount || 500)
+            // Normalize legacy ₦10,000 rows down to the ₦500 tier.
+            sum += Math.min(Number((r as any).amount || 500), 500)
           }
         }
         approvedCount = approved
