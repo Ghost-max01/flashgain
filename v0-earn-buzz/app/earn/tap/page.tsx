@@ -134,6 +134,8 @@ export default function TapAndEarnPage() {
   const [autoActive, setAutoActive] = useState(false);
   const [autoPlan, setAutoPlan] = useState<AutoPlanId | null>(null);
   const [autoExpiresAt, setAutoExpiresAt] = useState<number | null>(null);
+  // Wall-clock anchor for auto accrual (counts while hidden/closed).
+  const [autoStartedAt, setAutoStartedAt] = useState<number | null>(null);
   const [autoTapsDone, setAutoTapsDone] = useState(0);
   const [autoFirstFreeUsed, setAutoFirstFreeUsed] = useState(false);
   const [autoLeftMs, setAutoLeftMs] = useState(0);
@@ -161,7 +163,6 @@ export default function TapAndEarnPage() {
   }, [perPlanTaskDone]);
   const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
-  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Global cleanup of stray ad elements (just in case) ──────────────
   // useEffect(() => {
@@ -282,6 +283,8 @@ export default function TapAndEarnPage() {
         setAutoFirstFreeUsed(!!a.firstFreeUsed);
         if (a.active && a.expiresAt && a.expiresAt > Date.now() && a.tapsDone < (AUTO_PLANS.find(p=>p.id===a.planId)?.maxTaps ?? Infinity)) {
           setAutoActive(true); setAutoPlan(a.planId); setAutoExpiresAt(a.expiresAt); setAutoTapsDone(a.tapsDone||0);
+          const found = AUTO_PLANS.find(p=>p.id===a.planId);
+          setAutoStartedAt(typeof (a as any).startedAt === "number" && (a as any).startedAt > 0 ? (a as any).startedAt : (found ? a.expiresAt - found.durationMs : null));
         }
       }
       const cd = JSON.parse(localStorage.getItem(AUTO_PLAN_COOLDOWN_KEY)||"{}");
@@ -291,8 +294,8 @@ export default function TapAndEarnPage() {
 
   // persist auto tap
   useEffect(() => {
-    try { localStorage.setItem(AUTO_TAP_KEY, JSON.stringify({ active: autoActive, planId: autoPlan, expiresAt: autoExpiresAt, tapsDone: autoTapsDone, firstFreeUsed: autoFirstFreeUsed })); } catch {}
-  }, [autoActive, autoPlan, autoExpiresAt, autoTapsDone, autoFirstFreeUsed]);
+    try { localStorage.setItem(AUTO_TAP_KEY, JSON.stringify({ active: autoActive, planId: autoPlan, expiresAt: autoExpiresAt, startedAt: autoStartedAt, tapsDone: autoTapsDone, firstFreeUsed: autoFirstFreeUsed })); } catch {}
+  }, [autoActive, autoPlan, autoExpiresAt, autoStartedAt, autoTapsDone, autoFirstFreeUsed]);
 
   // auto tap countdown + expire
   useEffect(() => {
@@ -309,21 +312,73 @@ export default function TapAndEarnPage() {
     return () => clearInterval(id);
   }, [autoActive, autoExpiresAt, autoPlan, autoTapsDone]);
 
-  // auto tap interval — duration-matched
+  // ── Auto tap accrual (wall-clock): progress = f(now - startedAt), so it
+  // keeps counting while the tab is throttled/hidden or the app is closed.
+  // Server re-validates the schedule before crediting; unique id per flush.
+  const autoStateRef = useRef({ active: false, plan: null as AutoPlanId | null, expiresAt: null as number | null, startedAt: null as number | null, tapsDone: 0 });
+  autoStateRef.current = { active: autoActive, plan: autoPlan, expiresAt: autoExpiresAt, startedAt: autoStartedAt, tapsDone: autoTapsDone };
+  const accruingRef = useRef(false);
+  const newAccrualId = useCallback(() => {
+    try {
+      if (typeof crypto !== "undefined" && (crypto as any).randomUUID) return (crypto as any).randomUUID();
+    } catch {}
+    return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+  }, []);
+  const accrueAuto = useCallback(async () => {
+    const s = autoStateRef.current;
+    if (!s.active || !s.plan || !s.expiresAt || !s.startedAt) return;
+    if (accruingRef.current) return;
+    const plan = AUTO_PLANS.find((p) => p.id === s.plan);
+    if (!plan) return;
+    const now = Date.now();
+    const intervalMs = getAutoIntervalMs(s.plan);
+    const effectiveEnd = Math.min(now, s.expiresAt);
+    const earnedTotal = Math.max(0, Math.min(plan.maxTaps, Math.floor((effectiveEnd - s.startedAt) / intervalMs)));
+    const finish = () => { setAutoActive(false); setAutoExpiresAt(null); setAutoStartedAt(null); };
+    if (earnedTotal <= s.tapsDone) {
+      if (now >= s.expiresAt || earnedTotal >= plan.maxTaps) finish();
+      return;
+    }
+    accruingRef.current = true;
+    const delta = earnedTotal - s.tapsDone;
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      const u = raw ? JSON.parse(raw) : null;
+      const uid = u?.id || u?.userId || u?.user_id || "";
+      if (!uid) return;
+      const res = await fetch("/api/tap/accrue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "auto", taps: delta, planId: s.plan, startedAt: s.startedAt }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.success) throw new Error(j?.error || "accrue failed");
+      setAutoTapsDone(earnedTotal);
+      setState((prev) => ({ ...prev, earned: prev.earned + delta * EARN_PER_TAP }));
+      try {
+        const raw2 = localStorage.getItem("tivexx-user");
+        if (raw2) {
+          const u2 = JSON.parse(raw2);
+          u2.balance = j.newBalance;
+          localStorage.setItem("tivexx-user", JSON.stringify(u2));
+        }
+      } catch {}
+      await reconcileServerBalance(uid);
+      if (now >= s.expiresAt || earnedTotal >= plan.maxTaps) finish();
+    } catch {
+      // tapsDone unchanged — next tick retries, nothing lost.
+    } finally {
+      accruingRef.current = false;
+    }
+  }, [newAccrualId, reconcileServerBalance]);
   useEffect(() => {
-    if (!autoActive) { if (autoTimerRef.current) clearInterval(autoTimerRef.current); autoTimerRef.current = null; return; }
-    const plan = AUTO_PLANS.find(p=>p.id===autoPlan);
-    const max = plan?.maxTaps ?? Infinity;
-    const intervalMs = getAutoIntervalMs(autoPlan);
-    autoTimerRef.current = setInterval(() => {
-      if (autoTapsDone >= max) return;
-      if (state.energy <= 0) return;
-      setState((prev) => ({ ...prev, energy: Math.max(0, prev.energy - 1), earned: prev.earned + EARN_PER_TAP }));
-      setAutoTapsDone(p=> p+1);
-      syncToDb(EARN_PER_TAP);
-    }, intervalMs);
-    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
-  }, [autoActive, autoPlan, autoTapsDone, state.energy]);
+    void accrueAuto();
+    const id = setInterval(() => { void accrueAuto(); }, 5000);
+    const onReturn = () => { if (document.visibilityState === "visible") void accrueAuto(); };
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => { clearInterval(id); window.removeEventListener("focus", onReturn); document.removeEventListener("visibilitychange", onReturn); };
+  }, [accrueAuto]);
 
   // sync tasks count — global + per-plan isolated (each plan starts at 0)
   useEffect(()=>{
@@ -436,91 +491,84 @@ export default function TapAndEarnPage() {
     } catch {}
   }, []);
 
+  // Manual tap earnings flush: taps are worthless until THIS succeeds.
+  // Sends tap counts (not naira) to /api/tap/accrue (per-call + daily caps
+  // enforced server-side), then adopts the server balance as truth.
+  const flushManualTaps = useCallback(async (): Promise<boolean> => {
+    const totalEarned = accumulatedEarned.current;
+    if (totalEarned === 0) return false;
+    accumulatedEarned.current = 0;
+    try {
+      const storedUser = localStorage.getItem("tivexx-user");
+      if (!storedUser) { accumulatedEarned.current += totalEarned; return false; }
+      const currentUser = JSON.parse(storedUser);
+      const uid = currentUser.id || currentUser.userId;
+      if (!uid) { accumulatedEarned.current += totalEarned; return false; }
+      const taps = Math.max(1, Math.round(totalEarned / EARN_PER_TAP));
+      const res = await fetch("/api/tap/accrue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.success) throw new Error(j?.error || "tap sync failed");
+      try {
+        const raw = localStorage.getItem("tivexx-user");
+        if (raw) {
+          const u = JSON.parse(raw);
+          u.balance = j.newBalance;
+          localStorage.setItem("tivexx-user", JSON.stringify(u));
+          console.log(`[Tap Earn] Synced ${taps} taps. New balance: ₦${j.newBalance}`);
+        }
+      } catch {}
+      return true;
+    } catch (err) {
+      // Re-queue so taps are never silently lost — next flush retries.
+      accumulatedEarned.current += totalEarned;
+      console.error("[Tap Earn] Server sync failed:", err);
+      return false;
+    }
+  }, [newAccrualId]);
+  // Flush when the app hides/closes or comes back — taps survive background.
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === "hidden") void flushManualTaps(); };
+    const onShow = () => { if (document.visibilityState === "visible") void flushManualTaps(); };
+    const onUnload = () => {
+      try {
+        const totalEarned = accumulatedEarned.current;
+        if (totalEarned > 0) {
+          const raw = localStorage.getItem("tivexx-user");
+          const u = raw ? JSON.parse(raw) : null;
+          const uid = u?.id || u?.userId || "";
+          if (uid) {
+            const taps = Math.max(1, Math.round(totalEarned / EARN_PER_TAP));
+            const payload = JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps });
+            try { navigator.sendBeacon("/api/tap/accrue", new Blob([payload], { type: "application/json" })); } catch {}
+          }
+        }
+      } catch {}
+    };
+    document.addEventListener("visibilitychange", onHide);
+    document.addEventListener("visibilitychange", onShow);
+    window.addEventListener("focus", onShow);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      document.removeEventListener("visibilitychange", onShow);
+      window.removeEventListener("focus", onShow);
+      window.removeEventListener("beforeunload", onUnload);
+    };
+  }, [flushManualTaps, newAccrualId]);
   const syncToDb = useCallback((earnedAmount: number) => {
     accumulatedEarned.current += earnedAmount;
     if (syncTimeout.current) clearTimeout(syncTimeout.current);
-    syncTimeout.current = setTimeout(() => {
-      const totalEarned = accumulatedEarned.current;
-      if (totalEarned === 0) return;
-      try {
-        const storedUser = localStorage.getItem("tivexx-user");
-        if (storedUser) {
-          const currentUser = JSON.parse(storedUser);
-          const uid = currentUser.id || currentUser.userId;
-          if (uid) {
-            currentUser.balance = (currentUser.balance || 0) + totalEarned;
-            localStorage.setItem("tivexx-user", JSON.stringify(currentUser));
-            console.log(
-              `[Tap Earn] Synced ₦${totalEarned} to balance. New balance: ₦${currentUser.balance}`,
-            );
-            try {
-              void fetch("/api/user-balance", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  userId: uid,
-                  balance: currentUser.balance,
-                }),
-              }).then(() => { void reconcileServerBalance(uid); }).catch((err) => {
-                console.error("[Tap Earn] Server sync failed:", err);
-              });
-            } catch (err) {
-              console.error("[Tap Earn] Server sync failed:", err);
-            }
-            accumulatedEarned.current = 0;
-          }
-        }
-      } catch (error) {
-        console.error("Sync error:", error);
-      }
-    }, 1500);
-  }, [reconcileServerBalance]);
+    syncTimeout.current = setTimeout(() => { void flushManualTaps(); }, 1500);
+  }, [flushManualTaps]);
 
   const pressEarningsToDb = useCallback((): Promise<boolean> => {
-    return new Promise((resolve) => {
-      try {
-        const totalEarned = accumulatedEarned.current;
-        if (totalEarned === 0) {
-          resolve(false);
-          return;
-        }
-        if (syncTimeout.current) clearTimeout(syncTimeout.current);
-        const storedUser = localStorage.getItem("tivexx-user");
-        if (storedUser) {
-          const currentUser = JSON.parse(storedUser);
-          const uid = currentUser.id || currentUser.userId;
-          if (uid) {
-            currentUser.balance = (currentUser.balance || 0) + totalEarned;
-            localStorage.setItem("tivexx-user", JSON.stringify(currentUser));
-            console.log(
-              `[Tap Earn] Force synced ₦${totalEarned} to balance. New balance: ₦${currentUser.balance}`,
-            );
-            (async () => {
-              try {
-                await fetch("/api/user-balance", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    userId: uid,
-                    balance: currentUser.balance,
-                  }),
-                });
-              } catch (err) {
-                console.error("[Tap Earn] Force server sync failed:", err);
-              }
-            })();
-            accumulatedEarned.current = 0;
-            resolve(true);
-            return;
-          }
-        }
-        resolve(false);
-      } catch (error) {
-        console.error("Force sync error:", error);
-        resolve(false);
-      }
-    });
-  }, []);
+    if (syncTimeout.current) clearTimeout(syncTimeout.current);
+    return flushManualTaps();
+  }, [flushManualTaps]);
 
   const handleNavigateBack = useCallback(async () => {
     await pressEarningsToDb();
@@ -588,7 +636,7 @@ export default function TapAndEarnPage() {
 
   // ── Auto Tap handlers ──
   const handleAutoToggle = useCallback(() => {
-    if (autoActive) { setAutoActive(false); setAutoExpiresAt(null); return; }
+    if (autoActive) { setAutoActive(false); setAutoExpiresAt(null); setAutoStartedAt(null); return; }
     if (!autoFirstFreeUsed) setShowAutoFreePopup(true);
     setShowAutoPlans(true);
   }, [autoActive, autoFirstFreeUsed]);
@@ -629,7 +677,7 @@ export default function TapAndEarnPage() {
       if (!res.ok || !data?.success) return;
       setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
     } catch { return; }
-    setAutoPlan(id); setAutoTapsDone(0); setAutoActive(true);
+    setAutoPlan(id); setAutoTapsDone(0); setAutoStartedAt(Date.now()); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
     if (id !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
@@ -691,7 +739,7 @@ export default function TapAndEarnPage() {
       if (!res.ok || !data?.success) return;
       setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
     } catch { return; }
-    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoActive(true);
+    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoStartedAt(Date.now()); setAutoActive(true);
     if (reqPlan !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
       const next = { ...autoPlanCooldowns, [reqPlan]: exp };
