@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { sendNotificationToUser } from "@/lib/notifications/server.js"
+import { sendNotificationToUser } from "@/lib/notifications/server"
 
 export const runtime = "nodejs"
 
