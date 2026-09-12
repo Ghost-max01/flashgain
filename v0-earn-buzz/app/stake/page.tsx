@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Sparkles, Zap, Trophy, Clock, Users, Flame, Crown, Gift, TrendingUp, ShieldCheck, Timer, Coins, Lock } from "lucide-react"
@@ -105,6 +105,8 @@ export default function StakeWinPage() {
   const [spins, setSpins] = useState(0)
   // Per-tier 24h cooldown: Record< tierPct, expiryTimestamp > — per-user via localStorage (per-browser), per-tier timers
   const [spinCooldowns, setSpinCooldowns] = useState<Record<number, number>>({})
+  // One id per spin so a replay/double-submit can never credit twice.
+  const spinIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     try {
@@ -182,27 +184,56 @@ export default function StakeWinPage() {
     const targetAngle = 360 - (targetIdx * segAngle + segAngle / 2)
     const spinsCount = 6 + Math.random() * 4
     const total = rotation + spinsCount * 360 + targetAngle - (rotation % 360)
-    setSpinning(true)
-    setSpinResult(null)
-    setShowSpinResult(false)
     setRotation(total)
+    // One id per spin so a replay/double-submit can never credit twice.
+    try {
+      spinIdRef.current = typeof crypto !== "undefined" && (crypto as any).randomUUID
+        ? (crypto as any).randomUUID()
+        : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+    } catch {
+      spinIdRef.current = `${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+    }
     setTimeout(() => {
       setSpinning(false)
       setSpinResult(target)
       setShowSpinResult(true)
       setSpins(s => s + 1)
-      if (target.win) {
-        const winAmt = spinStake * target.amount
-        const newBal = balance + winAmt
-        setBalance(newBal)
-        try { const raw = localStorage.getItem("tivexx-user"); if (raw) { const u = JSON.parse(raw); u.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u)) } } catch {}
-        toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${target.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% was the winner` })
-      } else {
-        const newBal = Math.max(0, balance - spinStake)
-        setBalance(newBal)
-        try { const raw = localStorage.getItem("tivexx-user"); if (raw) { const u = JSON.parse(raw); u.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u)) } } catch {}
-        toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% was not the winner this spin. The winning tier was ${winningTier}%.` })
-      }
+      // Settle on the SERVER so wins survive refresh/dashboard sync.
+      // Local state is only updated from the server's authoritative balance.
+      void (async () => {
+        try {
+          const raw = localStorage.getItem("tivexx-user")
+          const u = raw ? JSON.parse(raw) : null
+          const uid = u?.id || u?.userId || ""
+          if (!uid) {
+            toast({ title: "Sign in to keep your winnings", variant: "destructive" })
+            return
+          }
+          const winAmt = target.win ? spinStake * target.amount : 0
+          const res = await fetch("/api/stake/result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: uid, spinId: spinIdRef.current, stake: spinStake, winAmount: winAmt }),
+          })
+          const j = await res.json().catch(() => ({}))
+          if (!res.ok || !j?.success) {
+            throw new Error(j?.error || "Could not record spin")
+          }
+          const newBal = Number(j.newBalance)
+          setBalance(newBal)
+          try {
+            const raw2 = localStorage.getItem("tivexx-user")
+            if (raw2) { const u2 = JSON.parse(raw2); u2.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u2)) }
+          } catch {}
+          if (target.win) {
+            toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${target.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% was the winner` })
+          } else {
+            toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% was not the winner this spin. The winning tier was ${winningTier}%.` })
+          }
+        } catch (e: any) {
+          toast({ title: "Spin could not be recorded", description: e?.message || "Balance unchanged — try again.", variant: "destructive" })
+        }
+      })()
     }, 3200)
   }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
 

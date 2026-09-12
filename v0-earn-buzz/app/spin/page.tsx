@@ -176,6 +176,8 @@ const SpinWheel = ({ canSpin, onSpinStart, remainingSpins }: SpinWheelProps) => 
   const [showModal, setShowModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [claiming, setClaiming] = useState(false);
+  const [claimMsg, setClaimMsg] = useState<string | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
@@ -510,17 +512,57 @@ const SpinWheel = ({ canSpin, onSpinStart, remainingSpins }: SpinWheelProps) => 
                   )}
                   <div className="flex gap-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        // Cash prize: the Gift Card is credited straight to balance (server-side).
+                        // Physical prizes keep the original upgrade/delivery flow untouched.
+                        if (result.name.includes("Gift Card")) {
+                          if (claiming) return;
+                          setClaiming(true);
+                          setClaimMsg(null);
+                          try {
+                            const raw = localStorage.getItem("tivexx-user");
+                            const u = raw ? JSON.parse(raw) : null;
+                            const uid = u?.id || u?.userId || "";
+                            if (!uid) {
+                              setClaimMsg("Please sign in first to claim.");
+                              setClaiming(false);
+                              return;
+                            }
+                            const res = await fetch("/api/spin/claim", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ userId: uid, prize: result.name }),
+                            });
+                            const j = await res.json().catch(() => ({}));
+                            if (!res.ok || !j?.success) {
+                              throw new Error(j?.error || "Claim failed");
+                            }
+                            try {
+                              const next = { ...u, balance: j.newBalance };
+                              localStorage.setItem("tivexx-user", JSON.stringify(next));
+                            } catch {}
+                            setClaimMsg(
+                              j?.duplicate
+                                ? "Already claimed today — ₦50,000 is in your balance."
+                                : "₦50,000 added to your balance! 🎉"
+                            );
+                          } catch (e: any) {
+                            setClaimMsg(e?.message || "Claim failed. Try again.");
+                          }
+                          setClaiming(false);
+                          return;
+                        }
                         handleModalClose();
                         setShowUpgradeModal(true);
                       }}
-                      className="px-6 py-3 rounded-lg font-semibold text-sm transition-all hover:scale-105 text-white"
+                      disabled={claiming}
+                      className="px-6 py-3 rounded-lg font-semibold text-sm transition-all hover:scale-105 text-white disabled:opacity-60"
                       style={{
                         background: "linear-gradient(135deg, #dc2626, #b91c1c)",
                         boxShadow: "0 4px 12px rgba(220, 38, 38, 0.3)",
                       }}
                     >
-                      Claim Prize
+                      {claiming ? "Claiming..." : "Claim Prize"}
                     </button>
                     <button
                       onClick={() => {
@@ -534,9 +576,14 @@ const SpinWheel = ({ canSpin, onSpinStart, remainingSpins }: SpinWheelProps) => 
                       }}
                     >
                       Spin Again
-                    </button>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                  {claimMsg && (
+                    <p className="text-black font-bold text-sm mt-4 bg-white/70 rounded-lg px-4 py-2">
+                      {claimMsg}
+                    </p>
+                  )}
               </>
             ) : (
               <>

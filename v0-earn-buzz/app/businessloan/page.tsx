@@ -165,6 +165,7 @@ export default function BusinessLoanPage() {
             type: "loan",
             loanAmount: loanAmountNum,
             planId: selectedBank,
+            userId,
           },
         }),
       })
