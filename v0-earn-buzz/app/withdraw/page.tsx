@@ -32,23 +32,14 @@ export default function WithdrawPage() {
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
-  // REVIEW MODE (today only): open /withdraw?review=1 once and all withdrawal
-  // requirements show as met for the rest of today. Date-stamped — expires
-  // automatically tomorrow. For demo/review walkthroughs, NOT real eligibility.
+  // REVIEW DAY: requirements show as met all day today, no link needed.
+  // Date-gated — normal real gates return automatically tomorrow.
+  // For demo/review walkthroughs, NOT real eligibility.
   const [reviewMode, setReviewMode] = useState(false)
   useEffect(() => {
     try {
-      const today = new Date().toDateString()
-      const params = new URLSearchParams(window.location.search)
-      if (params.get("review") === "1") {
-        localStorage.setItem("tivexx-review-mode", today)
-        params.delete("review")
-        const clean = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
-        window.history.replaceState(null, "", clean)
-        setReviewMode(true)
-      } else {
-        setReviewMode(localStorage.getItem("tivexx-review-mode") === today)
-      }
+      const now = new Date()
+      setReviewMode(now.getFullYear() === 2026 && now.getMonth() === 8 && now.getDate() === 12)
     } catch {}
   }, [])
 
