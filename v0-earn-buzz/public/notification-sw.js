@@ -18,19 +18,9 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Service Worker Activation
+// Service Worker Activation — scoped: only delete its own cache, never other caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
+  event.waitUntil(Promise.resolve());
   self.clients.claim();
 });
 
@@ -41,7 +31,12 @@ self.addEventListener('push', (event) => {
     return;
   }
 
-  const data = event.data.json();
+  let data = {};
+  try {
+    data = event.data.json();
+  } catch (_) {
+    try { data = { body: event.data.text() }; } catch (__){ data = {}; }
+  }
   const options = {
     body: data.body || '',
     icon: data.icon || '/icons/icon-192x192.png',
@@ -93,12 +88,16 @@ self.addEventListener('notificationclick', (event) => {
       type: 'window',
       includeUncontrolled: true,
     }).then((clientList) => {
-      // Check if app is already open
+      // Check if app is already open (pathname+search matching)
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
+        try {
+          const clientUrl = new URL(client.url);
+          const target = new URL(urlToOpen, self.location.origin);
+          if (clientUrl.pathname + clientUrl.search === target.pathname + target.search && 'focus' in client) {
+            return client.focus();
+          }
+        } catch (_) { /* ignore URL parse errors */ }
       }
       // If not open, open new window
       if (clients.openWindow) {

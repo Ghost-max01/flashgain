@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { useTaskTimer } from "@/hooks/useTaskTimer"
+import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
 
 interface Task {
   id: string
@@ -152,7 +152,7 @@ export default function TieredTaskPage() {
         const timeSpent = Math.round(elapsed)
         toast({
           title: "You didn't interact with the task ❌",
-          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least 20 seconds before coming back.`,
+          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least ${TASK_VISIT_SECONDS} seconds before coming back.`,
           variant: "destructive",
           duration: 6000,
         })
@@ -241,6 +241,30 @@ export default function TieredTaskPage() {
     const task = AVAILABLE_TASKS.find((t) => t.id === taskId)
     if (!task) return
 
+    const storedUserRaw = localStorage.getItem("tivexx-user")
+    const parsedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null
+    const claimUserId = parsedUser?.id || parsedUser?.user_id || parsedUser?.userId || ""
+    if (!claimUserId) return
+    let serverOk = false
+    try {
+      const res = await fetch(`/api/track-task`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: claimUserId, taskId: task.id, taskName: task.platform, reward: task.reward }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data?.duplicate) {
+        toast({ title: "Already claimed", description: "This task was already credited on the server.", variant: "destructive" })
+        return
+      }
+      if (!res.ok || !data?.success) return
+      serverOk = true
+    } catch (err) {
+      console.error("Failed to track task completion:", err)
+      return
+    }
+    if (!serverOk) return
+
     const newBalance = balance + task.reward
     setBalance(newBalance)
 
@@ -257,21 +281,6 @@ export default function TieredTaskPage() {
         })
       } catch (err) {
         console.error("Failed to sync user balance to server:", err)
-      }
-
-      try {
-        await fetch(`/api/track-task`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.id || user.user_id || user.userId,
-            taskId: task.id,
-            taskName: task.platform,
-            reward: task.reward,
-          }),
-        })
-      } catch (err) {
-        console.error("Failed to track task completion:", err)
       }
     }
 
@@ -360,7 +369,7 @@ export default function TieredTaskPage() {
   const confirmStartTask = (task: Task) => {
     toast({
       title: "Task Started ⏱️",
-      description: "Make sure to spend at least 20 seconds on the site before returning. If you return too quickly, you'll need to try again!",
+      description: `Make sure to spend at least ${TASK_VISIT_SECONDS} seconds on the site before returning. If you return too quickly, you'll need to try again!`,
       duration: 5000,
     })
 

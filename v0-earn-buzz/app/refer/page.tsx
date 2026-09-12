@@ -1,7 +1,7 @@
 // app/refer/page.tsx
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -69,6 +69,7 @@ function ReferContent() {
   // referral approved/pending
   const [approvedCount, setApprovedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const isWithdrawing = useRef(false);
 
   const referralMessages = [
     "Join FlashGain9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
@@ -345,8 +346,10 @@ function ReferContent() {
       .finally(() => setLoading(false));
 
     // Poll every 30s to auto-promote pending -> approved when friend hits Beginner 30
+    // Non-destructive: skip poll update while a withdraw request is in flight
     const poll = setInterval(() => {
       try {
+        if (isWithdrawing.current) return;
         const su = localStorage.getItem("tivexx-user");
         if (!su) return;
         const u = JSON.parse(su);
@@ -626,7 +629,8 @@ function ReferContent() {
             {/* Referral withdraw — separate from main, min 10k after VIP */}
             {(() => {
               const min = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
-              const avail = (approvedCount || 0) * 500;
+              // Server truth: referral_balance is approved-only once loaded; fall back to approvedCount*500 pre-load
+              const avail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
               const canWithdraw = avail >= min;
               return (
                 <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 flex items-center justify-between">
@@ -641,12 +645,18 @@ function ReferContent() {
                     // simple local withdraw: require bank set
                     const bd = (()=>{ try{ return JSON.parse(localStorage.getItem("bank_details")||"null") }catch{return null}})();
                     if(!bd) { window.location.href="/setup-bank"; return; }
-                    const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: avail })});
-                    const j = await res.json();
-                    if(!res.ok){ alert(j.error||"Withdraw failed"); return; }
-                    alert("Referral withdrawal requested: ₦"+avail.toLocaleString());
-                    // reset displayed balance locally
-                    setAnimatedEarnings(0);
+                    isWithdrawing.current = true;
+                    try{
+                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: avail })});
+                      const j = await res.json();
+                      if(!res.ok){ alert(j.error||"Withdraw failed"); return; }
+                      alert("Referral withdrawal requested: ₦"+avail.toLocaleString());
+                      const nb = Number(j.referral_balance ?? j.available ?? 0);
+                      const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
+                      setAnimatedEarnings(nb);
+                      setUserData((prev:any)=> prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
+                      setApprovedCount(nac);
+                    } finally { isWithdrawing.current = false; }
                   }} className={`px-4 py-2 rounded-full font-black text-sm ${canWithdraw ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
                     {canWithdraw ? "Withdraw" : `Need ₦${min.toLocaleString()}`}
                   </button>
@@ -862,7 +872,7 @@ function ReferContent() {
               <p className="text-sm text-emerald-200/80">
                 Share your link on social media and messaging platforms to
                 maximize your earnings. Each successful referral earns you
-                ₦500 instantly!
+                ₦500 once approved (friend reaches Beginner 30+)!
               </p>
             </div>
           </div>

@@ -33,105 +33,85 @@ function CallbackInner() {
         const amount = Number(data.amount || 0)
         const metadata = data.metadata || {}
         const type = metadata.type
+        const duplicate = data?.duplicate === true
 
-        // Update local balance immediately (mirror server-side increment)
-        // Server already credited Supabase; also update localStorage for instant UI
+        // Sync authoritative server balance — never do local arithmetic.
+        // Local guard avoids re-persist churn; server idempotency (duplicate:true) is authoritative.
         try {
           const raw = localStorage.getItem("tivexx-user")
           if (raw) {
             const u = JSON.parse(raw)
-            // Avoid double credit if callback is revisited — check processed reference
             const seenKey = `paystack_ref_${reference}`
+            const uid = u.id || u.userId
+            if (uid) {
+              try {
+                const r = await fetch(`/api/user-balance?userId=${uid}`)
+                const j = await r.json()
+                if (j?.success && typeof j.balance === "number") {
+                  u.balance = j.balance
+                  localStorage.setItem("tivexx-user", JSON.stringify(u))
+                  persistUserSession(u)
+                }
+              } catch {}
+            }
             if (!localStorage.getItem(seenKey)) {
-              // Server already credited, but local still needs sync — fetch latest or increment
-              // Fetch latest balance from server if userId known
-              const uid = u.id || u.userId
-              if (uid) {
-                try {
-                  const r = await fetch(`/api/user-balance?userId=${uid}`)
-                  const j = await r.json()
-                  if (j?.success && typeof j.balance === "number") u.balance = j.balance
-                  else u.balance = Number(u.balance || 0) + amount
-                } catch { u.balance = Number(u.balance || 0) + amount }
-              } else {
-                u.balance = Number(u.balance || 0) + amount
-              }
-              localStorage.setItem("tivexx-user", JSON.stringify(u))
-              persistUserSession(u)
               localStorage.setItem(seenKey, "1")
+            }
+            if (duplicate) {
+              // Server reports duplicate — balance already synced above; nothing else to do.
             }
           }
         } catch {}
 
-        // Activate auto tap if this was an auto_tap payment
+        // Activate auto tap ONLY when server verify succeeded AND plan matches
+        // the pending request stored before redirect.
         if (type === "auto_tap" && metadata.planId) {
           try {
-            const planId = metadata.planId
-            const durationMap: Record<string, number> = { "24h": 86400000, "2d": 172800000, "3d": 259200000, "1w": 604800000, free1h: 20*60*1000 }
-            const duration = durationMap[planId] || 86400000
-            const tapsMap: Record<string, number> = { "24h": 1500, "2d": 3500, "3d": 5500, "1w": 10000, free1h: 200 }
-            localStorage.setItem("auto_tap_state", JSON.stringify({
-              active: true,
-              planId,
-              expiresAt: Date.now() + duration,
-              tapsDone: 0,
-              firstFreeUsed: planId === "free1h" ? true : JSON.parse(localStorage.getItem("auto_tap_state") || "null")?.firstFreeUsed || false,
-            }))
-            // 1-week lock per paid plan
-            if (planId !== "free1h") {
-              const cdRaw = JSON.parse(localStorage.getItem("auto_tap_plan_cooldowns") || "{}")
-              cdRaw[planId] = Date.now() + 7*24*60*60*1000
-              localStorage.setItem("auto_tap_plan_cooldowns", JSON.stringify(cdRaw))
+            const pendingRaw = localStorage.getItem("pending_auto_tap_payment")
+            const pending = pendingRaw ? JSON.parse(pendingRaw) : null
+            if (pending && String(pending.planId) === String(metadata.planId)) {
+              const planId = metadata.planId
+              const durationMap: Record<string, number> = { "24h": 86400000, "2d": 172800000, "3d": 259200000, "1w": 604800000, free1h: 20*60*1000 }
+              const duration = durationMap[planId] || 86400000
+              localStorage.setItem("auto_tap_state", JSON.stringify({
+                active: true,
+                planId,
+                expiresAt: Date.now() + duration,
+                tapsDone: 0,
+                firstFreeUsed: planId === "free1h" ? true : JSON.parse(localStorage.getItem("auto_tap_state") || "null")?.firstFreeUsed || false,
+              }))
+              // 1-week lock per paid plan
+              if (planId !== "free1h") {
+                const cdRaw = JSON.parse(localStorage.getItem("auto_tap_plan_cooldowns") || "{}")
+                cdRaw[planId] = Date.now() + 7*24*60*60*1000
+                localStorage.setItem("auto_tap_plan_cooldowns", JSON.stringify(cdRaw))
+              }
+              // Store proof that this plan was paid
+              localStorage.setItem(`auto_tap_paid_${planId}`, reference)
+              localStorage.removeItem("pending_auto_tap_payment")
             }
-            // Store proof that this plan was paid
-            localStorage.setItem(`auto_tap_paid_${planId}`, reference)
           } catch {}
         }
 
-        // Investment: amount already added to balance; optional flag
+        // Investment: server credited balance; keep a local history flag only.
         if (type === "investment") {
           try {
-            const existing = JSON.parse(localStorage.getItem("investment_history") || "[]")
-            existing.unshift({ reference, amount, plan: metadata.plan, at: Date.now() })
-            localStorage.setItem("investment_history", JSON.stringify(existing))
+            const seenHist = `paystack_ref_${reference}_inv`
+            if (!localStorage.getItem(seenHist)) {
+              const existing = JSON.parse(localStorage.getItem("investment_history") || "[]")
+              existing.unshift({ reference, amount, plan: metadata.plan, at: Date.now() })
+              localStorage.setItem("investment_history", JSON.stringify(existing))
+              localStorage.setItem(seenHist, "1")
+            }
           } catch {}
         }
 
-        // Loan: credit full loanAmount to balance (fee was paid via Paystack)
-        if (type === "loan" && (metadata as any).loanAmount) {
+        // Loan: NEVER auto-credit loanAmount here. Fee payment only credits the fee
+        // amount server-side; disbursement is a separate admin-approved step.
+        // Clear pending_loan marker only (no balance writes).
+        if (type === "loan") {
           try {
-            const pendingRaw = localStorage.getItem("pending_loan")
-            const pending = pendingRaw ? JSON.parse(pendingRaw) : null
-            const loanAmt = Number((metadata as any).loanAmount) || Number(pending?.loanAmount) || 0
-            const seenKey = `paystack_ref_${reference}`
-            if (loanAmt > 0 && !localStorage.getItem(seenKey + "_loan")) {
-              const rawLoan = localStorage.getItem("tivexx-user")
-              if (rawLoan) {
-                const uLoan = JSON.parse(rawLoan)
-                const uidLoan = uLoan.id || uLoan.userId
-                // Prefer server balance, fallback to local increment of loanAmt
-                if (uidLoan) {
-                  try {
-                    const rLoan = await fetch(`/api/user-balance?userId=${uidLoan}`)
-                    const jLoan: any = await rLoan.json().catch(()=>({}))
-                    if (jLoan?.success && typeof jLoan.balance === "number") uLoan.balance = jLoan.balance
-                    else uLoan.balance = Number(uLoan.balance || 0) + loanAmt
-                  } catch { uLoan.balance = Number(uLoan.balance || 0) + loanAmt }
-                } else {
-                  uLoan.balance = Number(uLoan.balance || 0) + loanAmt
-                }
-                localStorage.setItem("tivexx-user", JSON.stringify(uLoan))
-                persistUserSession(uLoan)
-                // Log transaction
-                try {
-                  const tx = JSON.parse(localStorage.getItem("tivexx-transactions") || "[]")
-                  tx.unshift({ id: Date.now(), type: "credit", description: `Loan Disbursed — ₦${loanAmt.toLocaleString()}`, amount: loanAmt, date: new Date().toISOString(), reference })
-                  localStorage.setItem("tivexx-transactions", JSON.stringify(tx))
-                } catch {}
-                localStorage.setItem(seenKey + "_loan", "1")
-                localStorage.removeItem("pending_loan")
-              }
-            }
+            localStorage.removeItem("pending_loan")
           } catch {}
         }
 
@@ -152,11 +132,10 @@ function CallbackInner() {
         if (!cancelled) {
           setStatus("success")
           const isLoan = type === "loan"
-          const loanAmt = isLoan ? Number((metadata as any).loanAmount || 0) : 0
-          const extra = isLoan ? `Loan ₦${loanAmt.toLocaleString()} disbursed to your balance! (+5 Trust)` : type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+5 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+5 Trust)` : `₦${amount.toLocaleString()} added to balance! (+5 Trust)`
+          const extra = isLoan ? `Fee received — loan disbursement is pending admin approval. (+5 Trust)` : type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+5 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+5 Trust)` : `₦${amount.toLocaleString()} added to balance! (+5 Trust)`
           setMsg(extra)
           toast({ title: "Payment verified ✓", description: extra })
-          setTimeout(() => router.replace(isLoan ? "/dashboard" : type === "investment" ? "/dashboard" : "/dashboard"), 2500)
+          setTimeout(() => router.replace("/dashboard"), 2500)
         }
       } catch (e) {
         if (!cancelled) { setStatus("failed"); setMsg("Verification error — contact support with ref " + reference) }

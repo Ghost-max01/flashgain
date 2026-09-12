@@ -75,13 +75,13 @@ function AutoTapReferContent() {
       const stored = localStorage.getItem("tivexx-user");
       if (stored) { const u = JSON.parse(stored); const localBal = u.balance || 50000; const refEarned = data.referral_balance || 0; const lastSync = localStorage.getItem("tivexx-last-synced-referrals") || "0"; const newEarned = Math.max(0, refEarned - parseInt(lastSync)); balance = localBal + newEarned; u.balance = balance; localStorage.setItem("tivexx-user", JSON.stringify(u)); if (newEarned>0) localStorage.setItem("tivexx-last-synced-referrals", refEarned.toString()); }
       setUserData({ id: userId, referral_code: data.referral_code, referral_count: data.referral_count, referral_balance: data.referral_balance, pending_count: data.pending_count || 0, balance });
-      setAnimatedEarnings(data.referral_balance + (data.pending_count || 0) * 10000);
+      setAnimatedEarnings(data.referral_balance + (data.pending_count || 0) * 500);
     }).catch(console.error).finally(()=> setLoading(false));
   }, [router]);
 
   useEffect(() => {
     if (!userData) return;
-    const target = userData.referral_balance + (userData.pending_count || 0) * 10000;
+    const target = userData.referral_balance + (userData.pending_count || 0) * 500;
     if (target === animatedEarnings) return;
     const diff = target - animatedEarnings; const steps=30; const inc=diff/steps; setIsEarningsChanging(true); let cur=0; const t=setInterval(()=>{ cur++; setAnimatedEarnings(p=>{ const v=p+inc; if(cur>=steps){clearInterval(t); setIsEarningsChanging(false); return target;} return Math.round(v); }); },16); return()=>clearInterval(t);
   }, [userData]);

@@ -51,3 +51,34 @@ export function isBankLocked(): boolean {
   const details = getBankDetails()
   return !!details?.locked
 }
+
+export function isBankDetailsComplete(d: BankDetails | null): boolean {
+  if (!d) return false
+  return Boolean(d.bank && d.bankCode && d.accountNumber && d.accountName)
+}
+
+// Verify localStorage cache against server truth. Returns verified only when
+// server says verified OR /api/verify-account success; validates bankCode/accountName presence.
+export async function verifyBankDetailsServer(userId: string): Promise<{ verified: boolean; unverified?: boolean; reason?: string }> {
+  try {
+    const local = getBankDetails()
+    if (!local || !isBankDetailsComplete(local)) return { verified: false, reason: "incomplete-local" }
+    const res = await fetch(`/api/banks/verify-saved?userId=${encodeURIComponent(userId)}`, { cache: "no-store" })
+    const j = await res.json().catch(() => ({}))
+    if (j?.verified === true) return { verified: true }
+    if (j?.unverified === true) return { verified: false, unverified: true, reason: "unverified" }
+    // Fallback: try /api/verify-account success
+    try {
+      const v = await fetch("/api/verify-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bankCode: local.bankCode, accountNumber: local.accountNumber }),
+      })
+      const vj = await v.json().catch(() => ({}))
+      if (v.ok && (vj?.accountName || vj?.verified)) return { verified: true }
+    } catch {}
+    return { verified: false, reason: "server-denied" }
+  } catch {
+    return { verified: false, reason: "error" }
+  }
+}

@@ -16,8 +16,10 @@ export default function AirtimePage() {
   const [paykey, setPaykey] = useState("")
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null)
   const [showPaykeyError, setShowPaykeyError] = useState(false)
+  const [buying, setBuying] = useState(false)
+  const [buyStatus, setBuyStatus] = useState<string | null>(null)
 
-  const CORRECT_PAYKEY = "MC-7474MOMODDT1I2PARFAGSGG"
+  // No client paykey bypass — server validates. Balance guard disables purchase when insufficient.
 
   useEffect(() => {
     const storedUser = localStorage.getItem("momo-credit-user")
@@ -60,43 +62,57 @@ export default function AirtimePage() {
     localStorage.setItem("momo-credit-notifications", JSON.stringify(notifications))
   }
 
-  const handleBuyAirtime = () => {
-    if (!selectedNetwork || !phoneNumber || !paykey || !selectedAmount) {
-      alert("Please fill all required fields")
+  const balanceNum = Number(userData?.balance || 0)
+  const canAfford = selectedAmount != null && balanceNum >= selectedAmount
+
+  const handleBuyAirtime = async () => {
+    if (!selectedNetwork || !phoneNumber || !selectedAmount) {
+      setBuyStatus("Please fill all required fields")
       return
     }
-
-    if (paykey !== CORRECT_PAYKEY) {
-      setShowPaykeyError(true)
+    if (!canAfford) {
+      setBuyStatus("Insufficient balance")
       return
     }
-
-    const storedTransactions = localStorage.getItem("momo-credit-transactions")
-    const transactions = storedTransactions ? JSON.parse(storedTransactions) : []
-
-    const newTransaction = {
-      id: Date.now(),
-      type: "debit",
-      description: `Airtime Purchase - ${selectedNetwork}`,
-      amount: selectedAmount,
-      date: new Date().toISOString(),
+    setBuying(true)
+    setBuyStatus("Sending request...")
+    try {
+      const uid = userData?.id || userData?.userId || userData?.user_id || ""
+      const res = await fetch("/api/airtime", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, phone: phoneNumber, network: selectedNetwork, amount: selectedAmount }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        setBuyStatus(data?.error || "Airtime request failed")
+        setBuying(false)
+        return
+      }
+      // Status poll for pending provider reference
+      const ref = data.reference as string | undefined
+      if (ref && (data.status === "pending" || data.status === "accepted")) {
+        setBuyStatus("Queued — confirming...")
+        for (let i = 0; i < 6; i++) {
+          await new Promise((r) => setTimeout(r, 3000))
+          try {
+            const s = await fetch(`/api/airtime/status?reference=${encodeURIComponent(ref)}`)
+            const sj = await s.json().catch(() => ({}))
+            if (sj?.success) {
+              setBuyStatus(`Status: ${sj.status || "confirmed"}`)
+              if (String(sj.status || "").toLowerCase() !== "pending") break
+            }
+          } catch {}
+        }
+      } else {
+        setBuyStatus(data.message || "Airtime sent")
+      }
+      router.push("/dashboard")
+    } catch (e: any) {
+      setBuyStatus(e?.message || "Request failed")
+    } finally {
+      setBuying(false)
     }
-
-    transactions.push(newTransaction)
-    localStorage.setItem("momo-credit-transactions", JSON.stringify(transactions))
-
-    const user = { ...userData }
-    user.balance -= selectedAmount
-    localStorage.setItem("momo-credit-user", JSON.stringify(user))
-
-    addNotification(
-      "Airtime Purchase Successful",
-      `₦${selectedAmount} ${selectedNetwork} airtime sent to ${phoneNumber}`,
-      "success",
-    )
-
-    alert("Airtime purchase successful!")
-    router.push("/dashboard")
   }
 
   if (!userData) {
@@ -176,10 +192,11 @@ export default function AirtimePage() {
         <Button
           onClick={handleBuyAirtime}
           className="w-full bg-orange-600 hover:bg-orange-700 text-white py-6 rounded-lg"
-          disabled={!selectedAmount || !selectedNetwork || !phoneNumber || !paykey}
+          disabled={!selectedAmount || !selectedNetwork || !phoneNumber || !canAfford || buying}
         >
-          Buy Airtime
+          {buying ? "Processing..." : canAfford ? "Buy Airtime" : "Insufficient balance"}
         </Button>
+        {buyStatus && <p className="text-sm text-gray-600 mt-2">{buyStatus}</p>}
       </div>
 
       {showPaykeyError && <PaykeyError onClose={() => setShowPaykeyError(false)} />}

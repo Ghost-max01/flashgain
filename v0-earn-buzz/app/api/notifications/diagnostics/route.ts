@@ -38,20 +38,16 @@ async function checkSupabaseTable(tableName: string, url: string, serviceRoleKey
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = (req as any)?.headers?.get?.("authorization") || "";
+  const secret = process.env.ADMIN_NOTIFY_SECRET;
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
   const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 
-  const diagnostics = {
-    supabaseUrl: Boolean(supabaseUrl),
-    supabaseServiceRole: Boolean(supabaseServiceRole),
-    firebaseProjectId: Boolean(process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
-    firebaseClientEmail: Boolean(process.env.FIREBASE_CLIENT_EMAIL),
-    firebasePrivateKey: Boolean(process.env.FIREBASE_PRIVATE_KEY && !process.env.FIREBASE_PRIVATE_KEY.includes("REPLACE_THIS_AFTER_ROTATING_KEY")),
-    vapidPublicKey: Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
-    vapidPrivateKey: Boolean(process.env.VAPID_PRIVATE_KEY),
-    cronSecret: Boolean(process.env.CRON_SECRET),
-  }
+  const hasSupabase = Boolean(supabaseUrl && supabaseServiceRole);
 
   let tables = {
     notificationFcmTokens: { exists: false, error: "Supabase not configured" },
@@ -59,7 +55,7 @@ export async function GET() {
     userTimers: { exists: false, error: "Supabase not configured" },
   }
 
-  if (diagnostics.supabaseUrl && diagnostics.supabaseServiceRole) {
+  if (hasSupabase) {
     const [fcmTable, webpushTable, timersTable] = await Promise.all([
       checkSupabaseTable("notification_fcm_tokens", supabaseUrl, supabaseServiceRole),
       checkSupabaseTable("notification_webpush_subscriptions", supabaseUrl, supabaseServiceRole),
@@ -78,33 +74,30 @@ export async function GET() {
     tables.notificationWebpushSubscriptions.exists &&
     tables.userTimers.exists
 
-  const backgroundReady =
-    diagnostics.supabaseUrl &&
-    diagnostics.supabaseServiceRole &&
-    tablesReady &&
-    ((diagnostics.firebaseProjectId && diagnostics.firebaseClientEmail && diagnostics.firebasePrivateKey) ||
-      (diagnostics.vapidPublicKey && diagnostics.vapidPrivateKey))
-
-  const actions: string[] = []
-
-  if (!diagnostics.supabaseUrl) actions.push("Set NEXT_PUBLIC_SUPABASE_URL in Vercel")
-  if (!diagnostics.supabaseServiceRole) actions.push("Set SUPABASE_SERVICE_ROLE_KEY in Vercel")
-  if (!tables.notificationFcmTokens.exists) actions.push("Create table: notification_fcm_tokens in Supabase SQL editor")
-  if (!tables.notificationWebpushSubscriptions.exists) actions.push("Create table: notification_webpush_subscriptions in Supabase SQL editor")
-  if (!tables.userTimers.exists) actions.push("Create table: user_timers in Supabase SQL editor")
-  if (!(diagnostics.firebaseProjectId && diagnostics.firebaseClientEmail && diagnostics.firebasePrivateKey)) {
-    actions.push("Set Firebase Admin env vars: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY")
+  // Return only counts — never env booleans
+  let counts = { fcmTokens: 0, webpushSubs: 0, timers: 0 };
+  if (hasSupabase && tablesReady) {
+    try {
+      const headers = { apikey: supabaseServiceRole, Authorization: `Bearer ${supabaseServiceRole}`, "Content-Type": "application/json", Prefer: "count=exact" };
+      const [a, b, c] = await Promise.all([
+        fetch(`${supabaseUrl}/rest/v1/notification_fcm_tokens?select=id`, { method: "HEAD", headers, cache: "no-store" }),
+        fetch(`${supabaseUrl}/rest/v1/notification_webpush_subscriptions?select=id`, { method: "HEAD", headers, cache: "no-store" }),
+        fetch(`${supabaseUrl}/rest/v1/user_timers?select=id`, { method: "HEAD", headers, cache: "no-store" }),
+      ]);
+      const parseCount = (r: Response) => {
+        const cr = r.headers.get("content-range") || "";
+        const m = cr.split("/").pop();
+        const n = m ? parseInt(m, 10) : 0;
+        return Number.isFinite(n) ? n : 0;
+      };
+      counts = { fcmTokens: parseCount(a), webpushSubs: parseCount(b), timers: parseCount(c) };
+    } catch {}
   }
-  if (!diagnostics.cronSecret) actions.push("Set CRON_SECRET in Vercel")
 
   return NextResponse.json({
     success: true,
-    backgroundReady,
-    diagnostics,
+    tablesReady,
+    counts,
     tables,
-    actions,
-    message: backgroundReady
-      ? "Background notification prerequisites are configured"
-      : "Background notification prerequisites are incomplete",
   })
 }

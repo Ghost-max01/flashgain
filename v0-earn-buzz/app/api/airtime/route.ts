@@ -21,7 +21,19 @@ function networkCode(network: string): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, phone, network, amount } = body || {};
+    const { phone, network, amount } = body || {};
+    let userId = String(body?.userId || body?.user_id || "").trim();
+    // Resolve userId from JWT ownership — reject mismatch; fallback to body only with no session.
+    try {
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabaseAuth = await createClient();
+      const { data } = await supabaseAuth.auth.getUser();
+      const authId = (data?.user as any)?.id || "";
+      if (authId) {
+        if (userId && userId !== authId) return NextResponse.json({ error: "User mismatch" }, { status: 401 });
+        userId = authId;
+      }
+    } catch {}
     if (!userId || !phone || !network) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     if (Number(amount) !== 500) return NextResponse.json({ error: "VIP airtime is exactly ₦500" }, { status: 400 });
 
@@ -39,7 +51,7 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.NEXT_PUBLIC_PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
+    const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || "";
     if (!PAYSTACK_KEY) {
       return NextResponse.json({ error: "Paystack not configured on server (PAYSTACK_SECRET_KEY missing). Add it on Vercel and redeploy." }, { status: 500 });
     }
@@ -113,12 +125,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg + hint, paystack: paystackJson, statusCode: paystackRes?.status || 500 }, { status: 400 });
     }
 
-    // At this point Paystack accepted the bill — dataStatus may be "success" or "pending"
-    // For pending, we return pending and let frontend poll /api/airtime/status; but for VIP we consider accepted as success and track reference.
+    // Retry-safe: ONLY mark vip_redeemed AFTER provider confirms success.
+    // Pending/failed → do NOT set redeemed; return retryable so the client can poll/retry.
     const providerRef: string = paystackJson?.data?.reference || paystackJson?.data?.id || paystackJson?.data?.data?.reference || reference;
-    const providerStatus: string = dataStatus || (paystackJson?.data ? "success" : "accepted");
+    const rawStatus: string = String(dataStatus || "").toLowerCase();
+    const providerStatus: string = rawStatus || "accepted";
 
-    // --- ONLY on verified Paystack success/accepted do we mark redeemed and track ---
+    const confirmed = rawStatus === "success" || rawStatus === "successful" || rawStatus === "delivered" || rawStatus === "completed";
+    if (!confirmed) {
+      // Track pending attempt without redeeming (best-effort log).
+      try {
+        if (supabase) {
+          await supabase.from("referral_withdraws").insert({
+            user_id: userId,
+            amount: 500,
+            type: "vip_airtime",
+            status: "pending",
+            meta: { phone: digits, network: String(network).toUpperCase(), providerRef, providerStatus, paystackResponse: paystackJson?.data || paystackJson },
+          } as any);
+        }
+      } catch {}
+      return NextResponse.json(
+        { success: false, retryable: true, reference: providerRef, status: providerStatus || "pending", message: "Provider has not confirmed delivery yet — retry or poll status.", paystack: paystackJson?.data || paystackJson },
+        { status: 202 },
+      );
+    }
+
+    // --- ONLY on verified provider success do we mark redeemed and track ---
     try {
       if (supabase) {
         await supabase.from("users").update({ vip_redeemed: true, referral_vip_balance: 0 }).eq("id", userId);
@@ -126,7 +159,7 @@ export async function POST(req: NextRequest) {
           user_id: userId,
           amount: 500,
           type: "vip_airtime",
-          status: providerStatus === "pending" ? "pending" : "success",
+          status: "success",
           meta: { phone: digits, network: String(network).toUpperCase(), providerRef, providerStatus, paystackResponse: paystackJson?.data || paystackJson },
         } as any);
       }
@@ -139,7 +172,7 @@ export async function POST(req: NextRequest) {
       success: true,
       reference: providerRef,
       status: providerStatus,
-      message: providerStatus === "pending" ? "Airtime queued — will confirm shortly. Reference tracked." : "Airtime sent — debited from Paystack. Reference tracked.",
+      message: "Airtime sent — debited from Paystack. Reference tracked.",
       paystack: paystackJson?.data || paystackJson,
     });
   } catch (e: any) {

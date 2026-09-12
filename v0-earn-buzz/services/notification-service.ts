@@ -12,9 +12,17 @@ function isStandalone(): boolean {
 
 // ─── VAPID public key ────────────────────────────────────────────────────────
 
-const VAPID_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-  "BLBi1so_KpGJtCt25Jpdq44NVgIrfSCPoGqE0jxw_dI5JVL59OqK3ODtuphKetG8VtM4vGUNFdXdMLOb0_dFsIA"
+function getVapidPublicKey(): string {
+  const k = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!k) throw new Error("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+  return k;
+}
+
+function requiredEnv(name: string): string {
+  const v = (process.env as any)?.[name];
+  if (!v) throw new Error(`Missing ${name}`);
+  return v;
+}
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
@@ -84,7 +92,7 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     const existing = await sw.pushManager.getSubscription()
     const subscription = existing ?? await sw.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
+      applicationServerKey: urlBase64ToUint8Array(getVapidPublicKey()) as unknown as BufferSource,
     })
 
     await fetch("/api/notifications/subscribe", {
@@ -120,19 +128,19 @@ async function registerFCMPush(uid: string): Promise<boolean> {
     const { getMessaging, getToken } = await import("firebase/messaging")
 
     const firebaseConfig = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAXHBpjh7TfRHoOdxduMaxbACLmKhc10Ts",
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "basework-76679.firebaseapp.com",
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "basework-76679",
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "basework-76679.firebasestorage.app",
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "776150811852",
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:776150811852:web:f0c69a11487993e5cd6e69",
+      apiKey: requiredEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),
+      authDomain: requiredEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
+      projectId: requiredEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID"),
+      storageBucket: requiredEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"),
+      messagingSenderId: requiredEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
+      appId: requiredEnv("NEXT_PUBLIC_FIREBASE_APP_ID"),
     }
 
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
     const messaging = getMessaging(app)
 
     const token = await getToken(messaging, {
-      vapidKey: VAPID_PUBLIC_KEY,
+      vapidKey: getVapidPublicKey(),
       serviceWorkerRegistration: sw,
     })
 

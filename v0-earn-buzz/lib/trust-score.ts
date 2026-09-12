@@ -4,10 +4,15 @@
 // Rules (all compound / sum):
 //  • 5 mins spent in webapp = +2
 //  • every 5 referrals        = +2   (5 refs = 2)
-//  • each app navigation      = +1
+//  • every 5 app navigations  = +1 (1 point per 5 navigations)
 //  • each successful payment  = +5
 //  • every 10 tasks           = +2
 //  • every 50 dashboard taps  = +1
+//  • bonus (client display only): capped at +5; server user-trust route is
+//    authoritative and recomputes. Values >100 in storage are ignored.
+// NOTE on storage: loadMeta/saveMeta wrap localStorage in try/catch (private
+// mode / quota). Cross-tab: no live sync — callers should re-read on
+// focus/visibilitychange if they need fresh values. No behavior change otherwise.
 export const TRUST_STORAGE_KEY = "tivexx-trust-score";
 export const TRUST_META_KEY = "tivexx-trust-meta";
 export const TRUST_TIME_KEY = "tivexx-trust-time-ms";
@@ -39,12 +44,34 @@ export function defaultMeta(): TrustMeta {
 export function loadMeta(): TrustMeta {
   try {
     const raw = localStorage.getItem(TRUST_META_KEY);
-    if (raw) return { ...defaultMeta(), ...JSON.parse(raw) };
-  } catch {}
+    if (raw) {
+      const parsed = { ...defaultMeta(), ...JSON.parse(raw) };
+      // Sanitize client-authoritative bonus: clamp to 0..100 on load, ignore >100.
+      // Server (user-trust route) recomputes authoritatively; this is display-only.
+      const b = Number((parsed as TrustMeta).bonus);
+      parsed.bonus = !Number.isFinite(b) ? 0 : Math.min(100, Math.max(0, Math.floor(b)));
+      if (typeof window !== "undefined") {
+        try {
+          // Cross-tab note: storage event listeners should call loadMeta() again
+          // on "storage" to pick up changes from other tabs. No auto-sync here.
+          localStorage.setItem(TRUST_META_KEY, JSON.stringify(parsed));
+        } catch {}
+      }
+      return parsed;
+    }
+  } catch {
+    // storage unavailable (private mode / quota) — fall through to defaults
+  }
   return defaultMeta();
 }
 export function saveMeta(m: TrustMeta) {
-  try { localStorage.setItem(TRUST_META_KEY, JSON.stringify(m)); } catch {}
+  try {
+    // Sanitize before persisting so a tampered bonus never persists unbounded.
+    const safe: TrustMeta = { ...m, bonus: Math.min(100, Math.max(0, Math.floor(Number(m.bonus) || 0))) };
+    localStorage.setItem(TRUST_META_KEY, JSON.stringify(safe));
+  } catch {
+    // storage unavailable — ignore (no behavior change otherwise)
+  }
 }
 
 export function computeScore(m: TrustMeta): number {
@@ -54,7 +81,10 @@ export function computeScore(m: TrustMeta): number {
   const payPoints = m.payCount * 5;                              // 5 per pay
   const taskPoints = Math.floor((m.taskCount || 0) / 10) * 2;     // 10 tasks = 2
   const tapPoints = Math.floor((m.tapCount || 0) / 50) * 1;       // 50 taps = 1
-  return timePoints + refPoints + navPoints + payPoints + taskPoints + tapPoints + m.bonus;
+  // 5 navs = 1 point
+  // bonus is client display-only, capped at +5 (server authoritative)
+  const safeBonus = Math.min(5, Math.max(0, Number(m.bonus) || 0));
+  return timePoints + refPoints + navPoints + payPoints + taskPoints + tapPoints + safeBonus;
 }
 
 export function getLevel(score: number) {

@@ -10,6 +10,25 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
 import { persistUserSession, restoreUserSessionFromCookie } from "@/lib/session-client";
+
+const SAFE_USER_COLUMNS =
+  "id,name,email,referral_code,password_hash,password_salt,referred_by,created_at,balance,referral_balance,referral_count,trust_score";
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function stripSensitive<T extends Record<string, any>>(u: T): T {
+  const copy: Record<string, any> = { ...(u as any) };
+  delete copy.password;
+  delete copy.password_hash;
+  delete copy.password_salt;
+  return copy as T;
+}
 import {
   Home,
   Gamepad2,
@@ -57,18 +76,18 @@ export default function LoginPage() {
         if (!error && data?.session?.user) {
           const { data: userRow, error: userError } = await supabase
             .from("users")
-            .select("*")
+            .select(SAFE_USER_COLUMNS)
             .eq("id", data.session.user.id)
             .single()
 
           if (!userError && userRow) {
-            persistUserSession({
+            persistUserSession(stripSensitive({
               ...userRow,
               userId: userRow.userId || userRow.referral_code || userRow.referralCode || userRow.id,
               balance: Number(userRow?.balance || 0),
               referral_balance: Number(userRow?.referral_balance || 0),
               referral_count: Number(userRow?.referral_count || 0),
-            })
+            }))
             try {
               localStorage.setItem("tivexx-just-authenticated", "1");
               localStorage.setItem("tivexx-auth-time", Date.now().toString());
@@ -108,7 +127,7 @@ export default function LoginPage() {
         // User exists in Supabase Auth → pull everything
         const { data } = await supabase
           .from("users")
-          .select("*")
+          .select(SAFE_USER_COLUMNS)
           .eq("id", authData.user.id)
           .single();
 
@@ -117,13 +136,15 @@ export default function LoginPage() {
         // STEP 2: Legacy fallback — check your old users table
         const { data: localUser } = await supabase
           .from("users")
-          .select("*")
+          .select(SAFE_USER_COLUMNS)
           .eq("email", email)
           .single();
 
         const normalizedInput = password.trim().toUpperCase();
         const normalizedReferralCode = (localUser?.referral_code || "").toUpperCase();
-        const matchesPassword = localUser?.password === password;
+        const matchesPassword = localUser?.password_hash
+          ? (await sha256Hex((localUser?.password_salt || "") + password)) === localUser.password_hash
+          : localUser?.password === password;
         const matchesUserId = normalizedInput.length > 0 && normalizedInput === normalizedReferralCode;
 
         if (!localUser || (!matchesPassword && !matchesUserId)) {
@@ -141,13 +162,13 @@ export default function LoginPage() {
 
       // Save the FULL user object with correct numbers
       const stableUserId = fullUser?.userId || fullUser?.referral_code || fullUser?.referralCode || fullUser?.id
-      persistUserSession({
+      persistUserSession(stripSensitive({
         ...fullUser,
         userId: stableUserId,
         balance: Number(fullUser?.balance || 0),
         referral_balance: Number(fullUser?.referral_balance || 0),
         referral_count: Number(fullUser?.referral_count || 0),
-      });
+      }));
 
       // Mark that user just authenticated — dashboard will show notification prompt only now (not for guests)
       try {

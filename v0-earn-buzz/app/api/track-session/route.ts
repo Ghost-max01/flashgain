@@ -1,16 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
+
+const ACTION_ALLOWLIST = ['session_start', 'login', 'admin_login', 'logout'] as const;
+const MAX_LIMIT = 50;
+
+function getAdminOrNull(): any {
+  try {
+    return getSupabaseAdmin();
+  } catch {
+    return null;
+  }
+}
+
+async function getRequestUid(request: NextRequest): Promise<string | null> {
+  try {
+    const auth = request.headers.get("authorization") || "";
+    const m = auth.match(/^Bearer\s+(.+)$/i);
+    const token = m ? m[1].trim() : null;
+    if (token) {
+      try {
+        const admin = getAdminOrNull();
+        if (admin) {
+          const { data } = await admin.auth.getUser(token);
+          const uid = (data as any)?.user?.id as string | undefined;
+          if (uid) return uid;
+        }
+      } catch {}
+    }
+  } catch {}
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    const uid = (data as any)?.user?.id as string | undefined;
+    if (uid) return uid;
+  } catch {}
+  return null;
+}
 
 // Track when users log into their accounts (not just authentication attempts)
 export async function POST(request: NextRequest) {
   try {
     const { userId, email, action } = await request.json()
 
-    // Get client IP and user agent
-    const ip = request.headers.get('x-forwarded-for') ||
-               request.headers.get('x-real-ip') ||
-               'unknown'
+    if (!userId && !email) {
+      return NextResponse.json({ success: false, error: "Missing userId/email" }, { status: 400 })
+    }
+    if (typeof action !== "string" || !(ACTION_ALLOWLIST as readonly string[]).includes(action)) {
+      return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
+    }
+
+    const supabase = getAdminOrNull();
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: "Server not configured" }, { status: 500 })
+    }
+
+    // Require JWT for IP logging: without a valid JWT matching the subject,
+    // drop IP logging (privacy) and store a redacted placeholder.
+    const requestUid = await getRequestUid(request);
+    const claimed = typeof userId === "string" ? userId : null;
+    const authed = requestUid !== null && (claimed === null || requestUid === claimed);
+
     const userAgent = request.headers.get('user-agent') || 'unknown'
+    const ip = authed
+      ? (request.headers.get('x-forwarded-for') ||
+         request.headers.get('x-real-ip') ||
+         'unknown')
+      : 'redacted';
 
     // Store session in Supabase
     const { data, error } = await supabase
@@ -18,7 +74,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId || email,
         email,
-        action, // 'session_start' | 'login' | 'admin_login'
+        action,
         ip_address: ip,
         user_agent: userAgent,
         timestamp: new Date().toISOString(),
@@ -43,15 +99,28 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const days = parseInt(searchParams.get('days') || '7')
+    const limitRaw = parseInt(searchParams.get('limit') || '50')
+    const limit = Math.max(1, Math.min(MAX_LIMIT, Number.isFinite(limitRaw) ? limitRaw : MAX_LIMIT))
+
+    const supabase = getAdminOrNull();
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: "Server not configured" }, { status: 500 })
+    }
+
+    const requestUid = await getRequestUid(request);
 
     if (userId) {
+      // Require JWT ownership of the queried userId.
+      if (!requestUid || requestUid !== userId) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      }
       // Return user login history
       const { data, error } = await supabase
         .from('user_sessions')
         .select('*')
         .eq('user_id', userId)
         .order('timestamp', { ascending: false })
-        .limit(50)
+        .limit(limit)
 
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 })
@@ -59,6 +128,10 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ success: true, sessions: data })
     } else {
+      // Daily analytics summary requires an authenticated caller.
+      if (!requestUid) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      }
       // Return daily analytics summary
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - days)
@@ -68,6 +141,7 @@ export async function GET(request: NextRequest) {
         .select('*')
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date', { ascending: true })
+        .limit(limit)
 
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 })

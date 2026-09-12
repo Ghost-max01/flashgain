@@ -14,8 +14,9 @@ export default function WithdrawPage() {
   const [userData, setUserData] = useState<any>(null)
   const [referralCount, setReferralCount] = useState(0)
   const [balance, setBalance] = useState(0)
+  const [serverBalance, setServerBalance] = useState<number | null>(null)
   const [showWarning, setShowWarning] = useState(false)
-  const [showCashout, setShowCashout] = useState(true)
+  const [showCashout, setShowCashout] = useState(false)
   const [warningMessage, setWarningMessage] = useState("")
   const [toggleActive, setToggleActive] = useState(false)
   const [showUpgradePopup, setShowUpgradePopup] = useState(false)
@@ -42,7 +43,29 @@ export default function WithdrawPage() {
 
     const user = JSON.parse(storedUser)
     setUserData(user)
+    // Display fallback from localStorage; authoritative sync from server below.
     setBalance(user.balance || 0)
+    try {
+      const uid = user.id || user.userId
+      if (uid) {
+        fetch(`/api/user-balance?userId=${uid}`)
+          .then((r) => r.json())
+          .then((j) => {
+            if (j?.success && typeof j.balance === "number") {
+              setServerBalance(j.balance)
+              setBalance(j.balance)
+              try {
+                const next = { ...user, balance: j.balance }
+                if (typeof j.referral_balance === "number") next.referral_balance = j.referral_balance
+                if (typeof j.referral_count === "number") next.referral_count = j.referral_count
+                localStorage.setItem("tivexx-user", JSON.stringify(next))
+                setUserData(next)
+              } catch {}
+            }
+          })
+          .catch(() => {})
+      }
+    } catch {}
 
     // Check if a new day has started and reset tasks if needed
     const lastResetDate = localStorage.getItem("tivexx-last-reset-date")
@@ -73,12 +96,23 @@ export default function WithdrawPage() {
 
   const fetchReferralCount = async (userId: string) => {
     try {
-      // FIXED: Point to your actual endpoint
       const response = await fetch(`/api/referral-stats?userId=${userId}`)
       const data = await response.json()
       if (data.success) {
         setReferralCount(data.referral_count || 0)
       }
+      // Also refresh authoritative balance + trust so gates use server truth.
+      try {
+        const b = await fetch(`/api/user-balance?userId=${userId}`).then((r) => r.json())
+        if (b?.success && typeof b.balance === "number") {
+          setServerBalance(b.balance)
+          setBalance(b.balance)
+        }
+        if (typeof b?.referral_count === "number") setReferralCount(b.referral_count)
+      } catch {}
+      try {
+        await fetch(`/api/user-trust?userId=${userId}`).catch(() => null)
+      } catch {}
     } catch (error) {
       console.error("Error fetching referral count:", error)
     }
@@ -209,10 +243,12 @@ export default function WithdrawPage() {
     }
   }, [])
 
-  // BYPASSED: Always show cashout button for testing - skip requirement checks
+  // Real withdraw gates: referral_count >= 5 && balance >= 200000 (per copy).
+  // Only enable cashout when server-synced requirements are met.
   useEffect(() => {
-    setShowCashout(true)
-  }, [balance, referralCount, completedTasksCount, toggleActive])
+    const eligible = (serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS
+    setShowCashout(eligible)
+  }, [balance, serverBalance, referralCount, completedTasksCount, toggleActive])
 
   // Auto-close blocked popup after 20 seconds with countdown and reset toggle
   useEffect(() => {
@@ -271,8 +307,12 @@ export default function WithdrawPage() {
 
   const handleProceedToWithdrawal = () => {
     setShowWithdrawalInfoModal(false)
-    
-    // BYPASSED: Go directly to withdrawal page without referral checks
+    // Enforce real gates before proceeding — otherwise show requirements modal.
+    const effectiveBalance = serverBalance ?? balance
+    if (referralCount < REQUIRED_REFERRALS || effectiveBalance < 200000) {
+      setShowRequirementsModal(true)
+      return
+    }
     router.push("/withdraw/select-bank")
   }
 
@@ -280,8 +320,9 @@ export default function WithdrawPage() {
   const handleUpgradeCancel = () => {
     setShowUpgradePopup(false)
     setToggleActive(false)
-    // BYPASSED: Always show cashout button
-    setShowCashout(true)
+    // Re-evaluate real gates instead of force-showing cashout.
+    const eligible = (serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS
+    setShowCashout(eligible)
   }
 
   const handleUpgradeConfirm = () => {
@@ -716,9 +757,9 @@ export default function WithdrawPage() {
         {/* Withdrawal Info Modal */}
         <WithdrawalInfoModal
           isOpen={showWithdrawalInfoModal}
-          isEligible={true}
-          completedTasksCount={TOTAL_DAILY_TASKS}
-          referralCount={REQUIRED_REFERRALS}
+          isEligible={(serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS}
+          completedTasksCount={completedTasksCount}
+          referralCount={referralCount}
           onClose={() => setShowWithdrawalInfoModal(false)}
           onProceed={handleProceedToWithdrawal}
         />

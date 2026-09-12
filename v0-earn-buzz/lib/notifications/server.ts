@@ -5,18 +5,18 @@ import type { NotificationSendPayload, NotificationSubscribePayload } from "@/li
 const DEFAULT_ICON = "/icons/icon-192x192.png"
 const DEFAULT_BADGE = "/icons/icon-192x192.png"
 const DEFAULT_CLICK_URL = "/"
-const DEFAULT_TITLE = "Helping Hands Notification"
+const DEFAULT_TITLE = "FlashGain Notification"
 
 function buildAbsoluteClickUrl(clickUrl: string) {
   if (!clickUrl) {
-    return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://helpinghands.money/"
+    return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://flashgain9ja.money/"
   }
 
   if (/^https?:\/\//i.test(clickUrl)) {
     return clickUrl
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://helpinghands.money"
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://flashgain9ja.money"
   return `${base.replace(/\/$/, "")}/${String(clickUrl).replace(/^\//, "")}`
 }
 

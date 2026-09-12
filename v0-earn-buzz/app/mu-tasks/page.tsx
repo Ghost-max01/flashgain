@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { useTaskTimer } from "@/hooks/useTaskTimer"
+import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
 
 interface Task {
   id: string
@@ -942,12 +942,9 @@ function MuTaskPageInner() {
   const needParam = Number(searchParams.get("need") || searchParams.get("count") || "0")
   const planParam = (searchParams.get("plan") || "") as string
   // per-plan isolation: mu tasks for 2d (30) vs 1w (100) track separately starting at 0
+  // Rewards/keys follow explicit ?plan= only (server plan). ?need= is display-only slicing.
   const resolvedPlan = (() => {
     if (planParam === "2d" || planParam === "1w") return planParam
-    if (needParam === 30) return "2d"
-    if (needParam === 100) return "1w"
-    if (needParam > 50) return "1w"
-    if (needParam > 0) return "2d"
     return ""
   })()
   const taskStorageKey = resolvedPlan ? `mu-completed-tasks-${resolvedPlan}` : "mu-completed-tasks"
@@ -1022,7 +1019,7 @@ function MuTaskPageInner() {
         const timeSpent = Math.round(elapsed)
         toast({
           title: "You didn't interact with the task ❌",
-          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least 10 seconds before coming back.`,
+          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least ${TASK_VISIT_SECONDS} seconds before coming back.`,
           variant: "destructive",
           duration: 6000,
         })
@@ -1117,6 +1114,30 @@ function MuTaskPageInner() {
     const task = AVAILABLE_TASKS.find((t) => t.id === taskId)
     if (!task) return
 
+    const storedUserRaw = localStorage.getItem("tivexx-user")
+    const parsedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null
+    const claimUserId = parsedUser?.id || parsedUser?.user_id || parsedUser?.userId || ""
+    if (!claimUserId) return
+    let serverOk = false
+    try {
+      const res = await fetch(`/api/track-task`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: claimUserId, taskId: task.id, taskName: task.platform, reward: task.reward }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data?.duplicate) {
+        toast({ title: "Already claimed", description: "This task was already credited on the server.", variant: "destructive" })
+        return
+      }
+      if (!res.ok || !data?.success) return
+      serverOk = true
+    } catch (err) {
+      console.error("Failed to track task completion:", err)
+      return
+    }
+    if (!serverOk) return
+
     const newBalance = balance + task.reward
     setBalance(newBalance)
 
@@ -1134,22 +1155,6 @@ function MuTaskPageInner() {
         })
       } catch (err) {
         console.error("Failed to sync user balance to server:", err)
-      }
-
-      // Track task completion for analytics
-      try {
-        await fetch(`/api/track-task`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.id || user.user_id || user.userId,
-            taskId: task.id,
-            taskName: task.platform,
-            reward: task.reward,
-          }),
-        })
-      } catch (err) {
-        console.error("Failed to track task completion:", err)
       }
     }
 
@@ -1221,7 +1226,7 @@ function MuTaskPageInner() {
   const confirmStartTask = (task: Task) => {
     toast({
       title: "Task Started ⏱️",
-      description: "Make sure to spend at least 10 seconds on the site before returning. If you return too quickly, you'll need to try again!",
+      description: `Make sure to spend at least ${TASK_VISIT_SECONDS} seconds on the site before returning. If you return too quickly, you'll need to try again!`,
       duration: 5000,
     })
 
@@ -1433,7 +1438,7 @@ function MuTaskPageInner() {
                 {task.link && (
                   <div className="hh-task-warning">
                     <span className="text-amber-400 font-bold mr-1">⚠️</span>
-                    <span>Interact with the task for up to 10 seconds before you can claim the reward.</span>
+                    <span>Interact with the task for up to {TASK_VISIT_SECONDS} seconds before you can claim the reward.</span>
                   </div>
                 )}
               </div>

@@ -100,8 +100,8 @@ export default function InvestmentPlatformPage() {
       minDeposit: "₦50,000",
       maxDeposit: "₦50,000",
       duration: "12 hrs",
-      projectedReturn: "400%",
-      annualizedReturn: "~2800% weekly",
+      projectedReturn: "Fixed plan total",
+      annualizedReturn: "Per plan terms",
       color: "emerald",
       gradient: "from-emerald-500 to-emerald-600",
       lightGradient: "from-emerald-500/20 to-emerald-600/10",
@@ -127,8 +127,8 @@ export default function InvestmentPlatformPage() {
       minDeposit: "₦100,000",
       maxDeposit: "₦250,000",
       duration: "12 hrs",
-      projectedReturn: "400%",
-      annualizedReturn: "~2800% weekly",
+      projectedReturn: "Fixed plan total",
+      annualizedReturn: "Per plan terms",
       color: "blue",
       gradient: "from-blue-500 to-blue-600",
       lightGradient: "from-blue-500/20 to-blue-600/10",
@@ -156,8 +156,8 @@ export default function InvestmentPlatformPage() {
       minDeposit: "₦150,000",
       maxDeposit: "₦1,000,000+",
       duration: "12 hrs",
-      projectedReturn: "400%",
-      annualizedReturn: "~2800% weekly",
+      projectedReturn: "Fixed plan total",
+      annualizedReturn: "Per plan terms",
       color: "amber",
       gradient: "from-amber-500 to-amber-600",
       lightGradient: "from-amber-500/20 to-amber-600/10",
@@ -186,16 +186,15 @@ export default function InvestmentPlatformPage() {
 
   const calculateProjectedValue = () => {
     const amount = parseFloat(investmentAmount) || 50000;
-    // 4x return in 12 hours (profit = 3x) and two periods per day
-    const twelveHourGrowthRate = 3; // growth factor (profit multiplier)
-    const weeklyGrowthRate = twelveHourGrowthRate * 14; // 14 half‑days
-    const growth = amount * twelveHourGrowthRate;
+    // Simple plan totals — no compounding hype. Returns credited per plan terms;
+    // calculator shows principal only (server/plan determines any return).
+    const growth = 0;
     return {
       invested: amount,
       growth: Math.round(growth),
-      total: Math.round(amount * (1 + twelveHourGrowthRate)),
-      weeklyTotal: Math.round(amount * (1 + weeklyGrowthRate)),
-      weeklyGrowth: Math.round(amount * weeklyGrowthRate),
+      total: Math.round(amount),
+      weeklyTotal: Math.round(amount),
+      weeklyGrowth: 0,
     };
   };
 

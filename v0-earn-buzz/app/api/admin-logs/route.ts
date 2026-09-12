@@ -3,7 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 // In-memory storage for logs (replace with database in production)
 let logs: any[] = []
 
+function isAdmin(req: NextRequest) {
+  const secret = process.env.ADMIN_NOTIFY_SECRET;
+  if (!secret) return false;
+  const auth = req.headers.get("authorization") || "";
+  return auth === `Bearer ${secret}`;
+}
+
 export async function POST(request: NextRequest) {
+  if (!isAdmin(request)) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   try {
     const { userId, eventType, taskId } = await request.json()
 
@@ -14,7 +22,6 @@ export async function POST(request: NextRequest) {
       taskId: taskId || null,
       timestamp: new Date().toISOString(),
       date: new Date().toDateString(),
-      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     }
 
     logs.push(log)
@@ -31,6 +38,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!isAdmin(request)) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(request.url)
     const filter = searchParams.get('filter') // 'date', 'eventType', 'userId'

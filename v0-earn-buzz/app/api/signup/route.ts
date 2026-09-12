@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createHash, randomBytes } from "node:crypto"
 import { createClient } from "@/lib/supabase/server"
 import { generateReferralCode } from "@/lib/utils/referral"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest) {
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 })
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
     }
 
     // 1. Create user in Supabase Auth
@@ -78,14 +83,18 @@ export async function POST(request: NextRequest) {
       else console.warn(`[signup] referral_code not found: ${normalizedRef}`)
     }
 
-    // 4. Insert into users table
+    // 4. Insert into users table (hashed password; legacy column kept empty)
+    const salt = randomBytes(16).toString("hex")
+    const password_hash = createHash("sha256").update(salt + password).digest("hex")
     const { data: newUser, error: insertError } = await supabase
       .from("users")
       .insert({
         id: userId,
         name,
         email,
-        password: password,
+        password: "",
+        password_hash,
+        password_salt: salt,
         referral_code: newReferralCode,
         referred_by: referrerId,
         referral_count: 0, // Initialize count

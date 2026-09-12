@@ -1,4 +1,4 @@
-const CACHE_NAME = "earn-buzz-v3"
+const CACHE_NAME = "earn-buzz-v4"
 const urlsToCache = [
   "/",
   "/manifest.webmanifest?v=20260317",
@@ -72,52 +72,93 @@ function isNavigationRequest(request) {
   )
 }
 
-// Fetch event — network-first for navigation, cache-first for static assets
+// Fetch event — network-first for app navigations, SWR only for static assets.
+// Never cache navigations with set-cookie / authenticated markers: the no-cache
+// list below is network-only with offline fallback page. Vary: Cookie.
+const NO_CACHE_PATHS = ["/dashboard", "/refer", "/withdraw", "/earn", "/task", "/businessloan", "/investment", "/loan", "/paystack"];
+function isNoCacheNav(pathname) {
+  return NO_CACHE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
 self.addEventListener("fetch", (event) => {
   const url = event.request.url
+  let pathname = "";
+  try { pathname = new URL(url).pathname; } catch (_) { pathname = ""; }
   if (
     url.includes("/api/") ||
-    url.includes("/_next/") ||
     url.includes("/firebase-messaging-sw.js") ||
     !url.startsWith(self.location.origin)
   ) {
     return
   }
 
+  // Static assets: stale-while-revalidate only for /_next/static, images, fonts
+  const isStatic = url.includes("/_next/static") || /\.(png|jpe?g|svg|gif|webp|ico|woff2?|ttf|eot)$/i.test(pathname);
+  if (!isNavigationRequest(event.request) && !isStatic) {
+    return
+  }
+
   if (isNavigationRequest(event.request)) {
-    // Stale-while-revalidate: respond with cache if available, update cache in background
+    if (isNoCacheNav(pathname)) {
+      // Network-only with offline fallback — never put to cache.
+      event.respondWith(
+        (async function () {
+          try {
+            const netRes = await fetch(event.request);
+            return netRes;
+          } catch (_) {
+            const cached = await caches.match(event.request);
+            if (cached) return cached;
+            return caches.match("/");
+          }
+        })(),
+      )
+      return
+    }
+    // Other navigations: network-first, fallback cache, then revalidate+put
     event.respondWith(
       (async function () {
-        const cache = await caches.open(CACHE_NAME)
-        const cached = await cache.match(event.request)
-
-        const networkFetch = fetch(event.request)
-          .then((response) => {
-            if (response && response.ok) {
-              const clone = response.clone()
-              cache.put(event.request, clone)
+        try {
+          const netRes = await fetch(event.request);
+          if (netRes && netRes.ok) {
+            // Don't cache responses with set-cookie or authenticated markers
+            const setCookie = netRes.headers.get("set-cookie");
+            if (!setCookie) {
+              const cache = await caches.open(CACHE_NAME);
+              event.waitUntil(cache.put(event.request, netRes.clone()));
             }
-            return response
-          })
-          .catch(() => null)
-
-        if (cached) {
-          // update cache in background, but return cached immediately
-          event.waitUntil(networkFetch)
-          return cached
+          }
+          return netRes;
+        } catch (_) {
+          const cache = await caches.open(CACHE_NAME);
+          const cached = await cache.match(event.request);
+          if (cached) return cached;
+          return caches.match("/");
         }
-
-        // No cached entry — wait for network, fallback to root cached page
-        const netRes = await networkFetch
-        if (netRes) return netRes
-        return caches.match("/")
       })(),
     )
     return
   }
 
+  // Static: stale-while-revalidate
   event.respondWith(
-    caches.match(event.request).then((response) => response || fetch(event.request))
+    (async function () {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(event.request);
+      const networkFetch = fetch(event.request).then((response) => {
+        if (response && response.ok) {
+          const clone = response.clone();
+          event.waitUntil(cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => null);
+      if (cached) {
+        event.waitUntil(networkFetch);
+        return cached;
+      }
+      const netRes = await networkFetch;
+      if (netRes) return netRes;
+      return fetch(event.request);
+    })(),
   )
 })
 

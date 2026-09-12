@@ -1,5 +1,4 @@
-const nodeRequire = eval("require") as NodeRequire
-const webpush = nodeRequire("web-push")
+import webpush from "web-push"
 
 let vapidConfigured = false
 

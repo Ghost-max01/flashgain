@@ -14,12 +14,8 @@ export const metadata: Metadata = {
   title: "FlashGain 9ja",
   description:
     "FlashGain 9ja is a financial & earning app that offers weekly cash rewards to new users",
-  manifest: "/manifest.webmanifest?v=20260318",
+  manifest: "/manifest.json?v=20260318",
   generator: "v0.dev",
-  other: {
-    "8c56abd733d73550a5527a8ac0c7bc62642d1a86":
-      "8c56abd733d73550a5527a8ac0c7bc62642d1a86",
-  },
   openGraph: {
     title: "FlashGain 9ja",
     description:
@@ -54,7 +50,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#ea580c" />
-        <link rel="manifest" href="/manifest.webmanifest?v=20260318" />
+        <link rel="manifest" href="/manifest.json?v=20260318" />
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png?v=20260318" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=20260318" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png?v=20260318" />

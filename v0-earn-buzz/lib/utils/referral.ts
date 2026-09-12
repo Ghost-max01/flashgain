@@ -1,9 +1,10 @@
-// Generate a unique referral code
+// Generate a unique referral code (CSPRNG)
 export function generateReferralCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   let code = "EB" // Prefix for EarnBuzz
+  const rand = crypto.getRandomValues(new Uint32Array(8))
   for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
+    code += chars.charAt(rand[i] % chars.length)
   }
   return code
 }

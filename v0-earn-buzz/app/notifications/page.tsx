@@ -21,13 +21,21 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
   useEffect(() => {
+    // Migrate old momo keys once → tivexx keys
+    try {
+      const oldU = localStorage.getItem("momo-credit-user");
+      if (oldU && !localStorage.getItem("tivexx-user")) localStorage.setItem("tivexx-user", oldU);
+      const oldN = localStorage.getItem("momo-credit-notifications");
+      if (oldN && !localStorage.getItem("tivexx-notifications")) localStorage.setItem("tivexx-notifications", oldN);
+    } catch {}
     // Check if user is logged in
-    const storedUser = localStorage.getItem("momo-credit-user")
+    let storedUser: string | null = null;
+    try { storedUser = localStorage.getItem("tivexx-user"); } catch { storedUser = null; }
     if (!storedUser) {
       router.push("/login")
       return
     }
-    setUserData(JSON.parse(storedUser))
+    try { setUserData(JSON.parse(storedUser)) } catch { router.push("/login"); return; }
 
     // Load notifications
     loadNotifications()
@@ -39,9 +47,11 @@ export default function NotificationsPage() {
   }, [router])
 
   const loadNotifications = () => {
-    const stored = localStorage.getItem("momo-credit-notifications")
+    let stored: string | null = null;
+    try { stored = localStorage.getItem("tivexx-notifications") } catch { stored = null; }
     if (stored) {
-      const allNotifications = JSON.parse(stored)
+      let allNotifications: Notification[] = [];
+      try { allNotifications = JSON.parse(stored) } catch { allNotifications = []; }
       // Filter out notifications older than 1 hour
       const oneHourAgo = Date.now() - 60 * 60 * 1000
       const validNotifications = allNotifications.filter((n: Notification) => n.timestamp > oneHourAgo)
@@ -49,7 +59,7 @@ export default function NotificationsPage() {
 
       // Update localStorage if we filtered any out
       if (validNotifications.length !== allNotifications.length) {
-        localStorage.setItem("momo-credit-notifications", JSON.stringify(validNotifications))
+        try { localStorage.setItem("tivexx-notifications", JSON.stringify(validNotifications)) } catch {}
       }
     }
   }
@@ -60,19 +70,19 @@ export default function NotificationsPage() {
 
     if (validNotifications.length !== notifications.length) {
       setNotifications(validNotifications)
-      localStorage.setItem("momo-credit-notifications", JSON.stringify(validNotifications))
+      try { localStorage.setItem("tivexx-notifications", JSON.stringify(validNotifications)) } catch {}
     }
   }
 
   const markAsRead = (id: string) => {
     const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
     setNotifications(updated)
-    localStorage.setItem("momo-credit-notifications", JSON.stringify(updated))
+    try { localStorage.setItem("tivexx-notifications", JSON.stringify(updated)) } catch {}
   }
 
   const clearAllNotifications = () => {
     setNotifications([])
-    localStorage.setItem("momo-credit-notifications", JSON.stringify([]))
+    try { localStorage.setItem("tivexx-notifications", JSON.stringify([])) } catch {}
   }
 
   const formatTime = (timestamp: number) => {

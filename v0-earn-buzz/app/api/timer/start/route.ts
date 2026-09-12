@@ -3,6 +3,10 @@ import { createClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
 
+// Server-issued 1-minute claim cadence.
+const CLAIM_CADENCE_MS = 60_000
+const DEFAULT_TIMER_TYPE = "claim"
+
 // Initialize Supabase Admin client for timer tracking
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
@@ -21,17 +25,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { userId } = body
 
-    // Accept either absolute timerEndsAt or legacy timerDuration
-    const timerEndsAt: Date = body.timerEndsAt
-      ? new Date(body.timerEndsAt)
-      : new Date(Date.now() + (body.timerDuration ?? 60) * 1000)
-
     if (!userId) {
       return NextResponse.json(
         { success: false, error: "Missing userId" },
         { status: 400 },
       )
     }
+
+    // IGNORE client-supplied timerEndsAt/timerDuration — server issues expiry.
+    const timerType: string =
+      typeof body.timer_type === "string" && /^[A-Za-z0-9_-]{1,32}$/.test(body.timer_type)
+        ? body.timer_type
+        : DEFAULT_TIMER_TYPE
+    const now = Date.now()
+    const expiresAt = new Date(now + CLAIM_CADENCE_MS)
 
     const supabase = getSupabaseAdmin()
 
@@ -40,22 +47,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "Timer started (local only)",
-        timerEndsAt: timerEndsAt.toISOString(),
+        timerEndsAt: expiresAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
       })
     }
 
     try {
-      // Store timer — upsert so re-claiming resets the timer
-      const { error } = await supabase.from("user_timers").upsert(
-        {
-          user_id: userId,
-          timer_ends_at: timerEndsAt.toISOString(),
-          timer_duration: Math.round((timerEndsAt.getTime() - Date.now()) / 1000),
-          created_at: new Date().toISOString(),
-          notified: false,
-        },
-        { onConflict: "user_id" },
-      )
+      // Store timer — upsert so re-claiming resets the timer.
+      // Key: (user_id, timer_type); fall back to user_id-only upsert if the
+      // timer_type column/constraint is not yet migrated (see 007).
+      const row: Record<string, unknown> = {
+        user_id: userId,
+        timer_ends_at: expiresAt.toISOString(),
+        timer_duration: Math.round(CLAIM_CADENCE_MS / 1000),
+        created_at: new Date().toISOString(),
+        notified: false,
+      }
+      let error: any = null
+      try {
+        const res = await supabase.from("user_timers").upsert(
+          { ...row, timer_type: timerType },
+          { onConflict: "user_id,timer_type" },
+        )
+        error = (res as any)?.error ?? null
+      } catch (compositeErr: any) {
+        // Likely missing column/constraint pre-migration — retry user_id-only.
+        const res = await supabase.from("user_timers").upsert(row, { onConflict: "user_id" })
+        error = (res as any)?.error ?? null
+      }
 
       if (error) {
         console.error("[timer/start] Supabase error:", error)
@@ -63,7 +82,8 @@ export async function POST(req: NextRequest) {
           {
             success: true,
             message: "Timer started (local fallback - DB error)",
-            timerEndsAt: timerEndsAt.toISOString(),
+            timerEndsAt: expiresAt.toISOString(),
+            expiresAt: expiresAt.toISOString(),
           },
           { status: 200 },
         )
@@ -71,7 +91,8 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        timerEndsAt: timerEndsAt.toISOString(),
+        timerEndsAt: expiresAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
       })
     } catch (err) {
       console.error("[timer/start] Database operation failed:", err)
@@ -79,7 +100,8 @@ export async function POST(req: NextRequest) {
         {
           success: true,
           message: "Timer started (local fallback - exception)",
-          timerEndsAt: timerEndsAt.toISOString(),
+          timerEndsAt: expiresAt.toISOString(),
+          expiresAt: expiresAt.toISOString(),
         },
         { status: 200 },
       )

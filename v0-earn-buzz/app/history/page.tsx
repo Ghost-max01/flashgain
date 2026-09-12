@@ -30,11 +30,14 @@ export default function HistoryPage() {
 
     const user = JSON.parse(storedUser)
     setUserData(user)
+    const uid = user.id || user.userId;
 
-    // Load existing transactions
+    // Load cached transactions first (localStorage only as cache)
     let txs: Transaction[] = []
-    const storedTransactions = localStorage.getItem("tivexx-transactions")
-    if (storedTransactions) txs = JSON.parse(storedTransactions)
+    try {
+      const storedTransactions = localStorage.getItem("tivexx-transactions")
+      if (storedTransactions) txs = JSON.parse(storedTransactions)
+    } catch { txs = []; }
 
     // ✅ Ensure the signup bonus (₦5,000) exists exactly once at the bottom
     const hasSignupBonus = txs.some((tx) => tx.category === "signup" && tx.amount === 5000)
@@ -45,7 +48,7 @@ export default function HistoryPage() {
         new Date().toISOString() // fallback if no date stored
 
       const signupBonus: Transaction = {
-        id: Date.now(),
+        id: crypto.randomUUID() as any,
         type: "credit",
         category: "signup",
         description: "Signup Bonus",
@@ -67,7 +70,7 @@ export default function HistoryPage() {
         const newReferralTxs: Transaction[] = []
         for (let i = 0; i < missingReferrals; i++) {
           newReferralTxs.push({
-            id: Date.now() + i,
+            id: crypto.randomUUID() as any,
             type: "credit",
             category: "referral",
             description: "Referral Bonus",
@@ -82,12 +85,45 @@ export default function HistoryPage() {
 
     // ✅ Sort so that signup bonus is always at bottom (oldest)
     txs.sort((a, b) => {
-      if (a.category === "signup") return -1
-      if (b.category === "signup") return 1
+      if (a.category === "signup") return 1
+      if (b.category === "signup") return -1
       return new Date(b.date).getTime() - new Date(a.date).getTime()
     })
 
     setTransactions(txs)
+    // Source from server: GET /api/withdrawals/history?userId= + referrals; localStorage only as cache
+    if (uid) {
+      fetch(`/api/withdrawals/history?userId=${encodeURIComponent(uid)}&t=${Date.now()}`)
+        .then((r) => r.json())
+        .then((d) => {
+          const rows = Array.isArray(d?.withdrawals) ? d.withdrawals : Array.isArray(d) ? d : [];
+          if (!rows.length) return;
+          setTransactions((prev) => {
+            const seen = new Set(prev.map((t: any) => String(t.id)));
+            const mapped: Transaction[] = rows.map((w: any) => ({
+              id: String(w.id || crypto.randomUUID()) as any,
+              type: "credit" as const,
+              category: "other" as const,
+              description: `Withdrawal ${w.status || ""}`.trim(),
+              amount: Number(w.amount || 0),
+              date: w.created_at || w.date || new Date().toISOString(),
+            })).filter((t: any) => !seen.has(String(t.id)));
+            const merged = [...mapped, ...prev];
+            merged.sort((a, b) => {
+              if (a.category === "signup") return 1
+              if (b.category === "signup") return -1
+              return new Date(b.date).getTime() - new Date(a.date).getTime()
+            });
+            try { localStorage.setItem("tivexx-transactions", JSON.stringify(merged)); } catch {}
+            return merged;
+          });
+        })
+        .catch(() => {});
+      fetch(`/api/referral-stats?userId=${encodeURIComponent(uid)}&t=${Date.now()}`)
+        .then((r) => r.json())
+        .then(() => {})
+        .catch(() => {});
+    }
   }, [router])
 
   const formatCurrency = (amount: number) =>
@@ -119,7 +155,7 @@ export default function HistoryPage() {
     const signupDate =
       user?.created_at || user?.signup_date || new Date().toISOString()
     const signupBonus: Transaction = {
-      id: Date.now(),
+      id: crypto.randomUUID() as any,
       type: "credit",
       category: "signup",
       description: "Signup Bonus",

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     if (!supabase) {
       console.log("[timer/check] No Supabase configured")
       return NextResponse.json(
-        { success: true, timerReady: false, message: "No server config" },
+        { success: false, timerReady: false, message: "No server config" },
         { status: 200 },
       )
     }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       if (timerError && timerError.code !== "PGRST116") {
         console.error("[timer/check] Error fetching timer:", timerError)
         return NextResponse.json(
-          { success: true, timerReady: false },
+          { success: false, timerReady: false },
           { status: 200 },
         )
       }
@@ -112,14 +112,14 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("[timer/check] Database query failed:", err)
       return NextResponse.json(
-        { success: true, timerReady: false, message: "DB error (handled)" },
+        { success: false, timerReady: false, message: "DB error" },
         { status: 200 },
       )
     }
   } catch (error) {
     console.error("[timer/check]", error)
     return NextResponse.json(
-      { success: true, timerReady: false },
+      { success: false, timerReady: false },
       { status: 200 },
     )
   }

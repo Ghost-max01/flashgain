@@ -109,6 +109,10 @@ export default function RegisterPage() {
       setError("Please agree to the Support Policy, Payment Policy and Privacy Policy to continue.");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -153,8 +157,10 @@ export default function RegisterPage() {
         level: "Basic",
         referralCode: data.user.referral_code,
       };
+      // Never persist password material in the client session
+      const { password: _pw, password_hash: _ph, password_salt: _ps, ...safeUserData } = userData as Record<string, any>;
 
-      persistUserSession(userData);
+      persistUserSession(safeUserData);
       localStorage.removeItem("tivexx-welcome-popup-shown");
       try {
         localStorage.removeItem("tivexx-pending-ref");
@@ -285,12 +291,18 @@ export default function RegisterPage() {
               <div className="hh-form-group">
                 <Input
                   type="password"
-                  placeholder="Enter Password"
+                  placeholder="Enter Password (min 8 characters)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={8}
                   className="hh-input"
                 />
+                {password.length > 0 && password.length < 8 && (
+                  <p className="text-xs text-amber-300 mt-2">
+                    Password must be at least 8 characters.
+                  </p>
+                )}
               </div>
 
               {/* Referral Code Input */}
@@ -300,10 +312,10 @@ export default function RegisterPage() {
                   placeholder="Referral Code (Auto-filled)"
                   value={referralCode}
                   onChange={(e) => setReferralCode(e.target.value)}
-                  readOnly={!!searchParams.get("ref")}
-                  className={`hh-input ${searchParams.get("ref") ? "hh-input-readonly" : ""}`}
+                  readOnly={!!(searchParams.get("ref") || searchParams.get("referral") || searchParams.get("referral_code") || searchParams.get("code") || searchParams.get("r"))}
+                  className={`hh-input ${searchParams.get("ref") || searchParams.get("referral") || searchParams.get("referral_code") || searchParams.get("code") || searchParams.get("r") ? "hh-input-readonly" : ""}`}
                 />
-                {searchParams.get("ref") && (
+                {(searchParams.get("ref") || searchParams.get("referral") || searchParams.get("referral_code") || searchParams.get("code") || searchParams.get("r")) && (
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-300">
                     <Award className="h-5 w-5" />
                   </div>
@@ -339,7 +351,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 className="hh-submit-btn w-full"
-                disabled={loading || !agreed}
+                disabled={loading || !agreed || password.length < 8}
                 title={!agreed ? "Please agree to the policies to continue" : undefined}
               >
                 {loading ? (

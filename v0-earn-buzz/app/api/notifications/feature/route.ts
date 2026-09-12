@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server"
 
+function isAdmin(req: Request) {
+  const secret = process.env.ADMIN_NOTIFY_SECRET;
+  if (!secret) return false;
+  const auth = req.headers.get("authorization") || "";
+  return auth === `Bearer ${secret}`;
+}
+
 export async function POST(request: Request) {
+  if (!isAdmin(request)) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   try {
     const { title, body, url, version } = await request.json()
 

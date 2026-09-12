@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const ref = req.nextUrl.searchParams.get("reference") || req.nextUrl.searchParams.get("id");
   if (!ref) return NextResponse.json({ error: "reference required" }, { status: 400 });
-  const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.NEXT_PUBLIC_PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
+  const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || "";
   if (!PAYSTACK_KEY) return NextResponse.json({ error: "PAYSTACK_SECRET_KEY missing" }, { status: 500 });
 
   // Try both singular and plural bill status endpoints

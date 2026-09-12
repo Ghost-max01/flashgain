@@ -41,13 +41,16 @@ export default function LoanPage() {
     const user = JSON.parse(storedUser)
     setUserData(user)
 
-    const lastLoanDate = localStorage.getItem("tivexx-last-loan-date")
-    if (lastLoanDate) {
-      const daysSinceLastLoan = Math.floor((Date.now() - Number.parseInt(lastLoanDate)) / (1000 * 60 * 60 * 24))
-      if (daysSinceLastLoan < 7) {
-        setShowRestrictionPopup(true)
-      }
-    }
+    // 7-day limit is enforced server-side (POST /api/loans/request); check server for restriction.
+    ;(async () => {
+      try {
+        const uid = user?.id || user?.userId || user?.user_id || ""
+        if (!uid) return
+        const res = await fetch(`/api/loans/request?userId=${encodeURIComponent(uid)}`)
+        const data = await res.json().catch(() => ({}))
+        if (data?.restricted) setShowRestrictionPopup(true)
+      } catch {}
+    })()
   }, [router])
 
   if (!mounted || !userData) {
@@ -86,32 +89,31 @@ export default function LoanPage() {
 
     setIsLoading(true)
 
-    setTimeout(() => {
-      setIsLoading(false)
-      setShowApproval(true)
-
-      // ✅ Choose a random rounded loan amount
-      const loanOptions = [20000, 25000, 28000, 30000, 35000]
-      const randomAmount = loanOptions[Math.floor(Math.random() * loanOptions.length)]
-      setLoanAmount(randomAmount)
-
-      const updatedBalance = userData.balance + randomAmount
-      const updatedUser = { ...userData, balance: updatedBalance }
-      localStorage.setItem("tivexx-user", JSON.stringify(updatedUser))
-      setUserData(updatedUser)
-
-      const transactions = JSON.parse(localStorage.getItem("tivexx-transactions") || "[]")
-      transactions.unshift({
-        id: Date.now(),
-        type: "credit",
-        description: "Loan Approved",
-        amount: randomAmount,
-        date: new Date().toISOString(),
-      })
-      localStorage.setItem("tivexx-transactions", JSON.stringify(transactions))
-
-      localStorage.setItem("tivexx-last-loan-date", Date.now().toString())
-    }, 10000)
+    // Server loan-request flow: POST /api/loans/request (stores pending, does NOT credit).
+    ;(async () => {
+      try {
+        const uid = userData?.id || userData?.userId || userData?.user_id || ""
+        // Amount is indicative; server stores pending without crediting.
+        const res = await fetch("/api/loans/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: uid, amount: 25000 }),
+        })
+        const data = await res.json().catch(() => ({}))
+        setIsLoading(false)
+        if (data?.restricted) {
+          setShowRestrictionPopup(true)
+          return
+        }
+        // UI shows "Under review" — no local balance credit, no fake Approved transaction.
+        setLoanAmount(0)
+        setShowApproval(true)
+      } catch {
+        setIsLoading(false)
+        setShowApproval(true)
+        setLoanAmount(0)
+      }
+    })()
   }
 
   const formatCurrency = (amount: number) => {
@@ -175,9 +177,9 @@ export default function LoanPage() {
               </div>
             </div>
             
-            <h2 className="text-2xl font-bold text-white mb-2">Congratulations!</h2>
-            <p className="text-gray-300 mb-2">Your loan has been approved</p>
-            <p className="hh-amount-display mb-6">{formatCurrency(loanAmount)}</p>
+            <h2 className="text-2xl font-bold text-white mb-2">Under review</h2>
+            <p className="text-gray-300 mb-2">Your loan request is pending review. No funds have been credited.</p>
+            <p className="hh-amount-display mb-6">Awaiting decision</p>
             
             <button
               onClick={() => {

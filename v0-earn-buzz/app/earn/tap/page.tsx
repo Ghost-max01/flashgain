@@ -418,6 +418,24 @@ export default function TapAndEarnPage() {
 
   // Removed gradual ENERGY_REGEN_MS interval — energy does not refill until 10-min exhaust finishes
 
+  const reconcileServerBalance = useCallback(async (uid: string) => {
+    // Server wins: overwrite local with server balance (never max-merge upward).
+    try {
+      const r = await fetch(`/api/user-balance?userId=${encodeURIComponent(uid)}&t=${Date.now()}`);
+      const j = await r.json().catch(() => ({}));
+      if (j?.success && typeof j.balance === "number") {
+        try {
+          const raw = localStorage.getItem("tivexx-user");
+          if (raw) {
+            const u = JSON.parse(raw);
+            u.balance = j.balance;
+            localStorage.setItem("tivexx-user", JSON.stringify(u));
+          }
+        } catch {}
+      }
+    } catch {}
+  }, []);
+
   const syncToDb = useCallback((earnedAmount: number) => {
     accumulatedEarned.current += earnedAmount;
     if (syncTimeout.current) clearTimeout(syncTimeout.current);
@@ -443,6 +461,8 @@ export default function TapAndEarnPage() {
                   userId: uid,
                   balance: currentUser.balance,
                 }),
+              }).then(() => { void reconcileServerBalance(uid); }).catch((err) => {
+                console.error("[Tap Earn] Server sync failed:", err);
               });
             } catch (err) {
               console.error("[Tap Earn] Server sync failed:", err);
@@ -454,7 +474,7 @@ export default function TapAndEarnPage() {
         console.error("Sync error:", error);
       }
     }, 1500);
-  }, []);
+  }, [reconcileServerBalance]);
 
   const pressEarningsToDb = useCallback((): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -573,7 +593,7 @@ export default function TapAndEarnPage() {
     setShowAutoPlans(true);
   }, [autoActive, autoFirstFreeUsed]);
 
-  const startAutoPlan = useCallback((id: AutoPlanId) => {
+  const startAutoPlan = useCallback(async (id: AutoPlanId) => {
     const cd = autoPlanCooldowns[id];
     if (cd && cd > Date.now()) return;
     if (id === "free1h" && autoFirstFreeUsed) return;
@@ -594,7 +614,22 @@ export default function TapAndEarnPage() {
       return;
     }
     const plan = AUTO_PLANS.find(p=>p.id===id)!;
-    setAutoPlan(id); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    // Server gate: free1h still free but requires server expiry before activation.
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      const u = raw ? JSON.parse(raw) : null;
+      const uid = u?.id || u?.userId || u?.user_id || "";
+      if (!uid) return;
+      const res = await fetch("/api/timer/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, timerEndsAt: new Date(Date.now()+plan.durationMs).toISOString() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) return;
+      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
+    } catch { return; }
+    setAutoPlan(id); setAutoTapsDone(0); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
     if (id !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
@@ -608,11 +643,21 @@ export default function TapAndEarnPage() {
   const fulfillRequirement = useCallback(async () => {
     if (!reqPlan || !reqChoice) return;
     const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
+    const getUid = () => { try { const r = localStorage.getItem("tivexx-user"); const u = r ? JSON.parse(r) : null; return u?.id || u?.userId || u?.user_id || ""; } catch { return ""; } };
+    const getServerTaskCount = async (prefix: string) => {
+      try {
+        const uid = getUid();
+        if (!uid) return 0;
+        const r = await fetch(`/api/track-task/status?userId=${encodeURIComponent(uid)}&plan=${encodeURIComponent(prefix)}`);
+        const j = await r.json().catch(() => ({}));
+        return j?.success ? Number(j.count || 0) : 0;
+      } catch { return 0; }
+    };
     if (reqChoice==="task") {
       const need = AUTO_REQ_TASK[reqPlan];
-      const key = getPerPlanTaskKey(reqPlan);
-      const completed = JSON.parse(localStorage.getItem(key)||"[]");
-      const done = Array.isArray(completed) ? completed.length : 0;
+      // Server-confirmed counts only (track-task-confirmed). Paid unlock requires server counts >= need.
+      const prefix = (reqPlan==="24h"||reqPlan==="3d") ? "mt-" : (reqPlan==="2d"||reqPlan==="1w") ? "mu-" : "";
+      const done = prefix ? await getServerTaskCount(prefix) : 0;
       if (done < need) return;
     }
     if (reqChoice==="referral") {
@@ -622,10 +667,31 @@ export default function TapAndEarnPage() {
       if (cnt < need) return;
     }
     if (reqChoice==="payment") {
-      // Payment flow - redirect to payment page
+      // Payment flow - redirect to payment page (server verifies reference; no local unlock)
+      // Require server confirm: POST /api/paystack/verify reference OR server counts >= need.
+      try {
+        const uid = getUid();
+        const need = AUTO_REQ_TASK[reqPlan];
+        const prefix = (reqPlan==="24h"||reqPlan==="3d") ? "mt-" : "mu-";
+        const done = await getServerTaskCount(prefix);
+        if (done < need) return;
+      } catch { return; }
       return;
     }
-    setAutoPlan(reqPlan); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    // Server-gated start: confirm via timer/start expiry (paid plans already server-verified above)
+    try {
+      const uid = getUid();
+      if (!uid) return;
+      const res = await fetch("/api/timer/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, timerEndsAt: new Date(Date.now()+plan.durationMs).toISOString() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) return;
+      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
+    } catch { return; }
+    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoActive(true);
     if (reqPlan !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
       const next = { ...autoPlanCooldowns, [reqPlan]: exp };

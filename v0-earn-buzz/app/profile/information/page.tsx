@@ -28,7 +28,7 @@ export default function ProfileInformationPage() {
 
   useEffect(() => {
     // Check if user is logged in
-    const storedUser = localStorage.getItem("momo-credit-user")
+    const storedUser = localStorage.getItem("tivexx-user")
 
     if (!storedUser) {
       router.push("/login")
@@ -43,7 +43,7 @@ export default function ProfileInformationPage() {
     // Ensure userId is stable per user
     if (!user.userId) {
       user.userId = user.referral_code || user.referralCode || user.id || ""
-      localStorage.setItem("momo-credit-user", JSON.stringify(user))
+      localStorage.setItem("tivexx-user", JSON.stringify(user))
     }
 
     setUserData(user)
@@ -54,7 +54,7 @@ export default function ProfileInformationPage() {
   }
 
   const handleLogoutConfirm = () => {
-    localStorage.removeItem("momo-credit-user")
+    localStorage.removeItem("tivexx-user")
       clearUserSession()
     router.push("/login")
   }

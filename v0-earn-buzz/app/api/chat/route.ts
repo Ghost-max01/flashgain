@@ -19,7 +19,7 @@ const REPLIES = {
     has_image: true,
   },
   "2": {
-    text: "If you have created an account on helpinghands you can use the claim button on the site dashboard to claim 2,000 every 1 minutes👇👇👇",
+    text: "If you have created an account on FlashGain you can use the claim button on the site dashboard to claim 2,000 every 1 minutes👇👇👇",
     link: "https://flashgain9ja.money/dashboard",
     linkLabel: "Open Dashboard",
     image: "/chatbot-img/image2.png",
@@ -50,7 +50,30 @@ const REPLIES = {
   },
 } as const;
 
+function evictSessionsIfNeeded() {
+  const keys = Object.keys(sessions);
+  if (keys.length > 1000) {
+    // evict oldest by last_updated/created_at
+    const sorted = keys.sort((a, b) => {
+      const ta = Date.parse(sessions[a]?.last_updated || sessions[a]?.created_at || "1970-01-01");
+      const tb = Date.parse(sessions[b]?.last_updated || sessions[b]?.created_at || "1970-01-01");
+      return ta - tb;
+    });
+    for (const k of sorted.slice(0, keys.length - 1000)) delete sessions[k];
+  }
+}
+
 function processMessage(userInput: string, sessionId: string) {
+  evictSessionsIfNeeded();
+  const now = Date.now();
+  const prev = sessions[sessionId];
+  // simple per-session rate-limit: max 1 msg/500ms via last_updated check → 429 handled by caller flag
+  if (prev?.last_updated) {
+    const last = Date.parse(prev.last_updated);
+    if (Number.isFinite(last) && now - last < 500) {
+      return { __rateLimited: true } as any;
+    }
+  }
   // Update session
   const session = sessions[sessionId] || {
     created_at: new Date().toISOString(),
@@ -192,11 +215,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (message.length > 2000) {
+      return NextResponse.json(
+        { error: 'Message too long (max 2000)' },
+        { status: 400 }
+      );
+    }
+
     // Generate or use provided session ID
     const finalSessionId = sessionId || crypto.randomUUID();
 
     // Process the message
-    const response = processMessage(message.trim(), finalSessionId);
+    const response: any = processMessage(message.trim(), finalSessionId);
+    if (response?.__rateLimited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
 
     // Return response with session ID
     return NextResponse.json({

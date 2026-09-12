@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { useTaskTimer } from "@/hooks/useTaskTimer"
+import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
 
 interface Task {
   id: string
@@ -110,99 +110,17 @@ const AVAILABLE_TASKS: Task[] = [
     link: "https://omg10.com/4/10676426",
     icon: "🌐",
   },
-  // Duplicate tasks linking to original tasks
-  {
-    id: "Monetage-our-most-earned-spin-to-win-ad..-2",
-    platform: "Monetage Spin-to-Win Ad.. (2)",
-    description: "Tap our premium ad link for extra rewards.",
-    category: "Ads",
-    reward: 5000,
-    link: "https://newadsrewardss-coral.vercel.app/",
-    icon: "📢",
-  },
-  {
-    id: "Telegram Channel Task 01-2",
-    platform: "Bloggersin Promo (2)",
-    description: "Tap our premium ad link for extra rewards",
-    category: "Tasks",
-    reward: 5000,
-    link: "https://newadsrewardss-coral.vercel.app/",
-    icon: "💬",
-  },
-  {
-    id: "effectivegatecpm-ad-2nd",
-    platform: "EffectiveGate CPM Ad (2)",
-    description: "Tap our ad link to earn Extra money",
-    category: "Advertisement",
-    reward: 5000,
-    link: "https://otieu.com/4/10575212",
-    icon: "🎯",
-  },
-  {
-    id: "effectivegatecpm-ad-2-2nd",
-    platform: "EffectiveGate Offer (2)",
-    description: "Tap our premium ad link for extra rewards",
-    category: "Advertisement",
-    reward: 5000,
-    link: "https://omg10.com/4/10676426",
-    icon: "🎁",
-  },
-  {
-    id: "spin-to-win-hub-2",
-    platform: "Spin-to-Win Hub (2)",
-    description: "Tap our premium ad link for extra rewards",
-    category: "Advertisement",
-    reward: 5000,
-    link: "https://newadsrewardss-coral.vercel.app/",
-    icon: "🎡",
-  },
-  {
-    id: "Winners hub-2",
-    platform: "Winners Hub Promo (2)",
-    description: "Tap our ad link to earn Extra money",
-    category: "Advertisement",
-    reward: 5000,
-    link: "https://omg10.com/4/10676426",
-    icon: "💸💲",
-  },
-  {
-    id: "Join Nova Cash-2",
-    platform: "Quick Survey Task (2)",
-    description: "Join Nova Cash",
-    category: "Tasks",
-    reward: 5000,
-    link: "https://newadsrewardss-coral.vercel.app/",
-    icon: "🎵",
-  },
-  {
-    id: "Telegram Channel Task 02-2",
-    platform: "Sponsored ads 1 (2)",
-    description: "Tap our premium ad link for extra rewards",
-    category: "Social Media",
-    reward: 5000,
-    link: "https://otieu.com/4/10575212",
-    icon: "🤖",
-  },
-  {
-    id: "facebook page-2",
-    platform: "Sponsored ads 2 (2)",
-    description: "Tap our premium ad link for extra rewards",
-    category: "Social Media",
-    reward: 5000,
-    link: "https://creditbuzz.online",
-    icon: "🎁",
-  },
-
-  {
-    id: "Task 03-2",
-    platform: "Sponsored ads 3 (2)",
-    description: "Tap our premium ad link for extra rewards",
-    category: "Social Media",
-    reward: 5000,
-    link: "https://omg10.com/4/10676426",
-    icon: "🌐",
-  },
+  // Duplicate tasks linking to original tasks — REMOVED (dedupe by link).
+  // Deduped to one entry per unique link below.
 ];
+const AVAILABLE_TASKS_DEDUPED: Task[] = (() => {
+  const seen = new Set<string>();
+  return AVAILABLE_TASKS.filter((t) => {
+    if (seen.has(t.link)) return false;
+    seen.add(t.link);
+    return true;
+  });
+})();
 
 export default function TaskPage() {
   const router = useRouter()
@@ -283,7 +201,7 @@ export default function TaskPage() {
         const timeSpent = Math.round(elapsed)
         toast({
           title: "You didn't interact with the task ❌",
-          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least 10 seconds before coming back.`,
+          description: `You only spent ${timeSpent}s outside. Please tap the task again and stay on the page for at least ${TASK_VISIT_SECONDS} seconds before coming back.`,
           variant: "destructive",
           duration: 6000,
         })
@@ -375,8 +293,38 @@ export default function TaskPage() {
   }
 
   const completeVerification = async (taskId: string) => {
-    const task = AVAILABLE_TASKS.find((t) => t.id === taskId)
+    const task = AVAILABLE_TASKS_DEDUPED.find((t) => t.id === taskId)
     if (!task) return
+
+    // Server is the ledger: claim first, abort local credit on duplicate/failure.
+    const storedUserRaw = localStorage.getItem("tivexx-user")
+    const parsedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null
+    const claimUserId = parsedUser?.id || parsedUser?.user_id || parsedUser?.userId || ""
+    if (!claimUserId) return
+    let serverOk = false
+    try {
+      const res = await fetch(`/api/track-task`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: claimUserId,
+          taskId: task.id,
+          taskName: task.platform,
+          reward: task.reward,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data?.duplicate) {
+        toast({ title: "Already claimed", description: "This task was already credited on the server.", variant: "destructive" })
+        return
+      }
+      if (!res.ok || !data?.success) return
+      serverOk = true
+    } catch (err) {
+      console.error("Failed to track task completion:", err)
+      return
+    }
+    if (!serverOk) return
 
     const newBalance = balance + task.reward
     setBalance(newBalance)
@@ -395,22 +343,6 @@ export default function TaskPage() {
         })
       } catch (err) {
         console.error("Failed to sync user balance to server:", err)
-      }
-
-      // Track task completion for analytics
-      try {
-        await fetch(`/api/track-task`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.id || user.user_id || user.userId,
-            taskId: task.id,
-            taskName: task.platform,
-            reward: task.reward,
-          }),
-        })
-      } catch (err) {
-        console.error("Failed to track task completion:", err)
       }
     }
 
@@ -482,7 +414,7 @@ export default function TaskPage() {
   const confirmStartTask = (task: Task) => {
     toast({
       title: "Task Started ⏱️",
-      description: "Make sure to spend at least 10 seconds on the site before returning. If you return too quickly, you'll need to try again!",
+      description: `Make sure to spend at least ${TASK_VISIT_SECONDS} seconds on the site before returning. If you return too quickly, you'll need to try again!`,
       duration: 5000,
     })
 
@@ -584,7 +516,7 @@ export default function TaskPage() {
             <div className="hh-stats-row mt-4">
               <div className="hh-stat-item">
                 <div className="hh-stat-label">Tasks Available</div>
-                <div className="hh-stat-value text-emerald-400">{AVAILABLE_TASKS.length - completedTasks.length}</div>
+                <div className="hh-stat-value text-emerald-400">{AVAILABLE_TASKS_DEDUPED.length - completedTasks.length}</div>
               </div>
               <div className="hh-stat-divider"></div>
               <div className="hh-stat-item">
@@ -596,7 +528,7 @@ export default function TaskPage() {
         </div>
 
         <div className="space-y-4">
-          {AVAILABLE_TASKS.map((task, index) => {
+          {AVAILABLE_TASKS_DEDUPED.map((task, index) => {
             const isVerifying = verifyingTasks[task.id] !== undefined
             const progress = isVerifying ? verifyingTasks[task.id].progress : 0
             const cooldown = cooldowns[task.id]
@@ -694,7 +626,7 @@ export default function TaskPage() {
                 {task.link && (
                   <div className="hh-task-warning">
                     <span className="text-amber-400 font-bold mr-1">⚠️</span>
-                    <span>Interact with the task for up to 10 seconds before you can claim the reward.</span>
+                    <span>Interact with the task for up to {TASK_VISIT_SECONDS} seconds before you can claim the reward.</span>
                   </div>
                 )}
               </div>

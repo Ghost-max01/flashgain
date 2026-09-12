@@ -1,5 +1,9 @@
 import { useEffect } from "react"
 
+// Minimum visit duration (seconds) a task link must stay open before credit.
+// Single source of truth — callers must use this for toast/progress copy.
+export const TASK_VISIT_SECONDS = 20;
+
 export function useTaskTimer() {
   // Store task tracking in sessionStorage: { taskId: startTime }
   const STORAGE_KEY = "taskTimers"
@@ -45,7 +49,7 @@ export function useTaskTimer() {
             return
           }
 
-          if (elapsed >= 20000) {
+          if (elapsed >= TASK_VISIT_SECONDS * 1000) {
             // Task qualifies for completion (20+ seconds outside)
             onTaskSuccess(taskId, elapsed / 1000)
             tasksToDelete.push(taskId)

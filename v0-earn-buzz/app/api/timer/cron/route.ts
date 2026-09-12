@@ -19,8 +19,10 @@ async function runCron(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
   const expectedKey = process.env.CRON_SECRET || ""
 
-  if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
-    console.warn("[timer/cron] Unauthorized cron request — proceeding anyway")
+  if (expectedKey) {
+    if (authHeader !== `Bearer ${expectedKey}`) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ""

@@ -19,11 +19,16 @@ export interface VipState {
 
 export function loadVip(): VipState {
   try {
+    const redeemedFlag = (()=>{ try{ return localStorage.getItem(VIP_REDEEMED_KEY)==="1"; }catch{ return false; } })();
     const raw = localStorage.getItem(VIP_KEY);
     if (raw) {
       const j = JSON.parse(raw);
-      return { available: VIP_AMOUNT, redeemed: false, history: [], ...j, history: Array.isArray(j.history) ? j.history : [] };
+      const availRaw = Number(j.available ?? VIP_AMOUNT);
+      const available = Number.isFinite(availRaw) ? Math.min(Math.max(0, availRaw), 500) : VIP_AMOUNT;
+      const redeemed = Boolean(j.redeemed) || redeemedFlag;
+      return { available, redeemed, phone: j.phone, network: j.network, date: j.date, history: Array.isArray(j.history) ? j.history : [] };
     }
+    if (redeemedFlag) return { available: 0, redeemed: true, history: [] };
   } catch {}
   return { available: VIP_AMOUNT, redeemed: false, history: [] };
 }

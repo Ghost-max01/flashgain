@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { supabase } from "@/lib/supabase/client"
 
 export default function ChangePasswordPage() {
   const router = useRouter()
@@ -20,7 +21,7 @@ export default function ChangePasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("momo-credit-user")
+    const storedUser = localStorage.getItem("tivexx-user")
     if (!storedUser) {
       router.push("/login")
       return
@@ -28,53 +29,80 @@ export default function ChangePasswordPage() {
     setUserData(JSON.parse(storedUser))
   }, [router])
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
+
+    if (newPassword.length < 8) {
+      setMessage({ type: "error", text: "New password must be at least 8 characters long." })
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setMessage({ type: "error", text: "New passwords do not match." })
+      return
+    }
+
     setIsLoading(true)
-
-    // Simulate API call or local storage update
-    setTimeout(() => {
-      const registeredUsers = JSON.parse(localStorage.getItem("momo-credit-registered-users") || "[]")
-      const currentUserEmail = userData?.email
-
-      const userIndex = registeredUsers.findIndex((u: any) => u.email === currentUserEmail)
-
-      if (userIndex === -1) {
+    try {
+      const email = userData?.email
+      if (!email) {
         setMessage({ type: "error", text: "User not found. Please log in again." })
         setIsLoading(false)
         return
       }
 
-      // Basic validation
-      if (currentPassword !== registeredUsers[userIndex].password) {
+      // 1. Verify current password via Supabase Auth
+      if (!supabase) {
+        setMessage({ type: "error", text: "Database connection not available." })
+        setIsLoading(false)
+        return
+      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      })
+      if (signInError) {
         setMessage({ type: "error", text: "Current password is incorrect." })
         setIsLoading(false)
         return
       }
 
-      if (newPassword.length < 6) {
-        setMessage({ type: "error", text: "New password must be at least 6 characters long." })
+      // 2. Update Supabase Auth password
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+      if (updateError) {
+        setMessage({ type: "error", text: updateError.message })
         setIsLoading(false)
         return
       }
 
-      if (newPassword !== confirmNewPassword) {
-        setMessage({ type: "error", text: "New passwords do not match." })
+      // 3. Update users.password_hash/salt server-side (verifies old hash, enforces min 8)
+      const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          email,
+          currentPassword,
+          newPassword,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setMessage({ type: "error", text: data?.error || "Failed to update password." })
         setIsLoading(false)
         return
       }
-
-      // Update password in registered users
-      registeredUsers[userIndex].password = newPassword
-      localStorage.setItem("momo-credit-registered-users", JSON.stringify(registeredUsers))
 
       setMessage({ type: "success", text: "Password changed successfully!" })
       setCurrentPassword("")
       setNewPassword("")
       setConfirmNewPassword("")
+    } catch {
+      setMessage({ type: "error", text: "Failed to update password. Please try again." })
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   if (!userData) {
@@ -134,9 +162,10 @@ export default function ChangePasswordPage() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
+                placeholder="Enter new password (min 8 characters)"
                 className="h-12 text-base"
                 required
+                minLength={8}
               />
             </div>
 

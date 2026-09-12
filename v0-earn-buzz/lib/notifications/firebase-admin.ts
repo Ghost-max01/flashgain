@@ -1,15 +1,15 @@
-const nodeRequire = eval("require") as NodeRequire
-const firebaseAdminApp = nodeRequire("firebase-admin/app")
-const firebaseAdminMessaging = nodeRequire("firebase-admin/messaging")
+import { getApps, initializeApp, cert, type App } from "firebase-admin/app"
+import { getMessaging } from "firebase-admin/messaging"
 
 function getPrivateKey() {
   const raw = process.env.FIREBASE_PRIVATE_KEY || ""
   return raw.replace(/\\n/g, "\n")
 }
 
-function getFirebaseAdminApp() {
-  if (firebaseAdminApp.getApps().length) {
-    return firebaseAdminApp.getApps()[0]
+function getFirebaseAdminApp(): App {
+  const apps = getApps();
+  if (apps.length) {
+    return apps[0]
   }
 
   const projectId = process.env.FIREBASE_PROJECT_ID
@@ -20,8 +20,8 @@ function getFirebaseAdminApp() {
     throw new Error("Missing Firebase Admin env vars")
   }
 
-  return firebaseAdminApp.initializeApp({
-    credential: firebaseAdminApp.cert({
+  return initializeApp({
+    credential: cert({
       projectId,
       clientEmail,
       privateKey,
@@ -30,5 +30,5 @@ function getFirebaseAdminApp() {
 }
 
 export function getFirebaseMessaging() {
-  return firebaseAdminMessaging.getMessaging(getFirebaseAdminApp())
+  return getMessaging(getFirebaseAdminApp())
 }

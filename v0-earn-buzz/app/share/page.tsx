@@ -1,4 +1,5 @@
 "use client"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +8,26 @@ import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
 
 export default function SharePage() {
-  const shareLink = "https://momo-credit.netlify.app/"
+  const [code, setCode] = useState("");
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    try { setOrigin(window.location.origin); } catch {}
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        const uid = u.id || u.userId;
+        if (u.referral_code) setCode(String(u.referral_code));
+        if (uid) {
+          fetch(`/api/referral-stats?userId=${encodeURIComponent(uid)}&t=${Date.now()}`)
+            .then((r) => r.json())
+            .then((d) => { if (d?.referral_code) setCode(String(d.referral_code)); })
+            .catch(() => {});
+        }
+      }
+    } catch {}
+  }, []);
+  const shareLink = origin && code ? `${origin}/register?ref=${encodeURIComponent(code)}` : (origin ? `${origin}/register` : "/register");
   const shareMessage =
     "Earn Buzz: Your ultimate financial companion! Manage money, buy airtime/data, get quick loans, and invest with ease. Download now!"
 

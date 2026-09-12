@@ -425,6 +425,36 @@ export default function DashboardPage() {
   }, []);
   // tick for 1-week lock countdown display
   useEffect(()=>{ const id=setInterval(()=> setNowTick(Date.now()), 60000); return ()=> clearInterval(id); }, []);
+  // Per-plan progress bars read SERVER counts (track-task/status); localStorage keys stay as display cache only.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchServerCounts = async () => {
+      try {
+        const raw = localStorage.getItem("tivexx-user");
+        const u = raw ? JSON.parse(raw) : null;
+        const uid = u?.id || u?.userId || u?.user_id || "";
+        if (!uid) return;
+        const get = async (prefix: string) => {
+          try {
+            const r = await fetch(`/api/track-task/status?userId=${encodeURIComponent(uid)}&plan=${encodeURIComponent(prefix)}`);
+            const j = await r.json().catch(() => ({}));
+            return j?.success ? Number(j.count || 0) : 0;
+          } catch { return 0; }
+        };
+        const [mt, mu, tiered] = await Promise.all([get("mt-"), get("mu-"), get("tiered-")]);
+        if (cancelled) return;
+        // Map server counts onto per-plan keys (24h/3d share mt-, 2d/1w share mu-; display keeps slicing).
+        setPerPlanTaskDone((prev) => ({ ...prev, "24h": mt, "3d": mt, "2d": mu, "1w": mu }));
+        setMtTaskDone(mt);
+        setMuTaskDone(mu);
+      } catch {}
+    };
+    void fetchServerCounts();
+    const id = setInterval(fetchServerCounts, 15000);
+    const onFocus = () => { void fetchServerCounts(); };
+    window.addEventListener("focus", onFocus);
+    return () => { cancelled = true; clearInterval(id); window.removeEventListener("focus", onFocus); };
+  }, []);
   // exhaust countdown
   useEffect(() => {
     if (!tapExhaustUntil) { setTapExhaustLeft(0); return; }
@@ -635,7 +665,29 @@ export default function DashboardPage() {
           localStorage.setItem("tivexx-user", JSON.stringify(u));
           persistUserSession(u);
           setUserData(u);
-          if (uid) void fetch("/api/user-balance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, balance: u.balance }) });
+          // Reconcile with server on every claim: server wins, overwrite local (never max-merge upward).
+          if (uid) {
+            void fetch("/api/user-balance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, balance: u.balance }) })
+              .then(() => fetch(`/api/user-balance?userId=${encodeURIComponent(uid)}&t=${Date.now()}`))
+              .then((r) => r.json().catch(() => ({})))
+              .then((j: any) => {
+                if (j?.success && typeof j.balance === "number") {
+                  try {
+                    const raw2 = localStorage.getItem("tivexx-user");
+                    if (raw2) {
+                      const u2 = JSON.parse(raw2);
+                      u2.balance = j.balance;
+                      localStorage.setItem("tivexx-user", JSON.stringify(u2));
+                      persistUserSession(u2);
+                      setUserData(u2);
+                      setBalance(j.balance);
+                      setAnimatedBalance(j.balance);
+                    }
+                  } catch {}
+                }
+              })
+              .catch(() => {});
+          }
         }
       } catch {}
       tapAccum.current = 0;
@@ -688,7 +740,7 @@ export default function DashboardPage() {
     if (!autoFirstFreeUsed) setShowAutoFreePopup(true);
     setShowAutoPlans(true);
   }, [autoActive, autoFirstFreeUsed, toast]);
-  const startAutoPlan = useCallback((id: AutoPlanId) => {
+  const startAutoPlan = useCallback(async (id: AutoPlanId) => {
     // 1-week lock per paid package
     const cd = autoPlanCooldowns[id];
     if (cd && cd > Date.now()) {
@@ -717,7 +769,20 @@ export default function DashboardPage() {
       return;
     }
     const plan = AUTO_PLANS.find(p=>p.id===id)!;
-    setAutoPlan(id); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    // Server gate for free1h: POST /api/timer/start (server expiry) before activation.
+    try {
+      const uid = (userData as any)?.id || (userData as any)?.userId || "";
+      if (!uid) return;
+      const res = await fetch("/api/timer/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, timerEndsAt: new Date(Date.now()+plan.durationMs).toISOString() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) return;
+      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
+    } catch { return; }
+    setAutoPlan(id); setAutoTapsDone(0); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
     // lock this plan for 1 week after starting (paid packages)
     if (id !== "free1h") {
@@ -735,10 +800,18 @@ export default function DashboardPage() {
     if (reqChoice==="task") {
       const need = AUTO_REQ_TASK[reqPlan];
       const isMt = reqPlan==="24h" || reqPlan==="3d";
-      const key = getPerPlanTaskKey(reqPlan);
-      const completed = JSON.parse(localStorage.getItem(key)||"[]");
-      const done = Array.isArray(completed) ? completed.length : 0;
-      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, you have ${done}. Go to ${isMt ? "MT" : "MU"} Tasks — progress for each plan is separate (starts at 0).` }); return; }
+      // Server-confirmed counts only — unlock ONLY on server counts >= need (no pure-localStorage path).
+      let done = 0;
+      try {
+        const uid = (userData as any)?.id || (userData as any)?.userId || "";
+        const prefix = isMt ? "mt-" : "mu-";
+        if (uid) {
+          const r = await fetch(`/api/track-task/status?userId=${encodeURIComponent(uid)}&plan=${encodeURIComponent(prefix)}`);
+          const j = await r.json().catch(() => ({}));
+          if (j?.success) done = Number(j.count || 0);
+        }
+      } catch {}
+      if (done < need) { toast({ title: "Requirement not met", description: `Need ${need} tasks, server confirms ${done}. Go to ${isMt ? "MT" : "MU"} Tasks — progress for each plan is separate (starts at 0).` }); return; }
     }
     if (reqChoice==="referral") {
       const need = AUTO_REQ_REF[reqPlan];
@@ -781,8 +854,20 @@ export default function DashboardPage() {
       }
       return;
     }
-    // start auto
-    setAutoPlan(reqPlan); setAutoExpiresAt(Date.now()+plan.durationMs); setAutoTapsDone(0); setAutoActive(true);
+    // start auto — server-gated (timer/start expiry); no pure-localStorage unlock.
+    try {
+      const uid = (userData as any)?.id || (userData as any)?.userId || "";
+      if (!uid) return;
+      const res = await fetch("/api/timer/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, timerEndsAt: new Date(Date.now()+plan.durationMs).toISOString() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) { toast({ title: "Server denied", description: "Could not confirm unlock", variant: "destructive" }); return; }
+      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
+    } catch { return; }
+    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoActive(true);
     // lock this plan for 1 week
     if (reqPlan !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
@@ -937,11 +1022,32 @@ export default function DashboardPage() {
     }
 
     if (canClaim) {
-      const newClaimCount = claimCount + 1;
-      const newBalance = balance + 2000;
-
-      setBalance(newBalance);
-      setClaimCount(newClaimCount);
+      // Server-authoritative claim: balance incremented ONLY server-side.
+      try {
+        const uid = (userData as any)?.id || (userData as any)?.userId || "";
+        if (!uid) return;
+        const res = await fetch("/api/timer/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: uid }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.success) {
+          if (data?.error === "Paused" || data?.paused) {
+            const until = data.pauseUntil ? new Date(data.pauseUntil).getTime() : Date.now() + 5 * 60 * 60 * 1000;
+            setPauseEndTime(until);
+            try { localStorage.setItem("tivexx-pause-end-time", until.toString()); } catch {}
+            setCanClaim(false);
+            setShowPauseDialog(true);
+          }
+          return;
+        }
+        // Client sets balance from server response, never balance+2000 locally.
+        const newBalance = Number(data.newBalance ?? balance);
+        const newClaimCount = Number(data.claimCount ?? claimCount + 1);
+        setBalance(newBalance);
+        setAnimatedBalance(newBalance);
+        setClaimCount(newClaimCount);
 
       localStorage.setItem("tivexx-claim-count", newClaimCount.toString());
 
@@ -955,13 +1061,10 @@ export default function DashboardPage() {
       setTimeout(() => setShowClaimSuccess(false), 3000);
       void notifyClaimSuccess(2000, newBalance);
 
-      if (newClaimCount >= 50) {
-        const fiveHoursLater = Date.now() + 5 * 60 * 60 * 1000;
-        setPauseEndTime(fiveHoursLater);
-        localStorage.setItem(
-          "tivexx-pause-end-time",
-          fiveHoursLater.toString(),
-        );
+      if (data?.paused) {
+        const until = data.pauseUntil ? new Date(data.pauseUntil).getTime() : Date.now() + 5 * 60 * 60 * 1000;
+        setPauseEndTime(until);
+        try { localStorage.setItem("tivexx-pause-end-time", until.toString()); } catch {}
         setCanClaim(false);
       } else {
         const timerEndMs = Date.now() + 60 * 1000;
@@ -971,30 +1074,9 @@ export default function DashboardPage() {
         // Save single absolute end time — no need to update every tick
         localStorage.setItem("tivexx-timer-end", timerEndMs.toString());
         localStorage.removeItem("tivexx-claim-ready-notified");
-
-        // Notify server so cron can send push if app is closed before timer ends
-        try {
-          const userId = userData?.id || userData?.userId;
-          if (userId) {
-            console.log("[dashboard] Starting server timer for user:", userId);
-            await fetch("/api/timer/start", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId,
-                timerEndsAt: new Date(timerEndMs).toISOString(),
-              }),
-            });
-          }
-        } catch (error) {
-          console.error(
-            "[dashboard] Error notifying server of timer start:",
-            error,
-          );
-        }
       }
 
-      if (newClaimCount === 50) {
+      if (newClaimCount === 50 || data?.paused) {
         setTimeout(() => setShowReminderDialog(true), 1000);
       }
 
@@ -1009,6 +1091,9 @@ export default function DashboardPage() {
         date: new Date().toISOString(),
       });
       localStorage.setItem("tivexx-transactions", JSON.stringify(transactions));
+      } catch (e) {
+        console.error("[dashboard] claim failed", e);
+      }
     }
   };
 
@@ -1364,12 +1449,8 @@ export default function DashboardPage() {
         const storedLatest = storedLatestRaw
           ? JSON.parse(storedLatestRaw)
           : null;
-        const localStorageBalance =
-          storedLatest && typeof storedLatest.balance === "number"
-            ? storedLatest.balance
-            : user.balance || 50000;
-        const dbBalance = data.balance || 50000;
-        const baseBalance = Math.max(localStorageBalance, dbBalance);
+        // Server wins: local = server values (no Math.max merge, no inflated write-back).
+        const dbBalance = typeof data.balance === "number" ? data.balance : 50000;
 
         const referralEarnings = data.referral_balance || 0;
         const lastSyncedReferrals =
@@ -1377,12 +1458,10 @@ export default function DashboardPage() {
 
         const newReferralEarnings =
           referralEarnings - parseInt(lastSyncedReferrals);
-        const totalBalance = baseBalance + Math.max(0, newReferralEarnings);
+        const totalBalance = dbBalance + Math.max(0, newReferralEarnings);
 
         console.log(
-          "[dashboard] fetchUserBalance -> local:",
-          localStorageBalance,
-          "db:",
+          "[dashboard] fetchUserBalance -> db:",
           dbBalance,
           "total:",
           totalBalance,
@@ -1404,15 +1483,7 @@ export default function DashboardPage() {
         }
 
         setUserData(updatedUser);
-
-        await fetch(`/api/user-balance`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.id || user.userId,
-            balance: totalBalance,
-          }),
-        });
+        // No write-back POST of inflated total — server is authoritative.
       } catch (error) {
         console.error("[Dashboard] Error fetching user balance:", error);
         // Prefer most recent client-side stored value when network or server fails

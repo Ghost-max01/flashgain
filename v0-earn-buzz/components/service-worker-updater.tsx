@@ -26,7 +26,7 @@ export function ServiceWorkerUpdater() {
         // clear old Next chunk caches that may hold the broken layout-ef862 / page-5f716
         if ('caches' in window) {
           void caches.keys().then(keys => keys.forEach(k => {
-            if (k.includes('next') || k.includes('workbox') || k.includes('flashgain')) void caches.delete(k);
+            if (k.includes('next') || k.includes('workbox') || k.includes('flashgain') || k === 'earn-buzz-v3' || k === 'earn-buzz-v4') void caches.delete(k);
           }));
         }
       }
@@ -36,11 +36,9 @@ export function ServiceWorkerUpdater() {
     let hasReloaded = false
 
     const handleControllerChange = () => {
-      // New service worker has taken control. Do a silent background fetch
-      // to warm caches and let the app keep running without a visible reload.
+      // New service worker has taken control. Re-check for updates only.
       try {
-        // fetch current page to allow SW to update its cache via fetch handler
-        void fetch(window.location.href, { cache: 'no-store', credentials: 'same-origin' })
+        void navigator.serviceWorker.getRegistration('/sw.js').then((reg) => reg?.update());
       } catch (e) {
         /* ignore */
       }
@@ -68,6 +66,10 @@ export function ServiceWorkerUpdater() {
     // If page appears blank (very small body text), try to refresh using SW update
     const checkForBlankAndReload = () => {
       try {
+        // Guard: skip auto-reload during sensitive flows or when a withdraw is in flight
+        const p = window.location.pathname || '';
+        if (p.startsWith('/withdraw') || p.startsWith('/paystack') || p.startsWith('/investment') || p.startsWith('/businessloan') || p.startsWith('/loan')) return;
+        try { if (sessionStorage.getItem('in-progress-withdraw') === '1') return; } catch {}
         const bodyText = document.body?.innerText || ''
         const visibleText = bodyText.trim()
         const lastReload = parseInt(localStorage.getItem('sw-last-reload') || '0', 10)
@@ -95,12 +97,12 @@ export function ServiceWorkerUpdater() {
     void tryUpdate()
     checkForBlankAndReload()
 
-    // Retry a few times in the background for stubborn cases
+    // Retry a few times in the background for stubborn cases (max 3 tries, 1x per 60s)
     const interval = setInterval(() => {
-      if (attempts > 6) return clearInterval(interval)
+      if (attempts >= 3) return clearInterval(interval)
       void tryUpdate()
       checkForBlankAndReload()
-    }, 10_000)
+    }, 60_000)
 
     return () => {
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)

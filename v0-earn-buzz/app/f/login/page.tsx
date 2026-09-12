@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { Mail, Lock, Eye, EyeOff, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-const ADMIN_EMAIL = "Oladunnilawal400@gmail.com"
-const ADMIN_PASSWORD = "@Oladunni6020"
+const TOKEN_KEY = "admin-session-token"
 
 export default function AdminLogin() {
   const router = useRouter()
@@ -18,11 +17,22 @@ export default function AdminLogin() {
 
   useEffect(() => {
     setMounted(true)
-    // Check if already logged in
-    const adminSession = localStorage.getItem("admin-session")
-    if (adminSession) {
-      router.push("/f")
+    // Re-verify any existing token with the server
+    const verify = async () => {
+      try {
+        const token = sessionStorage.getItem(TOKEN_KEY)
+        if (!token) return
+        const res = await fetch("/api/admin-auth", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          router.push("/f")
+        } else {
+          sessionStorage.removeItem(TOKEN_KEY)
+        }
+      } catch {}
     }
+    verify()
   }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -30,29 +40,40 @@ export default function AdminLogin() {
     setError("")
     setLoading(true)
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      // Set admin session
-      localStorage.setItem(
+    try {
+      const res = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success || !data?.token) {
+        setError(data?.error || "Invalid email or password")
+        setLoading(false)
+        return
+      }
+      // Store token in sessionStorage (not localStorage)
+      sessionStorage.setItem(TOKEN_KEY, data.token)
+      sessionStorage.setItem(
         "admin-session",
         JSON.stringify({
-          email: ADMIN_EMAIL,
+          email,
           loginTime: new Date().toISOString(),
           sessionId: `admin-${Date.now()}`,
         })
       )
 
       // Log admin login
-      const logs = JSON.parse(localStorage.getItem("admin-logs") || "[]")
-      logs.push({
-        type: "admin_login",
-        email: ADMIN_EMAIL,
-        timestamp: new Date().toISOString(),
-        date: new Date().toDateString(),
-      })
-      localStorage.setItem("admin-logs", JSON.stringify(logs))
+      try {
+        const logs = JSON.parse(localStorage.getItem("admin-logs") || "[]")
+        logs.push({
+          type: "admin_login",
+          email,
+          timestamp: new Date().toISOString(),
+          date: new Date().toDateString(),
+        })
+        localStorage.setItem("admin-logs", JSON.stringify(logs))
+      } catch {}
 
       // Track session in database
       try {
@@ -60,7 +81,7 @@ export default function AdminLogin() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: ADMIN_EMAIL,
+            email,
             action: "admin_login",
             adminSession: true,
           }),
@@ -70,7 +91,7 @@ export default function AdminLogin() {
       }
 
       router.push("/f")
-    } else {
+    } catch {
       setError("Invalid email or password")
       setLoading(false)
     }

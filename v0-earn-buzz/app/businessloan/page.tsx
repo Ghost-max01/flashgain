@@ -89,6 +89,9 @@ export default function BusinessLoanPage() {
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [showFeePopup, setShowFeePopup] = useState(false)
+  const [pendingFee, setPendingFee] = useState(0)
+  const [pendingLoanAmount, setPendingLoanAmount] = useState(0)
 
   const numericValue = (val: string) => {
     const n = Number(val.toString().replace(/[^0-9.]/g, ""))
@@ -102,6 +105,12 @@ export default function BusinessLoanPage() {
 
   const handleContinue = async () => {
     setError(null)
+    // Require verified account before continuing (fetch /api/verify-account result).
+    if (!verified) {
+      setError("Please verify your account first — account verification is required before continuing.")
+      toast({ title: "Verification required", description: "Verify your account before continuing.", variant: "destructive" })
+      return
+    }
     const loanAmountNum = Math.floor(numericValue(loanAmount))
 
     if (!loanAmount || !accountNumber || !selectedBank || !accountName) {
@@ -119,7 +128,16 @@ export default function BusinessLoanPage() {
       return
     }
 
-    const fee = Math.ceil(loanAmountNum * PROCESSING_RATE)
+    // Show the 3% fee notice popup before heading to Paystack.
+    setPendingFee(Math.ceil(loanAmountNum * PROCESSING_RATE))
+    setPendingLoanAmount(loanAmountNum)
+    setShowFeePopup(true)
+  }
+
+  const proceedToPaystack = async () => {
+    const loanAmountNum = pendingLoanAmount
+    const fee = pendingFee
+    setShowFeePopup(false)
     setSubmitting(true)
     try {
       // Get user email/id for Paystack
@@ -141,14 +159,12 @@ export default function BusinessLoanPage() {
           email,
           amount: fee,
           callbackUrl: `${window.location.origin}/paystack/callback`,
+          // Metadata built server-side at initialize (companion crew); do not trust client fee
+          // and do not include accountNumber here. Server computes fee = 3%.
           metadata: {
             type: "loan",
             loanAmount: loanAmountNum,
-            fee,
-            selectedBank,
-            accountNumber: accountNumber.replace(/\D/g, ""),
-            accountName,
-            userId,
+            planId: selectedBank,
           },
         }),
       })
@@ -500,6 +516,40 @@ export default function BusinessLoanPage() {
             </p>
           </div>
         </div>
+
+        {/* 3% processing fee notice popup */}
+        {showFeePopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+            <div className="hh-card w-full max-w-sm text-center">
+              <h3 className="hh-section-title mb-3">Processing Fee Required</h3>
+              <p className="text-sm text-white/80 leading-relaxed">
+                To proceed with your loan of{" "}
+                <span className="font-bold text-emerald-300">{formatCurrency(pendingLoanAmount)}</span>,
+                you are required to pay a 3% processing fee of{" "}
+                <span className="font-bold text-emerald-300">{formatCurrency(pendingFee)}</span>.
+              </p>
+              <p className="text-xs text-white/50 mt-2">
+                You will be taken to Paystack to complete the fee payment.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                <button
+                  onClick={() => setShowFeePopup(false)}
+                  disabled={submitting}
+                  className="hh-submit-btn w-full !bg-white/5 !border !border-white/10"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={proceedToPaystack}
+                  disabled={submitting}
+                  className="hh-submit-btn w-full"
+                >
+                  {submitting ? "Redirecting..." : "Proceed"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Security Note */}
         <div className="hh-card hh-tip-card hh-entry-3 mt-6">

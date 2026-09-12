@@ -39,15 +39,31 @@ export default function AdminDashboard() {
     }
   }, [period, users])
 
-  const checkAdminAuth = () => {
-    const adminSession = localStorage.getItem("admin-session")
-    if (!adminSession) {
+  const checkAdminAuth = async () => {
+    const token =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("admin-session-token")
+        : null
+    if (!token) {
       router.push("/f/login")
       return
     }
 
-    const session = JSON.parse(adminSession)
-    setAdminEmail(session.email)
+    try {
+      const res = await fetch("/api/admin-auth", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        sessionStorage.removeItem("admin-session-token")
+        router.push("/f/login")
+        return
+      }
+      const data = await res.json().catch(() => ({}))
+      setAdminEmail(data?.email || "")
+    } catch {
+      router.push("/f/login")
+      return
+    }
     loadAdminData()
   }
 
@@ -100,6 +116,10 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = () => {
+    try {
+      sessionStorage.removeItem("admin-session-token")
+      sessionStorage.removeItem("admin-session")
+    } catch {}
     localStorage.removeItem("admin-session")
     router.push("/f/login")
   }
