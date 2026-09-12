@@ -1,21 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
   try {
-    const { userId } = params
-    const supabase = await createClient()
+    const { userId: rawId } = params
+    // Use admin client: anon/RLS would return errors/zeros and look like "didn't count"
+    const supabase = getSupabaseAdmin()
 
-    const { data: user, error } = await supabase
+    // Accept either users.id (UUID) or referral_code
+    let userId = (rawId || "").trim()
+    let user: any = null
+    const first = await supabase
       .from("users")
       .select("id, name, email, referral_code, password, referred_by, created_at")
       .eq("id", userId)
-      .single()
+      .maybeSingle()
+    user = (first as any).data || null
+    if (!user) {
+      const second = await supabase
+        .from("users")
+        .select("id, name, email, referral_code, password, referred_by, created_at")
+        .ilike("referral_code", userId)
+        .maybeSingle()
+      user = (second as any).data || null
+      if (user) userId = user.id
+    }
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
     // referral_count = total immediate, referral_balance = approved (Beginner 30+) only
     let referralCount = 0

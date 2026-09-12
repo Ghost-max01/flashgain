@@ -1926,8 +1926,8 @@ function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }:
       setAutoRefCode(code);
       const cnt = localStorage.getItem(`auto_ref_count_${autoTapPlan}`);
       setAutoRefCount(cnt ? Number(cnt) : 0);
-      // also sync from server if available
-      const uid = userData?.id;
+      // also sync from server if available (accept UUID or referral_code)
+      const uid = (userData as any)?.id || (userData as any)?.userId;
       if (uid) {
         fetch(`/api/referral-stats?userId=${uid}&t=${Date.now()}`).then(r=>r.json()).then(d=>{
           if (typeof d.referral_count === "number") setAutoRefCount(d.referral_count);
@@ -1941,7 +1941,13 @@ function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }:
     return null;
   }
 
-  const autoLink = origin && autoRefCode ? `${origin}/register?ref=${autoRefCode}` : `${origin}${referralLink}`;
+  // IMPORTANT: ?ref= must be the REAL referral_code (signup looks it up in
+  // users.referral_code). Fake per-plan codes (XXXX-AUTO-...) never match and
+  // silently record no referral. Plan context travels via &autoTapPlan=.
+  const realCode = (userData as any)?.referral_code || (userData as any)?.referralCode || (userData as any)?.userId || "";
+  const autoLink = origin && realCode
+    ? `${origin}/register?ref=${encodeURIComponent(realCode)}${autoTapPlan ? `&autoTapPlan=${encodeURIComponent(autoTapPlan)}` : ""}`
+    : `${origin}${referralLink}`;
   const done = autoRefCount;
   const need = plan.need;
   const pct = Math.min(100, Math.round((done/need)*100));

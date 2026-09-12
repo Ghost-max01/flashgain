@@ -796,9 +796,12 @@ export default function DashboardPage() {
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
   }, [reqPlan, reqChoice, balance, userData, toast, autoPlanCooldowns]);
   const copyAutoRefLink = useCallback(()=>{
-    const link = `${window.location.origin}/register?ref=${autoRefCode}`;
+    // NOTE: ?ref= must be the REAL referral_code — fake XXXX-AUTO codes never
+    // resolve in signup and silently record no referral.
+    const realCode = (userData as any)?.referral_code || userData?.userId || userData?.id || autoRefCode;
+    const link = `${window.location.origin}/register?ref=${realCode}`;
     navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
-  }, [autoRefCode, toast]);
+  }, [autoRefCode, userData, toast]);
   const formatAutoLeft = (ms:number) => {
     const s = Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
     if (h>0) return `${h}h ${m}m ${sec}s`; return `${m}m ${sec}s`;

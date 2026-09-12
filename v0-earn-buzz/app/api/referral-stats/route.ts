@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
+    const rawId = (searchParams.get("userId") || "").trim()
 
-    if (!userId) {
+    if (!rawId) {
       return NextResponse.json({
         success: false,
         referral_code: "",
@@ -18,14 +18,45 @@ export async function GET(request: Request) {
       })
     }
 
-    const supabase = await createClient()
+    // Use admin client: anon/RLS would return 0 rows and look like "didn't count"
+    const supabase = getSupabaseAdmin()
 
-    const { data: user, error: userError } = await supabase
+    // Accept either the users.id (UUID) or the referral_code — callers
+    // sometimes pass userId (=referral_code), which previously returned all zeros.
+    let userId = rawId
+    let userCode = ""
+    const { data: byId } = await supabase
       .from("users")
-      .select("referral_code")
-      .eq("id", userId)
+      .select("id, referral_code")
+      .eq("id", rawId)
       .maybeSingle()
-    if (userError) throw userError
+    if (byId) {
+      userId = (byId as any).id
+      userCode = (byId as any).referral_code || ""
+    } else {
+      const { data: byCode } = await supabase
+        .from("users")
+        .select("id, referral_code")
+        .ilike("referral_code", rawId)
+        .maybeSingle()
+      if (byCode) {
+        userId = (byCode as any).id
+        userCode = (byCode as any).referral_code || ""
+      } else {
+        // Unknown identifier — return zeros but mark unsuccessful so UI doesn't cache it
+        return NextResponse.json({
+          success: false,
+          referral_code: "",
+          referral_count: 0,
+          referral_balance: 0,
+          pending_count: 0,
+          approved_count: 0,
+          pending_balance: 0,
+        })
+      }
+    }
+
+    const user = { referral_code: userCode }
 
     // Fetch all referrals for this referrer (paginate up to 2000 for now)
     const { data: allRefs, error: refsError } = await supabase

@@ -102,7 +102,11 @@ function AutoTapReferContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#050d14]"><div className="text-center"><div className="relative w-16 h-16 mx-auto mb-4"><div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div><div className="absolute inset-2 rounded-full border-2 border-emerald-400/50 animate-ping" style={{animationDelay:"0.3s"}}></div><div className="absolute inset-4 rounded-full bg-emerald-500/20 animate-pulse"></div></div><p className="text-emerald-400 text-sm font-medium tracking-widest uppercase">Loading</p></div></div>;
 
-  const autoLink = origin && autoRefCode ? `${origin}/register?ref=${autoRefCode}` : "";
+  // IMPORTANT: ?ref= must be the REAL referral_code (signup looks it up in
+  // users.referral_code). Fake per-plan codes (XXXX-AUTO-...) never match and
+  // silently record no referral. Plan context travels via &autoTapPlan=.
+  const realCode = userData?.referral_code || (userData as any)?.userId || "";
+  const autoLink = origin && realCode ? `${origin}/register?ref=${encodeURIComponent(realCode)}&autoTapPlan=${encodeURIComponent(planId)}` : "";
   const pct = Math.min(100, Math.round((autoRefCount / Math.max(1, plan.need))*100));
   const referralLink = userData?.referral_code ? `/register?ref=${userData.referral_code}` : "/register";
 
