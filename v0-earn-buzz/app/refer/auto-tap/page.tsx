@@ -49,6 +49,23 @@ function AutoTapReferContent() {
   useEffect(() => {
     setOrigin(window.location.origin);
     setActiveMessage(referralMessages[Math.floor(Math.random() * referralMessages.length)]);
+    // Backward-compat: old links used /refer?ref=CODE — persist + forward guests to /register?ref=CODE
+    try {
+      const keys = ["ref", "referral", "referral_code", "code", "r"];
+      let incomingRef = "";
+      for (const k of keys) {
+        const v = searchParams.get(k);
+        if (v && v.trim()) { incomingRef = v.trim().toUpperCase().replace(/\s+/g, ""); break; }
+      }
+      if (incomingRef) {
+        try {
+          localStorage.setItem("tivexx-pending-ref", incomingRef);
+          document.cookie = `pending_ref=${encodeURIComponent(incomingRef)}; path=/; max-age=${60 * 60 * 24 * 30}`;
+        } catch {}
+        const su = localStorage.getItem("tivexx-user");
+        if (!su) { router.push(`/register?ref=${encodeURIComponent(incomingRef)}`); return; }
+      }
+    } catch {}
     const storedUser = localStorage.getItem("tivexx-user");
     if (!storedUser) { router.push("/login"); return; }
     const user = JSON.parse(storedUser);
@@ -85,7 +102,7 @@ function AutoTapReferContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#050d14]"><div className="text-center"><div className="relative w-16 h-16 mx-auto mb-4"><div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div><div className="absolute inset-2 rounded-full border-2 border-emerald-400/50 animate-ping" style={{animationDelay:"0.3s"}}></div><div className="absolute inset-4 rounded-full bg-emerald-500/20 animate-pulse"></div></div><p className="text-emerald-400 text-sm font-medium tracking-widest uppercase">Loading</p></div></div>;
 
-  const autoLink = origin && autoRefCode ? `${origin}/refer?ref=${autoRefCode}` : "";
+  const autoLink = origin && autoRefCode ? `${origin}/register?ref=${autoRefCode}` : "";
   const pct = Math.min(100, Math.round((autoRefCount / Math.max(1, plan.need))*100));
   const referralLink = userData?.referral_code ? `/register?ref=${userData.referral_code}` : "/register";
 

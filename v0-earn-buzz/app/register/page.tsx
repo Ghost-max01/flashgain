@@ -48,9 +48,37 @@ export default function RegisterPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    const refCode = searchParams.get("ref");
+    const PENDING_KEY = "tivexx-pending-ref";
+    const normalize = (s: string) => s.trim().toUpperCase().replace(/\s+/g, "");
+    const getRefFromAllSources = (): string => {
+      const keys = ["ref", "referral", "referral_code", "code", "r"];
+      for (const k of keys) {
+        const v = searchParams.get(k);
+        if (v && v.trim()) return normalize(v);
+      }
+      try {
+        const url = new URL(window.location.href);
+        for (const k of keys) {
+          const v = url.searchParams.get(k);
+          if (v && v.trim()) return normalize(v);
+        }
+      } catch {}
+      try {
+        const stored = localStorage.getItem(PENDING_KEY);
+        if (stored && stored.trim()) return normalize(stored);
+        const m = document.cookie.match(/(?:^|; )pending_ref=([^;]*)/);
+        if (m) return normalize(decodeURIComponent(m[1]));
+      } catch {}
+      return "";
+    };
+
+    const refCode = getRefFromAllSources();
     if (refCode) {
       setReferralCode(refCode);
+      try {
+        localStorage.setItem(PENDING_KEY, refCode);
+        document.cookie = `pending_ref=${encodeURIComponent(refCode)}; path=/; max-age=${60 * 60 * 24 * 30}`;
+      } catch {}
     }
   }, [mounted, searchParams]);
 
@@ -85,6 +113,17 @@ export default function RegisterPage() {
     setError("");
 
     try {
+      // Use visible ref or persisted pending ref — prevents lost tracking if user navigated away
+      let effectiveRef = (referralCode || "").trim().toUpperCase();
+      if (!effectiveRef) {
+        try {
+          effectiveRef = (localStorage.getItem("tivexx-pending-ref") || "").trim().toUpperCase();
+          if (!effectiveRef) {
+            const m = document.cookie.match(/(?:^|; )pending_ref=([^;]*)/);
+            if (m) effectiveRef = decodeURIComponent(m[1]).trim().toUpperCase();
+          }
+        } catch {}
+      }
       const response = await fetch("/api/signup", {
         method: "POST",
         headers: {
@@ -94,7 +133,7 @@ export default function RegisterPage() {
           name,
           email,
           password,
-          referralCode: referralCode || undefined,
+          referralCode: effectiveRef || undefined,
         }),
       });
 
@@ -117,6 +156,10 @@ export default function RegisterPage() {
 
       persistUserSession(userData);
       localStorage.removeItem("tivexx-welcome-popup-shown");
+      try {
+        localStorage.removeItem("tivexx-pending-ref");
+        document.cookie = "pending_ref=; path=/; max-age=0";
+      } catch {}
       // Flag for dashboard: show notification enable/status only after successful signup (not for anonymous visitors)
       try {
         localStorage.setItem("tivexx-just-authenticated", "1");

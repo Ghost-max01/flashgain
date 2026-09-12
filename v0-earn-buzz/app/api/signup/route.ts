@@ -6,7 +6,12 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin"
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin()
-    const { name, email, password, referralCode } = await request.json()
+    const { name, email, password, referralCode: bodyRef } = await request.json()
+    // Fallback to pending_ref cookie if body didn't send it (direct link -> register -> signup)
+    let referralCode = bodyRef
+    if (!referralCode) {
+      try { referralCode = request.cookies.get("pending_ref")?.value ? decodeURIComponent(request.cookies.get("pending_ref")!.value) : undefined } catch {}
+    }
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 })
@@ -49,15 +54,28 @@ export async function POST(request: NextRequest) {
       newReferralCode = generateReferralCode()
     }
 
-    // 3. Find referrer
+    // 3. Find referrer — normalize and case-insensitive (link may be lowercased by some apps)
     let referrerId = null
-    if (referralCode) {
-      const { data } = await supabase
+    const normalizedRef = (referralCode || "").toString().trim().toUpperCase()
+    if (normalizedRef) {
+      // try exact then case-insensitive fallback
+      let referrerData: any = null
+      const { data: exact } = await supabase
         .from("users")
         .select("id, referral_count, referral_balance, balance")
-        .eq("referral_code", referralCode)
+        .eq("referral_code", normalizedRef)
         .maybeSingle()
-      if (data) referrerId = data.id
+      referrerData = exact
+      if (!referrerData) {
+        const { data: ci } = await supabase
+          .from("users")
+          .select("id, referral_count, referral_balance, balance")
+          .ilike("referral_code", normalizedRef)
+          .maybeSingle()
+        referrerData = ci
+      }
+      if (referrerData) referrerId = referrerData.id
+      else console.warn(`[signup] referral_code not found: ${normalizedRef}`)
     }
 
     // 4. Insert into users table

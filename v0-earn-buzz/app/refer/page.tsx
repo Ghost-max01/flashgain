@@ -256,6 +256,28 @@ function ReferContent() {
   useEffect(() => {
     setOrigin(window.location.origin);
 
+    // Backward-compat: old shared links used /refer?ref=CODE (should be /register?ref=CODE).
+    // Persist the code and send logged-out visitors to /register so attribution isn't lost.
+    try {
+      const keys = ["ref", "referral", "referral_code", "code", "r"];
+      let incomingRef = "";
+      for (const k of keys) {
+        const v = searchParams.get(k);
+        if (v && v.trim()) { incomingRef = v.trim().toUpperCase().replace(/\s+/g, ""); break; }
+      }
+      if (incomingRef) {
+        try {
+          localStorage.setItem("tivexx-pending-ref", incomingRef);
+          document.cookie = `pending_ref=${encodeURIComponent(incomingRef)}; path=/; max-age=${60 * 60 * 24 * 30}`;
+        } catch {}
+      }
+      const storedUserFirst = localStorage.getItem("tivexx-user");
+      if (!storedUserFirst && incomingRef) {
+        router.push(`/register?ref=${encodeURIComponent(incomingRef)}`);
+        return;
+      }
+    } catch {}
+
     // load VIP state
     try {
       const v = loadVip();
@@ -357,27 +379,34 @@ function ReferContent() {
     ? `/register?ref=${userData.referral_code}`
     : "/register";
 
+  const getFullReferralLink = () => {
+    const effOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
+    if (!userData?.referral_code || !effOrigin) return "";
+    return `${effOrigin}/register?ref=${userData.referral_code}`;
+  };
+
   const handleCopy = () => {
-    if (!origin) return;
-    const linkOnly = `${origin}${referralLink}`;
+    const linkOnly = getFullReferralLink();
+    if (!linkOnly) return;
     navigator.clipboard.writeText(linkOnly);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const shareWhatsApp = () => {
-    if (!origin) return;
-    const msg = `${activeMessage}\n\nSign up here: ${origin}${referralLink}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_self");
+    const linkOnly = getFullReferralLink();
+    if (!linkOnly) return;
+    const msg = `${activeMessage}\n\nSign up here: ${linkOnly}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   const shareTelegram = () => {
-    if (!origin) return;
-    const link = `${origin}${referralLink}`;
-    const msg = `${activeMessage}\n\nSign up here: ${link}`;
+    const linkOnly = getFullReferralLink();
+    if (!linkOnly) return;
+    const msg = `${activeMessage}\n\nSign up here: ${linkOnly}`;
     window.open(
-      `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(msg)}`,
-      "_self",
+      `https://t.me/share/url?url=${encodeURIComponent(linkOnly)}&text=${encodeURIComponent(msg)}`,
+      "_blank",
     );
   };
 
@@ -648,15 +677,16 @@ function ReferContent() {
               <div className="hh-link-label">Your unique link</div>
               <div className="hh-link-value">
                 <span className="truncate">
-                  {origin ? `${origin}${referralLink}` : "Loading..."}
+                  {getFullReferralLink() || "Loading your referral link..."}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <button
+                disabled={!getFullReferralLink()}
                 onClick={handleCopy}
-                className={`hh-share-btn ${copied ? "hh-share-success" : "hh-share-copy"}`}
+                className={`hh-share-btn ${copied ? "hh-share-success" : "hh-share-copy"} ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {copied ? (
                   <>
@@ -672,8 +702,9 @@ function ReferContent() {
               </button>
 
               <button
+                disabled={!getFullReferralLink()}
                 onClick={shareWhatsApp}
-                className="hh-share-btn hh-share-wa"
+                className={`hh-share-btn hh-share-wa ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Share2 className="h-5 w-5" />
                 <span>Share</span>
@@ -685,15 +716,17 @@ function ReferContent() {
         {/* Quick Share Buttons */}
         <div className="grid grid-cols-2 gap-3 hh-entry-3">
           <button
+            disabled={!getFullReferralLink()}
             onClick={shareWhatsApp}
-            className="hh-action-btn hh-action-green"
+            className={`hh-action-btn hh-action-green ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <span className="hh-action-icon">📱</span>
             <span>WhatsApp</span>
           </button>
           <button
+            disabled={!getFullReferralLink()}
             onClick={shareTelegram}
-            className="hh-action-btn hh-action-blue"
+            className={`hh-action-btn hh-action-blue ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <span className="hh-action-icon">✈️</span>
             <span>Telegram</span>
@@ -1908,7 +1941,7 @@ function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }:
     return null;
   }
 
-  const autoLink = origin && autoRefCode ? `${origin}/refer?ref=${autoRefCode}` : `${origin}${referralLink}`;
+  const autoLink = origin && autoRefCode ? `${origin}/register?ref=${autoRefCode}` : `${origin}${referralLink}`;
   const done = autoRefCount;
   const need = plan.need;
   const pct = Math.min(100, Math.round((done/need)*100));

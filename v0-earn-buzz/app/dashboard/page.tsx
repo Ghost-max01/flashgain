@@ -796,7 +796,7 @@ export default function DashboardPage() {
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
   }, [reqPlan, reqChoice, balance, userData, toast, autoPlanCooldowns]);
   const copyAutoRefLink = useCallback(()=>{
-    const link = `${window.location.origin}/refer?ref=${autoRefCode}`;
+    const link = `${window.location.origin}/register?ref=${autoRefCode}`;
     navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
   }, [autoRefCode, toast]);
   const formatAutoLeft = (ms:number) => {
@@ -1060,7 +1060,7 @@ export default function DashboardPage() {
   };
 
   const copyLinkToClipboard = async () => {
-    const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/refer?ref=${userData?.userId || "ref"}`;
+    const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${userData?.userId || "ref"}`;
     try {
       await navigator.clipboard.writeText(referralLink);
       setCopiedLink(true);
@@ -1848,7 +1848,7 @@ export default function DashboardPage() {
               <div className="hh-browser-check-link-box">
                 <code className="text-[10px] text-white break-all">
                   {typeof window !== "undefined"
-                    ? `${window.location.origin}/refer?ref=${userData?.userId || "ref"}`
+                    ? `${window.location.origin}/register?ref=${userData?.userId || "ref"}`
                     : "Loading..."}
                 </code>
               </div>
