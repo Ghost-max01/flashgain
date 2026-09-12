@@ -184,6 +184,11 @@ export default function StakeWinPage() {
     const targetAngle = 360 - (targetIdx * segAngle + segAngle / 2)
     const spinsCount = 6 + Math.random() * 4
     const total = rotation + spinsCount * 360 + targetAngle - (rotation % 360)
+    // spinning=true drives the 3.2s CSS rotation animation; clearing the old
+    // result keeps the banner honest (never shows a stale WIN/LOSE).
+    setSpinning(true)
+    setSpinResult(null)
+    setShowSpinResult(false)
     setRotation(total)
     // One id per spin so a replay/double-submit can never credit twice.
     try {
