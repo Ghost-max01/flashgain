@@ -223,12 +223,11 @@ function ReferContent() {
     "Join FlashGain9ja today and stand a chance to be among the next successful withdrawals 💸 Click the link below to start.",
   ];
 
-  // Animate earnings
+  // Animate earnings: withdrawable (approved) only — pending stays in potential card
   useEffect(() => {
     if (!userData) return;
 
-    const targetEarnings =
-      userData.referral_balance + (userData.pending_count || 0) * 500;
+    const targetEarnings = userData.referral_balance;
     if (targetEarnings === animatedEarnings) return;
 
     const difference = targetEarnings - animatedEarnings;
@@ -318,12 +317,40 @@ function ReferContent() {
         setApprovedCount(data.approved_count ?? 0);
         setPendingCount(data.pending_count || 0);
 
-        setAnimatedEarnings(
-          data.referral_balance + (data.pending_count || 0) * 500,
-        );
+        setAnimatedEarnings(data.referral_balance || 0);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    // Poll every 30s to auto-promote pending -> approved when friend hits Beginner 30
+    const poll = setInterval(() => {
+      try {
+        const su = localStorage.getItem("tivexx-user");
+        if (!su) return;
+        const u = JSON.parse(su);
+        const uid = u.id || u.userId;
+        if (!uid) return;
+        fetch(`/api/referral-stats?userId=${uid}&t=${Date.now()}`)
+          .then((r) => r.json())
+          .then((data) => {
+            setUserData((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    referral_count: data.referral_count ?? prev.referral_count,
+                    referral_balance: data.referral_balance ?? prev.referral_balance,
+                    pending_count: data.pending_count ?? 0,
+                    approved_count: data.approved_count ?? 0,
+                  }
+                : prev
+            );
+            setApprovedCount(data.approved_count ?? 0);
+            setPendingCount(data.pending_count ?? 0);
+          })
+          .catch(() => {});
+      } catch {}
+    }, 30000);
+    return () => clearInterval(poll);
   }, [router]);
 
   const referralLink = userData?.referral_code
@@ -696,13 +723,13 @@ function ReferContent() {
               {
                 icon: "💰",
                 title: "Earn Rewards",
-                desc: "Get ₦500 credited instantly per referral",
+                desc: "Count adds instantly • ₦500 pending until friend hits Beginner (30+)",
                 color: "emerald",
               },
               {
                 icon: "⭐",
-                title: "Friends Complete Tasks",
-                desc: "Referral is verified after they complete tasks",
+                title: "Approved on Beginner",
+                desc: "₦500 becomes withdrawable when friend reaches Trust 30+",
                 color: "amber",
                 highlight: true,
               },

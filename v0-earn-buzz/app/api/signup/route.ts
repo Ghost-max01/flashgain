@@ -81,13 +81,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    // 5. Record referral. The referrer is credited immediately when the
-    //    referral is created, regardless of the referred user's balance.
+    // 5. Record referral: count increments immediately, but amount stays pending
+    //    until referred user reaches Beginner (trust_score >=30). DB trigger handles it;
+    //    referrals row inserted as pending (processed=false) if trust <30.
     if (referrerId) {
       await supabase.from("referrals").insert({
         referrer_id: referrerId,
         referred_id: userId,
-        amount: 500, // 500 naira referral bonus
+        amount: 500, // 500 naira — withdrawable only after referred hits Beginner 30
       })
     }
 
