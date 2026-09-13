@@ -53,6 +53,10 @@ export default function StakeWinPage() {
     "Modupe", "Nkechi", "Oluwaseun", "Titilayo", "Uche", "Yewande", "Zara", "Bola",
     "Dapo", "Esi", "Folake", "Gbenga", "Hauwa", "Ifedolapo", "Jide", "Kola",
     "Ada", "Blessing", "Chika", "Ekanem", "Ijeoma", "Nana", "Olumide", "Tomi",
+    "Segun", "Tolu", "Yemi", "Kunle", "Bimbo", "Dele", "Femi", "Gani",
+    "Hakeem", "Ibukun", "Jumoke", "Kemi", "Ladi", "Morenike", "Niyi", "Ola",
+    "Pele", "Qudus", "Ranti", "Sade", "Tayo", "Ufuoma", "Vicky", "Wale",
+    "Xola", "Yinka", "Zainab"
   ]
   const [liveTicker, setLiveTicker] = useState<{ name: string; staked: number; won: number; ago: string }[]>([])
   useEffect(() => {
@@ -107,6 +111,10 @@ export default function StakeWinPage() {
   const [spinCooldowns, setSpinCooldowns] = useState<Record<number, number>>({})
   // One id per spin so a replay/double-submit can never credit twice.
   const spinIdRef = useRef<string | null>(null)
+  // Spin session state - prevents leaving until all available spins used
+  const [spinSessionActive, setSpinSessionActive] = useState(false)
+  const [showSpinCompleteModal, setShowSpinCompleteModal] = useState(false)
+  const [availableTiers, setAvailableTiers] = useState<number[]>([])
 
   useEffect(() => {
     try {
@@ -133,6 +141,46 @@ export default function StakeWinPage() {
   useEffect(() => {
     try { localStorage.setItem("spin_tier_cooldowns", JSON.stringify(spinCooldowns)) } catch {}
   }, [spinCooldowns])
+
+  // Compute available tiers (not on cooldown)
+  useEffect(() => {
+    const now = Date.now()
+    const tiers = [20, 30, 40].filter(pct => {
+      const expiry = spinCooldowns[pct] || 0
+      return expiry <= now
+    })
+    setAvailableTiers(tiers)
+    // Start spin session when there are available tiers
+    if (tiers.length > 0) {
+      setSpinSessionActive(true)
+      // Auto-select first available tier on mount if no tier selected
+      const currentPct = balance === 0 ? 20 : Math.round((amount / balance) * 100)
+      const currentTier = currentPct <= 22 ? 20 : currentPct <= 33 ? 30 : 40
+      const isCurrentTierAvailable = tiers.includes(currentTier)
+      if (!isCurrentTierAvailable) {
+        const firstTier = tiers[0]
+        const stakeAmt = Math.floor(balance * firstTier / 100)
+        setAmount(stakeAmt)
+        setCustom(String(stakeAmt))
+      }
+    } else {
+      setSpinSessionActive(false)
+    }
+  }, [spinCooldowns, amount, balance])
+
+  // Auto-advance to next available tier after spin
+  const advanceToNextTier = useCallback((currentTier: number) => {
+    const nextTier = availableTiers.find(t => t !== currentTier)
+    if (nextTier) {
+      const stakeAmt = Math.floor(balance * nextTier / 100)
+      setAmount(stakeAmt)
+      setCustom(String(stakeAmt))
+    } else {
+      // No more tiers available - show completion modal
+      setShowSpinCompleteModal(true)
+      setSpinSessionActive(false)
+    }
+  }, [availableTiers, balance])
 
   const getTierForStake = (stake: number) => {
     if (balance === 0) return 20
@@ -203,6 +251,8 @@ export default function StakeWinPage() {
       setSpinResult(target)
       setShowSpinResult(true)
       setSpins(s => s + 1)
+      // Auto-advance to next available tier
+      advanceToNextTier(tierPct)
       // Settle on the SERVER so wins survive refresh/dashboard sync.
       // Local state is only updated from the server's authoritative balance.
       void (async () => {
@@ -240,7 +290,7 @@ export default function StakeWinPage() {
         }
       })()
     }, 3200)
-  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
+  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns, advanceToNextTier])
 
   const onStake = () => {
     const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
@@ -248,6 +298,28 @@ export default function StakeWinPage() {
     if (amount > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
     toast({ title: `Staked ₦${amount.toLocaleString()} 🎯`, description: `Potential win ₦${win.toLocaleString()} — draw in ${fmtTime(nextDrawMs)}` })
   }
+
+  // Prevent leaving page during active spin session
+  useEffect(() => {
+    if (!spinSessionActive) return
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = "You have spins remaining. Complete them before leaving."
+      return e.returnValue
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    // Block router navigation
+    const handleRouteChange = () => {
+      if (spinSessionActive && !showSpinCompleteModal) {
+        window.location.reload() // Force reload to prevent navigation
+      }
+    }
+    window.addEventListener("popstate", handleRouteChange)
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+      window.removeEventListener("popstate", handleRouteChange)
+    }
+  }, [spinSessionActive, showSpinCompleteModal])
 
   return (
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
@@ -259,13 +331,13 @@ export default function StakeWinPage() {
       {/* Header */}
       <div className="sticky top-0 z-20 hh-header">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => router.push("/dashboard")} className="hh-back-btn"><ArrowLeft className="h-5 w-5" /></button>
+          <button onClick={() => !spinSessionActive && router.push("/dashboard")} className={`hh-back-btn ${spinSessionActive ? 'opacity-40 cursor-not-allowed' : ''}`} disabled={spinSessionActive}><ArrowLeft className="h-5 w-5" /></button>
           <div className="flex items-center gap-2">
             <div className="hh-icon-ring !w-8 !h-8"><Crown className="h-4 w-4 text-amber-300" /></div>
             <span className="font-black tracking-widest text-sm">STAKE & WIN</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">LIVE</span>
           </div>
-          <Link href="/dashboard" className="text-[11px] font-bold text-emerald-300">Home →</Link>
+          <Link href="/dashboard" className={`text-[11px] font-bold text-emerald-300 ${spinSessionActive ? 'pointer-events-none opacity-40' : ''}`} onClick={(e) => spinSessionActive && e.preventDefault()}>Home →</Link>
         </div>
       </div>
 
@@ -302,10 +374,10 @@ export default function StakeWinPage() {
               <ShieldCheck className="h-4 w-4 text-emerald-400" /> Provably fair • Instant payout • No lock — withdraw anytime
             </div>
           </div>
-          {/* Winners marquee */}
+          {/* Winners marquee — uses liveTicker (updates every 5 min) */}
           <div className="border-t border-white/10 bg-black/20 px-3 py-2 overflow-hidden">
             <div className="flex gap-2 animate-[hh-marquee_30s_linear_infinite] whitespace-nowrap">
-              {[...recentWins, ...recentWins].map((w, i) => (
+              {[...liveTicker, ...liveTicker].map((w, i) => (
                 <span key={i} className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-3 py-1 text-[11px] font-bold">
                   <Trophy className="h-3 w-3 text-amber-300" /> {w.name} won ₦{w.won.toLocaleString()} <span className="text-white/50">staked ₦{w.staked.toLocaleString()}</span>
                 </span>
@@ -325,10 +397,12 @@ export default function StakeWinPage() {
               const stakeAmt = Math.floor(balance * t.pct / 100)
               const expiry = (spinCooldowns as Record<number, number>)[t.pct] || 0
               const isUsed = expiry > Date.now()
+              const isCurrentTier = amount === stakeAmt && spinSessionActive
+              const isDisabled = isUsed || (spinSessionActive && !isCurrentTier)
               return (
                 <button
                   key={t.pct}
-                  disabled={isUsed}
+                  disabled={isDisabled}
                   onClick={() => {
                     if (isUsed) {
                       const leftH = Math.ceil((expiry - Date.now()) / 3600000)
@@ -337,12 +411,16 @@ export default function StakeWinPage() {
                       toast({ title: `${t.pct}% already used`, description: `This tier is locked for ${label}. Choose a remaining tier.`, variant: "destructive" })
                       return
                     }
+                    if (spinSessionActive && !isCurrentTier) {
+                      toast({ title: "Complete current spin first", description: "Finish your current tier spin before switching.", variant: "destructive" })
+                      return
+                    }
                     setAmount(stakeAmt); setCustom(String(stakeAmt))
                   }}
-                  className={`rounded-2xl border p-3 text-center font-black transition relative overflow-hidden ${isUsed ? "bg-white/5 border-white/10 text-white/35 cursor-not-allowed opacity-60" : amount===stakeAmt ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_8px_20px_rgba(16,185,129,0.35)]" : "bg-white/5 border-white/10 text-white hover:border-emerald-500/30"}`}>
+                  className={`rounded-2xl border p-3 text-center font-black transition relative overflow-hidden ${isUsed ? "bg-white/5 border-white/10 text-white/35 cursor-not-allowed opacity-60" : isDisabled ? "bg-white/5 border-white/10 text-white/35 cursor-not-allowed opacity-60" : amount===stakeAmt ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_8px_20px_rgba(16,185,129,0.35)]" : "bg-white/5 border-white/10 text-white hover:border-emerald-500/30"}`}>
                   <div className="text-lg font-black flex items-center justify-center gap-1">{t.label} {isUsed && <Lock className="h-3 w-3 opacity-60" />}</div>
-                  <div className={`text-[10px] mt-0.5 ${isUsed ? "text-white/30" : "text-white/50"}`}>{isUsed ? "Used • 24h lock" : t.desc}</div>
-                  <div className={`text-xs font-bold mt-1 ${isUsed ? "text-white/30" : "text-emerald-300"}`}>₦{stakeAmt.toLocaleString()}</div>
+                  <div className={`text-[10px] mt-0.5 ${isUsed ? "text-white/30" : isDisabled ? "text-white/30" : "text-white/50"}`}>{isUsed ? "Used • 24h lock" : isDisabled ? "Complete current spin" : t.desc}</div>
+                  <div className={`text-xs font-bold mt-1 ${isUsed ? "text-white/30" : isDisabled ? "text-white/30" : "text-emerald-300"}`}>₦{stakeAmt.toLocaleString()}</div>
                   {isUsed && <div className="absolute inset-0 bg-black/20 pointer-events-none" />}
                 </button>
               )
@@ -465,6 +543,38 @@ export default function StakeWinPage() {
         <div className="text-center text-[11px] text-white/40 pb-2">18+ • Stake responsibly • Provably fair • Terms apply</div>
       </div>
 
+      {/* Spin Complete Modal */}
+      {showSpinCompleteModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-md w-full">
+            <div className="hh-popup-header">
+              <Trophy className="h-8 w-8 text-amber-400" />
+              <h2 className="text-xl font-bold text-white">Spins Complete</h2>
+            </div>
+            <p className="text-gray-300 text-center mb-4">
+              You've used all your available spins for today ({spins}/3).
+            </p>
+            <p className="text-xs text-white/50 text-center mb-6">
+              Each tier (20%, 30%, 40%) can be spun once per 24 hours. Come back tomorrow for more spins!
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="hh-popup-btn hh-popup-btn-confirm flex-1"
+              >
+                Back to Dashboard
+              </button>
+              <button
+                onClick={() => setShowSpinCompleteModal(false)}
+                className="hh-popup-btn hh-popup-btn-cancel flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Thumb-zone sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-20">
         <div className="max-w-md mx-auto px-4 pb-4 pt-2 bg-gradient-to-t from-[#050d14] via-[#050d14]/95 to-transparent">
@@ -473,7 +583,7 @@ export default function StakeWinPage() {
               <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[getTierForStake(amount)]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
               <span className="text-sm font-black text-amber-300">→ Win ₦{win.toLocaleString()}</span>
             </div>
-            <Button onClick={onStake} className="rounded-full hh-btn-primary hh-spin-glow font-black px-6">Tap to Spin</Button>
+            <Button onClick={spinSessionActive ? undefined : onStake} disabled={spinSessionActive} className={`rounded-full hh-btn-primary hh-spin-glow font-black px-6 ${spinSessionActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Tap to Spin</Button>
           </div>
         </div>
       </div>
