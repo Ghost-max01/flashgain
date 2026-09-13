@@ -29,6 +29,7 @@ export default function WithdrawPage() {
   const [showTrustRequiredPopup, setShowTrustRequiredPopup] = useState(false)
   const [showHoursPopup, setShowHoursPopup] = useState(false)
   const [spinPlayedToday, setSpinPlayedToday] = useState(false)
+  const [balanceInitialized, setBalanceInitialized] = useState(false)
   const TOTAL_DAILY_TASKS = 20
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
@@ -54,7 +55,10 @@ export default function WithdrawPage() {
     const user = JSON.parse(storedUser)
     setUserData(user)
     // Display fallback from localStorage; authoritative sync from server below.
-    setBalance(user.balance || 0)
+    if (!balanceInitialized) {
+      setBalance(user.balance || 0)
+      setBalanceInitialized(true)
+    }
     try {
       const uid = user.id || user.userId
       if (uid) {
@@ -111,13 +115,9 @@ export default function WithdrawPage() {
       if (data.success) {
         setReferralCount(data.referral_count || 0)
       }
-      // Also refresh authoritative balance + trust so gates use server truth.
+      // Only refresh referral count from server, not balance (to avoid glitching)
       try {
         const b = await fetch(`/api/user-balance?userId=${userId}`).then((r) => r.json())
-        if (b?.success && typeof b.balance === "number") {
-          setServerBalance(b.balance)
-          setBalance(b.balance)
-        }
         if (b?.success && typeof b?.referral_count === "number") setReferralCount(b.referral_count)
       } catch {}
       try {
@@ -159,7 +159,7 @@ export default function WithdrawPage() {
         if (!storedUser) return
         const user = JSON.parse(storedUser)
         setUserData(user)
-        setBalance(user.balance || 0)
+        // Don't update balance from localStorage to avoid glitching; use serverBalance as source of truth
         // refresh referral count if user id changed
         if (user.id || user.userId) fetchReferralCount(user.id || user.userId)
       } catch (e) {
@@ -184,7 +184,7 @@ export default function WithdrawPage() {
         if (detail) {
           if (detail.user) {
             setUserData(detail.user)
-            setBalance(detail.user.balance || 0)
+            // Don't update balance from custom event to avoid glitching
             if (detail.user.id || detail.user.userId) fetchReferralCount(detail.user.id || detail.user.userId)
           }
           if (Array.isArray(detail.completedTasks)) {
@@ -369,6 +369,18 @@ export default function WithdrawPage() {
   const referralKey = Number(userData?.referral_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const bankLast4 = bankDetails?.accountNumber ? String(bankDetails.accountNumber).slice(-4) : '0000'
 
+  // Abbreviate account name: "Faith Wali" -> "F. Wali"
+  const getAbbreviatedName = (fullName: string) => {
+    if (!fullName) return ""
+    const parts = fullName.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0]
+    const firstInitial = parts[0][0].toUpperCase()
+    const lastName = parts[parts.length - 1]
+    return `${firstInitial}. ${lastName}`
+  }
+
+  const abbreviatedAccountName = bankDetails?.accountName ? getAbbreviatedName(bankDetails.accountName) : ""
+
   useEffect(() => {
     const card = document.getElementById('wallet-card')
     if (!card || !bankDetails?.locked) return
@@ -483,14 +495,14 @@ export default function WithdrawPage() {
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    <span>Referral <span className="val">₦{referralKey}</span></span>
+                    <span className="val">{abbreviatedAccountName}</span>
                   </div>
                   <div className="meta-item">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <rect x="3" y="9" width="18" height="11" rx="2" />
                       <path d="M8 9V6a4 4 0 0 1 8 0v3" />
                     </svg>
-                    <span className="val">•••• {bankLast4}</span>
+                    <span className="val">{bankDetails?.bank} •••• {bankLast4}</span>
                   </div>
                 </div>
 
