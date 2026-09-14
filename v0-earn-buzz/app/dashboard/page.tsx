@@ -3887,6 +3887,51 @@ export default function DashboardPage() {
           padding: 10px;
         }
 
+        /* ─── SPIN-EXHAUSTED POPUP (card + GLOWING button, unmissable CTA) ─── */
+        .hh-popup {
+          background: linear-gradient(135deg, #0d1f2d, #0a1628);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 24px;
+          padding: 24px;
+          box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+          animation: hh-popup-appear 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes hh-popup-appear {
+          from { opacity: 0; transform: scale(0.8) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .hh-popup-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .hh-popup-btn {
+          display: block;
+          width: 100%;
+          padding: 15px 16px;
+          border-radius: 14px;
+          font-weight: 800;
+          font-size: 15px;
+          border: none;
+          cursor: pointer;
+          transition: transform 0.15s ease, box-shadow 0.2s ease;
+        }
+        .hh-popup-btn-confirm {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: #fff;
+          border: 1px solid rgba(16,185,129,0.55);
+          box-shadow: 0 0 0 0 rgba(16,185,129,0.55), 0 8px 24px rgba(16,185,129,0.45);
+          animation: hh-confirm-glow 1.8s ease-in-out infinite;
+        }
+        .hh-popup-btn-confirm:hover { transform: translateY(-2px); }
+        .hh-popup-btn-confirm:active { transform: scale(0.97); }
+        @keyframes hh-confirm-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.55), 0 8px 24px rgba(16,185,129,0.45); }
+          50% { box-shadow: 0 0 0 10px rgba(16,185,129,0), 0 10px 32px rgba(16,185,129,0.65), 0 0 28px rgba(52,211,153,0.5); }
+        }
+
         /* ─── STAGGERED ENTRY ANIMATIONS ─── */
         .hh-entry-1 {
           animation: hh-entry 0.5s ease-out 0s both;
