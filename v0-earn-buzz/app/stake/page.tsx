@@ -116,46 +116,7 @@ export default function StakeWinPage() {
   const [availableTiers, setAvailableTiers] = useState<number[]>([])
   // Exceeded spins modal - shows when user tries to enter after all 3 spins used
   const [showExceededModal, setShowExceededModal] = useState(false)
-  // Water fill state for spin button - refills over 5 minutes (300 seconds)
-  const [spinRefillEndTime, setSpinRefillEndTime] = useState<number>(0)
-  const [waterFillPercent, setWaterFillPercent] = useState(100)
-  const spinRefillDuration = 5 * 60 * 1000 // 5 minutes in ms
-
-  // Water fill animation timer
-  useEffect(() => {
-    const now = Date.now()
-    const storedEndTime = Number(localStorage.getItem("spin_refill_end_time") || 0)
-    if (storedEndTime > now) {
-      setSpinRefillEndTime(storedEndTime)
-    } else {
-      // Ready to spin - full water
-      setSpinRefillEndTime(0)
-      setWaterFillPercent(100)
-    }
-  }, [])
-
-  // Update water fill percentage based on refill timer
-  useEffect(() => {
-    if (spinRefillEndTime <= 0) {
-      setWaterFillPercent(100)
-      return
-    }
-    const updateFill = () => {
-      const now = Date.now()
-      const remaining = spinRefillEndTime - now
-      if (remaining <= 0) {
-        setSpinRefillEndTime(0)
-        setWaterFillPercent(100)
-        localStorage.removeItem("spin_refill_end_time")
-      } else {
-        const percent = Math.max(0, Math.min(100, 100 - (remaining / spinRefillDuration) * 100))
-        setWaterFillPercent(percent)
-      }
-    }
-    updateFill()
-    const interval = setInterval(updateFill, 1000)
-    return () => clearInterval(interval)
-  }, [spinRefillEndTime])
+  // NOTE: no refill countdown — each tier (20/30/40%) is once per 24h, nothing refills.
 
   useEffect(() => {
     try {
@@ -232,21 +193,11 @@ export default function StakeWinPage() {
 
   // ── Shared spin-button state: BOTH spin buttons (wheel center + sticky CTA)
   // use this exact same gate so they always work the same thing.
-  const isSpinDisabled = spinning || waterFillPercent < 100 || !spinSessionActive
-  // Minimalistic refill label — seconds in front of minutes (SS:MM)
-  const formatSpinRefill = (endTime: number) => {
-    const remaining = Math.max(0, endTime - Date.now())
-    if (remaining <= 0) return "00:00"
-    const totalSec = Math.ceil(remaining / 1000)
-    const mins = Math.floor(totalSec / 60)
-    const secs = totalSec % 60
-    return `${String(secs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
-  }
+  // No refill — each tier is once per 24h.
+  const isSpinDisabled = spinning || !spinSessionActive
 
   const doSpin = useCallback(() => {
     if (spinning) return
-    // Same refill gate for both buttons — no spinning while water refills
-    if (waterFillPercent < 100) return
     if (spinStake < 200) return toast({ title: "Min stake ₦200", variant: "destructive" })
     if (spinStake > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
 
@@ -319,10 +270,6 @@ export default function StakeWinPage() {
           setShowSpinCompleteModal(true)
           setSpinSessionActive(false)
         }
-        // Start 5-minute refill timer after spin
-        const refillEndTime = Date.now() + spinRefillDuration
-        setSpinRefillEndTime(refillEndTime)
-        localStorage.setItem("spin_refill_end_time", String(refillEndTime))
       }, 0)
       // Settle on the SERVER so wins survive refresh/dashboard sync.
       // Local state is only updated from the server's authoritative balance.
@@ -361,7 +308,7 @@ export default function StakeWinPage() {
         }
       })()
     }, 3200)
-  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns, waterFillPercent])
+  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
 
   const onStake = () => {
     const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
@@ -573,37 +520,15 @@ export default function StakeWinPage() {
               </div>
             </div>
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
-            {/* Water fill spin button */}
+            {/* Wheel-center spin button — SAME gate/action as sticky CTA below (isSpinDisabled + doSpin).
+                No refill: each tier (20/30/40%) is once per 24h. */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20">
               <div className="relative w-full h-full rounded-full">
-                {/* Water fill background - fills from bottom up */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 rounded-full transition-all duration-1000 ease-out"
-                  style={{
-                    background: `linear-gradient(to top, #06b6d4 ${waterFillPercent}%, transparent ${waterFillPercent}%)`,
-                    height: `${waterFillPercent}%`,
-                    opacity: waterFillPercent > 0 ? 0.4 : 0,
-                  }}
-                />
-                {/* Subtle wave animation on water surface */}
-                {waterFillPercent > 0 && waterFillPercent < 100 && (
-                  <div
-                    className="absolute bottom-0 left-0 right-0 h-2 rounded-full"
-                    style={{
-                      bottom: `${waterFillPercent}%`,
-                      background: `linear-gradient(90deg, transparent, #22d3ee, transparent)`,
-                      opacity: 0.6,
-                      animation: 'hh-wave 1.5s ease-in-out infinite',
-                    }}
-                  />
-                )}
-                {/* Sparkle when full */}
-                {waterFillPercent === 100 && !spinning && (
+                {!spinning && (
                   <div className="absolute inset-0 rounded-full flex items-center justify-center pointer-events-none">
                     <Sparkles className="h-5 w-5 text-amber-300 animate-pulse" style={{ filter: 'drop-shadow(0 0 8px #fbbf24)' }} />
                   </div>
                 )}
-                {/* Main spin button — centered, SAME gate/action as sticky CTA below (isSpinDisabled + doSpin) */}
                 <button
                   onClick={doSpin}
                   disabled={isSpinDisabled}
@@ -611,13 +536,6 @@ export default function StakeWinPage() {
                 >
                   {spinning ? (
                     <span>...</span>
-                  ) : waterFillPercent < 100 ? (
-                    <>
-                      <span className="text-[9px] font-bold">REFILLING</span>
-                      <span className="text-[10px] font-mono font-black">
-                        {formatSpinRefill(spinRefillEndTime)}
-                      </span>
-                    </>
                   ) : (
                     <>
                       <span>TAP TO</span>
@@ -729,14 +647,7 @@ export default function StakeWinPage() {
               disabled={isSpinDisabled}
               className={`rounded-full hh-btn-primary hh-spin-glow font-black px-6 ${isSpinDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              {spinning ? "Spinning..." : waterFillPercent < 100 ? (
-                <>
-                  <span className="text-[10px]">REFILL</span>
-                  <span className="text-[10px] font-mono font-black">
-                    {formatSpinRefill(spinRefillEndTime)}
-                  </span>
-                </>
-              ) : "Tap to Spin"}
+              {spinning ? "Spinning..." : "Tap to Spin"}
             </Button>
           </div>
         </div>
@@ -764,11 +675,6 @@ export default function StakeWinPage() {
         @keyframes hh-spin-glow-btn {
           0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.45), 0 6px 20px rgba(16,185,129,0.35); }
           50% { box-shadow: 0 0 0 8px rgba(16,185,129,0), 0 8px 28px rgba(16,185,129,0.55), 0 0 26px rgba(52,211,153,0.45); }
-        }
-        /* Water wave animation for spin button refill */
-        @keyframes hh-wave {
-          0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.6; }
-          50% { transform: translateX(-50%) scaleX(1.2); opacity: 0.8; }
         }
       `}</style>
     </div>

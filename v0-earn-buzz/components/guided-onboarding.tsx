@@ -32,13 +32,9 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
   const isWelcome = step.id === "welcome";
   const isLast = idx === STEPS.length - 1;
 
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
-
+  // NOTE: no body overflow lock — locking blocks window scrolling, so targets
+  // below the fold can never be pushed up into view and their tooltips + Next
+  // stay hidden. The fixed overlay still covers the screen per step.
   useEffect(() => { if (open) setIdx(0); }, [open]);
 
   useEffect(() => {
@@ -48,20 +44,19 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
         if (!step.target) { setRect(null); setTipPos(null); return; }
         const el = document.querySelector(step.target) as HTMLElement | null;
         if (!el) { setRect(null); setTipPos(null); return; }
-        // Push the target up so the tooltip + Next button stay visible (fixes 2/7 hidden Next)
-        // Use block:'nearest' first, then fine-adjust so card never clips below viewport
+        // Push the dashboard up so THIS step's target + tooltip + Next are all
+        // visible above the fixed bottom nav. Explicit scroll (not scrollIntoView
+        // block:'center') so low targets (referral, play-win) lift out from
+        // behind the nav instead of sitting half-covered.
         try {
-          const vwTmp = window.innerWidth; const vhTmp = window.innerHeight;
-          const estCardH = 156; const gapTmp = 14;
+          const vhTmp = window.innerHeight;
+          const bottomNavReserve = 96; // nav (72) + gap
+          const wantCenterY = (vhTmp - bottomNavReserve) * 0.38; // lift toward upper third
           const r0 = el.getBoundingClientRect();
-          const willFitBelow = vhTmp - r0.bottom >= estCardH + gapTmp + 12;
-          // if won't fit below, scroll target higher (toward top) to make room
-          if (!willFitBelow && r0.top > vhTmp * 0.35) {
-            el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
-            // nudge viewport up a bit to expose Next
-            setTimeout(() => { try { window.scrollBy({ top: -8, behavior: "smooth" }); } catch {} }, 380);
-          } else {
-            el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+          const delta = r0.top + r0.height / 2 - wantCenterY;
+          // Only scroll if the target isn't already in the visible band
+          if (Math.abs(delta) > 24) {
+            window.scrollTo({ top: window.scrollY + delta, behavior: "smooth" });
           }
         } catch {}
         setTimeout(() => {
