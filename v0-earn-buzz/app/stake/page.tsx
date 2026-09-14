@@ -179,15 +179,17 @@ export default function StakeWinPage() {
     } catch {}
   }, [])
 
-  // Check if all spins exhausted on mount - show blocking modal
+  // Check if all spins exhausted — re-evaluate whenever cooldowns load/change
   useEffect(() => {
     const now = Date.now()
+    const hasAnyCooldown = [20, 30, 40].some(pct => (spinCooldowns[pct] || 0) > 0)
+    if (!hasAnyCooldown) return
     const allOnCooldown = [20, 30, 40].every(pct => (spinCooldowns[pct] || 0) > now)
     if (allOnCooldown) {
       setShowExceededModal(true)
       setSpinSessionActive(false)
     }
-  }, []) // Run once on mount
+  }, [spinCooldowns])
 
   // Persist cooldowns on change
   useEffect(() => {
@@ -229,8 +231,23 @@ export default function StakeWinPage() {
   const spinStake = amount
   const spinTierPct = getTierForStake(amount)
 
+  // ── Shared spin-button state: BOTH spin buttons (wheel center + sticky CTA)
+  // use this exact same gate so they always work the same thing.
+  const isSpinDisabled = spinning || waterFillPercent < 100 || !spinSessionActive
+  // Minimalistic refill label — seconds in front of minutes (SS:MM)
+  const formatSpinRefill = (endTime: number) => {
+    const remaining = Math.max(0, endTime - Date.now())
+    if (remaining <= 0) return "00:00"
+    const totalSec = Math.ceil(remaining / 1000)
+    const mins = Math.floor(totalSec / 60)
+    const secs = totalSec % 60
+    return `${String(secs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+  }
+
   const doSpin = useCallback(() => {
     if (spinning) return
+    // Same refill gate for both buttons — no spinning while water refills
+    if (waterFillPercent < 100) return
     if (spinStake < 200) return toast({ title: "Min stake ₦200", variant: "destructive" })
     if (spinStake > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
 
@@ -344,7 +361,7 @@ export default function StakeWinPage() {
         }
       })()
     }, 3200)
-  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
+  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns, waterFillPercent])
 
   const onStake = () => {
     const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
@@ -586,10 +603,10 @@ export default function StakeWinPage() {
                     <Sparkles className="h-5 w-5 text-amber-300 animate-pulse" style={{ filter: 'drop-shadow(0 0 8px #fbbf24)' }} />
                   </div>
                 )}
-                {/* Main spin button */}
+                {/* Main spin button — SAME gate/action as sticky CTA below (isSpinDisabled + doSpin) */}
                 <button
                   onClick={doSpin}
-                  disabled={spinning || waterFillPercent < 100}
+                  disabled={isSpinDisabled}
                   className="hh-spin-glow relative w-full h-full rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20 z-10"
                 >
                   {spinning ? (
@@ -598,14 +615,7 @@ export default function StakeWinPage() {
                     <>
                       <span className="text-[9px] font-bold">REFILLING</span>
                       <span className="text-[10px] font-mono font-black">
-                        {(() => {
-                          const remaining = spinRefillEndTime - Date.now()
-                          if (remaining <= 0) return "00:00"
-                          const totalSec = Math.ceil(remaining / 1000)
-                          const mins = Math.floor(totalSec / 60)
-                          const secs = totalSec % 60
-                          return `${String(secs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
-                        })()}
+                        {formatSpinRefill(spinRefillEndTime)}
                       </span>
                     </>
                   ) : (
@@ -721,21 +731,14 @@ export default function StakeWinPage() {
             </div>
             <Button
               onClick={doSpin}
-              disabled={spinning || !spinSessionActive || waterFillPercent < 100}
-              className={`rounded-full hh-btn-primary hh-spin-glow font-black px-6 ${spinning || !spinSessionActive || waterFillPercent < 100 ? 'opacity-60 cursor-not-allowed' : ''}`}
+              disabled={isSpinDisabled}
+              className={`rounded-full hh-btn-primary hh-spin-glow font-black px-6 ${isSpinDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               {spinning ? "Spinning..." : waterFillPercent < 100 ? (
                 <>
                   <span className="text-[10px]">REFILL</span>
                   <span className="text-[10px] font-mono font-black">
-                    {(() => {
-                      const remaining = spinRefillEndTime - Date.now()
-                      if (remaining <= 0) return "00:00"
-                      const totalSec = Math.ceil(remaining / 1000)
-                      const mins = Math.floor(totalSec / 60)
-                      const secs = totalSec % 60
-                      return `${String(secs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
-                    })()}
+                    {formatSpinRefill(spinRefillEndTime)}
                   </span>
                 </>
               ) : "Tap to Spin"}

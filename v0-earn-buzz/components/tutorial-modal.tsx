@@ -5,8 +5,6 @@ import {
   Gift,
   Send,
   Sparkles,
-  CheckCircle2,
-  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -17,7 +15,6 @@ interface TutorialModalProps {
 export function TutorialModal({ onClose }: TutorialModalProps) {
   const [joinedChannel, setJoinedChannel] = useState(false);
   const [message, setMessage] = useState("");
-  const [finished, setFinished] = useState(false);
   const [animKey, setAnimKey] = useState(0);
 
   // Persist joined state in localStorage
@@ -47,15 +44,15 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
     localStorage.setItem("joined_community", "true");
   };
 
+  // Only 2 stages: Join Channel → Proceed to Dashboard (direct close).
+  // No extra success/confetti stage after Proceed — onClose chains straight
+  // into the onboarding tour guard (dashboard handles GuidedOnboarding).
   const handleProceedToDashboard = () => {
-    setFinished(true);
-    setTimeout(() => {
-      try {
-        onClose();
-      } catch (e) {
-        console.error("onClose error", e);
-      }
-    }, 500);
+    try {
+      onClose();
+    } catch (e) {
+      console.error("onClose error", e);
+    }
   };
 
   return (
@@ -87,10 +84,8 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
           )}
         </div>
 
-        {/* Content Section */}
+        {/* Content Section — 2 stages only: Join Channel → Proceed to Dashboard */}
         <div className="hh-modal-content" key={animKey}>
-          {!finished ? (
-            <>
               <h3 className="hh-modal-title">Welcome to FlashGain 9ja!</h3>
               <p className="hh-modal-description">
                 Earn welcome bonus and daily cash by completing easy tasks. But first, join our WhatsApp channel for updates!
@@ -118,32 +113,6 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
                   </button>
                 </div>
               )}
-            </>
-          ) : (
-            <>
-              <div className="hh-success-animation">
-                <CheckCircle2 className="hh-success-icon" />
-              </div>
-              <h3 className="hh-success-title">Welcome!</h3>
-              <p className="hh-success-text">
-                You're all set to start earning with FlashGain 9ja.
-              </p>
-              <div className="hh-modal-actions">
-                <button onClick={onClose} className="hh-dashboard-btn">
-                  Proceed to Dashboard
-                </button>
-              </div>
-
-              {/* Confetti Animation */}
-              <div className="hh-confetti-container" aria-hidden="true">
-                <span className="hh-confetti hh-confetti-1">🎉</span>
-                <span className="hh-confetti hh-confetti-2">✨</span>
-                <span className="hh-confetti hh-confetti-3">🎈</span>
-                <span className="hh-confetti hh-confetti-4">🌟</span>
-                <span className="hh-confetti hh-confetti-5">⭐</span>
-              </div>
-            </>
-          )}
         </div>
       </div>
 

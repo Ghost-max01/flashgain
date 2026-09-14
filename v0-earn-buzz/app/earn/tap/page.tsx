@@ -861,9 +861,21 @@ export default function TapAndEarnPage() {
             <button
               onClick={handleTap}
               disabled={autoActive || (tapExhaustUntil !== null && tapExhaustLeft > 0) || showRapidTapWarning || state.energy <= 0}
+              style={{ overflow: "hidden" }}
               className={`te-orb hh-orb-sm ${state.energy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`}
               title="Tap to earn coins"
             >
+              {/* ── Water refill: bottom→up, time-based (5min left = half) ── */}
+              {tapExhaustUntil !== null && tapExhaustLeft > 0 && (() => {
+                const fill = Math.max(0, Math.min(100, 100 - (tapExhaustLeft / TAP_EXHAUST_COOLDOWN_MS) * 100));
+                return (
+                  <span className="te-water" aria-hidden="true" style={{ height: `${fill}%` }}>
+                    <span className="te-water-wave te-water-wave-a" />
+                    <span className="te-water-wave te-water-wave-b" />
+                    <span className="te-water-shimmer" />
+                  </span>
+                );
+              })()}
               {/* Glass shine */}
               <div className="te-orb-shine"></div>
 
@@ -875,7 +887,7 @@ export default function TapAndEarnPage() {
                     strokeWidth={1.5}
                   />
                 </div>
-                <span className="te-tap-label">TAP</span>
+                <span className="te-tap-label">{tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP"}</span>
               </div>
 
               {/* Orbiting stars */}
@@ -1846,6 +1858,25 @@ export default function TapAndEarnPage() {
           opacity: 0.25;
           pointer-events: none;
         }
+
+        /* Calm water refill inside round orb (bottom → up, time-based) */
+        .te-water { position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+          background: linear-gradient(to top, rgba(14,165,233,0.9) 0%, rgba(34,211,238,0.65) 55%, rgba(34,211,238,0.35) 100%);
+          transition: height 1s linear; pointer-events: none; z-index: 1; }
+        .te-orb-center { z-index: 2; }
+        .te-orb-shine { z-index: 3; }
+        .te-water-wave { position: absolute; top: -7px; left: -50%; width: 200%; height: 14px; pointer-events: none; }
+        .te-water-wave-a { background: radial-gradient(ellipse 22px 7px at 22px 7px, rgba(255,255,255,0.45) 60%, transparent 61%);
+          background-size: 44px 14px; background-repeat: repeat-x; opacity: 0.55;
+          animation: te-water-drift 2.8s ease-in-out infinite; }
+        .te-water-wave-b { background: radial-gradient(ellipse 30px 8px at 30px 8px, rgba(186,230,253,0.35) 60%, transparent 61%);
+          background-size: 60px 14px; background-repeat: repeat-x; opacity: 0.4; top: -5px;
+          animation: te-water-drift 4.2s ease-in-out infinite reverse; }
+        .te-water-shimmer { position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(180deg, rgba(255,255,255,0.14), transparent 40%);
+          animation: te-water-bob 3.2s ease-in-out infinite; }
+        @keyframes te-water-drift { 0%,100% { transform: translateX(0); } 50% { transform: translateX(22px); } }
+        @keyframes te-water-bob { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
 
         /* Orb center content */
         .te-orb-center {

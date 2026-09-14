@@ -181,6 +181,8 @@ export default function DashboardPage() {
   }, [perPlanTaskDone]);
   const [autoPlanCooldowns, setAutoPlanCooldowns] = useState<Record<string, number>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
+  // Spin & Win 3/3 exhausted guard — popup when entering from dashboard
+  const [showSpinExhaustedPopup, setShowSpinExhaustedPopup] = useState(false);
   // Auto-tap toggle-off warning
   const [showAutoToggleWarning, setShowAutoToggleWarning] = useState(false);
   const confirmAutoToggleOff = useCallback(() => {
@@ -189,6 +191,48 @@ export default function DashboardPage() {
     setAutoExpiresAt(null);
     toast({ title: "Auto tap OFF" });
   }, [toast]);
+  // ── Spin entry guard: if 3/3 exhausted, show popup instead of navigating ──
+  const isSpinExhausted = useCallback(() => {
+    try {
+      const now = Date.now();
+      // 1) Stake per-tier cooldowns (20/30/40) — primary source
+      try {
+        const raw = localStorage.getItem("spin_tier_cooldowns");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const getExp = (pct: number) => {
+            const v: any = (parsed as any)[pct];
+            if (typeof v === "number") return v;
+            if (v && typeof v === "object") {
+              const vals = Object.values(v) as number[];
+              return vals.length ? Math.max(...vals) : 0;
+            }
+            return 0;
+          };
+          const hasAny = [20, 30, 40].some((p) => getExp(p) > 0);
+          if (hasAny && [20, 30, 40].every((p) => getExp(p) > now)) return true;
+        }
+      } catch {}
+      // 2) Legacy spin page timestamps (3 spins / 24h)
+      try {
+        const stored = localStorage.getItem("spinTimestamps");
+        if (stored) {
+          const ts: number[] = JSON.parse(stored);
+          const recent = Array.isArray(ts) ? ts.filter((t) => now - t < 24 * 60 * 60 * 1000) : [];
+          if (recent.length >= 3) return true;
+        }
+      } catch {}
+      return false;
+    } catch { return false; }
+  }, []);
+  const handlePlayWinClick = useCallback((e: React.MouseEvent) => {
+    if (isSpinExhausted()) {
+      e.preventDefault();
+      setShowSpinExhaustedPopup(true);
+    } else {
+      router.push("/stake");
+    }
+  }, [isSpinExhausted, router]);
   // ── Trust Score (compounding) ──
   const [trustScore, setTrustScore] = useState(0);
   const [trustMeta, setTrustMeta] = useState<any>(null);
@@ -975,9 +1019,11 @@ export default function DashboardPage() {
     const link = `${window.location.origin}/register?ref=${realCode}`;
     navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
   }, [autoRefCode, userData, toast]);
+  // Minimalistic auto timer — seconds in front of minutes (SS:MM, or SS:MM:HH)
   const formatAutoLeft = (ms:number) => {
     const s = Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
-    if (h>0) return `${h}h ${m}m ${sec}s`; return `${m}m ${sec}s`;
+    if (h>0) return `${String(sec).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(h).padStart(2,'0')}`;
+    return `${String(sec).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
   };
 
   // Animate balance changes
@@ -2189,9 +2235,22 @@ export default function DashboardPage() {
                   <div className={`te-halo ${tapEnergy > 0 && !autoActive ? "te-halo-active" : "te-halo-inactive"}`}></div>
                   <div className="te-ring te-ring-outer" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
                   <div className="te-ring te-ring-inner" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
-                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0) || showRapidTapWarning} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
+                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0) || showRapidTapWarning} style={{ overflow: "hidden" }} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
+                    {/* ── Water refill: fills bottom→up based on exhaust cooldown ──
+                        fill% = 100 - (left / 10min * 100). At 5min left → 50%.
+                        Starts the moment taps are used up (tapEnergy 0 → exhaust). */}
+                    {tapExhaustUntil !== null && tapExhaustLeft > 0 && (() => {
+                      const fill = Math.max(0, Math.min(100, 100 - (tapExhaustLeft / TAP_EXHAUST_COOLDOWN_MS) * 100));
+                      return (
+                        <span className="te-water" aria-hidden="true" style={{ height: `${fill}%` }}>
+                          <span className="te-water-wave te-water-wave-a" />
+                          <span className="te-water-wave te-water-wave-b" />
+                          <span className="te-water-shimmer" />
+                        </span>
+                      );
+                    })()}
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
-                    <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : "TAP"}</span></div>
+                    <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
                   </button>
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
                   {/* Rapid tap warning — same design as "100" popup but red, slower. Blocks tapping until it clears. */}
@@ -2363,8 +2422,10 @@ export default function DashboardPage() {
 
         {/* Support card moved below Referral card per request */}
 
-        {/* ── PLAY & WIN — STAKE ── */}
-        <Link data-tour="play-win" href="/stake" className="block hh-entry-4">
+        {/* ── PLAY & WIN — STAKE (guarded: 3/3 exhausted shows popup) ── */}
+        <div data-tour="play-win" onClick={handlePlayWinClick} role="button" tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter") (handlePlayWinClick as any)(e); }}
+          className="block hh-entry-4 cursor-pointer">
           <div className="hh-card relative overflow-hidden bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-600 border-amber-500/30 !p-4 flex items-center justify-between hover:from-amber-600 hover:to-emerald-600 transition cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
@@ -2377,7 +2438,7 @@ export default function DashboardPage() {
             </div>
             <span className="px-4 py-2 rounded-full bg-white text-emerald-700 font-black text-sm shadow-lg">Play →</span>
           </div>
-        </Link>
+        </div>
 
         {/* ── REFERRAL CARD ── */}
         <div data-tour="referral" className="hh-entry-5">
@@ -2461,6 +2522,33 @@ export default function DashboardPage() {
       {showLiveChat && (
         <div className="hh-live-chat-modal">
           <LiveChat onClose={() => setShowLiveChat(false)} />
+        </div>
+      )}
+
+      {/* ── SPIN 3/3 EXHAUSTED POPUP (dashboard → spin guard) ── */}
+      {showSpinExhaustedPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4 text-center">
+            <div className="hh-popup-header flex flex-col items-center gap-2">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 flex items-center justify-center">
+                <Trophy className="h-7 w-7 text-amber-400" />
+              </div>
+              <h2 className="text-xl font-black text-white tracking-tight">Spins Exhausted</h2>
+              <span className="text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">3/3 Used</span>
+            </div>
+            <p className="text-sm text-white/80 mt-4 leading-relaxed">
+              You&apos;ve exceeded your <span className="font-black text-amber-300">3/3 spins</span> for today.
+            </p>
+            <p className="text-xs text-white/50 mt-2">
+              Please come back tomorrow for more spins. Your balance and rewards are safe.
+            </p>
+            <button
+              onClick={() => setShowSpinExhaustedPopup(false)}
+              className="hh-popup-btn hh-popup-btn-confirm w-full mt-6"
+            >
+              Got it — I&apos;ll come back tomorrow
+            </button>
+          </div>
         </div>
       )}
 
@@ -3447,6 +3535,24 @@ export default function DashboardPage() {
         .hh-orb-stage-sm .te-ring-inner { inset: -12px; }
         .hh-orb-sm { width: 118px !important; height: 118px !important; }
         .te-orb-locked { cursor: not-allowed; filter: brightness(0.85); }
+        /* ── Calm water refill inside round orb (bottom → up, time-based) ── */
+        .te-water { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; overflow: visible;
+          background: linear-gradient(to top, rgba(14,165,233,0.9) 0%, rgba(34,211,238,0.65) 55%, rgba(34,211,238,0.35) 100%);
+          transition: height 1s linear; pointer-events: none; z-index: 1; }
+        .te-orb-center { z-index: 2; }
+        .te-orb-shine { z-index: 3; }
+        .te-water-wave { position: absolute; top: -7px; left: -50%; width: 200%; height: 14px; pointer-events: none; }
+        .te-water-wave-a { background: radial-gradient(ellipse 22px 7px at 22px 7px, rgba(255,255,255,0.45) 60%, transparent 61%);
+          background-size: 44px 14px; background-repeat: repeat-x; opacity: 0.55;
+          animation: te-water-drift 2.8s ease-in-out infinite; }
+        .te-water-wave-b { background: radial-gradient(ellipse 30px 8px at 30px 8px, rgba(186,230,253,0.35) 60%, transparent 61%);
+          background-size: 60px 14px; background-repeat: repeat-x; opacity: 0.4; top: -5px;
+          animation: te-water-drift 4.2s ease-in-out infinite reverse; }
+        .te-water-shimmer { position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(180deg, rgba(255,255,255,0.14), transparent 40%);
+          animation: te-water-bob 3.2s ease-in-out infinite; }
+        @keyframes te-water-drift { 0%,100% { transform: translateX(0); } 50% { transform: translateX(22px); } }
+        @keyframes te-water-bob { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
         .hh-icon-ring { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(245,158,11,0.2)); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; }
         .hh-toggle { position: relative; width: 52px; height: 28px; border-radius: 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.3s ease; flex-shrink: 0; }
         .hh-toggle-active { background: linear-gradient(135deg, #10b981, #059669); border-color: rgba(16,185,129,0.3); }

@@ -23,12 +23,13 @@ import {
   User,
   Clock,
   Star,
+  Target,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/referral";
 import { VIP_AMOUNT, VIP_KEY, VIP_REDEEMED_KEY, REFERRAL_MIN_WITHDRAW, loadVip, saveVip } from "@/lib/referral-vip";
-import { getLevel } from "@/lib/trust-score";
+import { getLevel, getProgress, getNextLabel, TRUST_LEVELS, type TrustMeta, computeScore, loadMeta } from "@/lib/trust-score";
 import { Smartphone, Phone } from "lucide-react";
 
 interface UserData {
@@ -60,6 +61,11 @@ function ReferContent() {
   const [activeMessage, setActiveMessage] = useState("");
   const [animatedEarnings, setAnimatedEarnings] = useState(0);
   const [isEarningsChanging, setIsEarningsChanging] = useState(false);
+  // Trust score / rank state
+  const [trustScore, setTrustScore] = useState(0);
+  const [currentLevel, setCurrentLevel] = useState<TRUST_LEVELS[number]>(TRUST_LEVELS[0]);
+  const [nextLevel, setNextLevel] = useState<{ label: string; need: number; color: string } | null>(null);
+  const [progress, setProgress] = useState(0);
   // VIP airtime state
   const [vip, setVip] = useState<{ available: number; redeemed: boolean; phone?: string; network?: string; date?: string; history: any[] }>({ available: 500, redeemed: false, history: [] });
   const [vipPhone, setVipPhone] = useState("");
@@ -341,6 +347,22 @@ function ReferContent() {
         setPendingCount(data.pending_count || 0);
 
         setAnimatedEarnings(data.referral_balance || 0);
+
+        // Compute trust score / rank
+        try {
+          const meta = loadMeta();
+          const score = computeScore(meta);
+          setTrustScore(score);
+          const lvl = getLevel(score);
+          setCurrentLevel(lvl);
+          setProgress(getProgress(score));
+          const nxt = getNextLabel(score);
+          if (nxt) {
+            setNextLevel({ label: nxt.label, need: nxt.need, color: TRUST_LEVELS.find(l => l.label === nxt.label)?.color || lvl.color });
+          } else {
+            setNextLevel(null);
+          }
+        } catch {}
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -858,6 +880,55 @@ function ReferContent() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Your Rank — Trust Score Level */}
+        <div className="hh-card hh-entry-5b">
+          <div className="hh-section-title text-center mb-5">Your Rank</div>
+          <div className="hh-rank-card">
+            <div className="hh-rank-main">
+              <div className="hh-rank-icon" style={{ background: `linear-gradient(135deg, ${currentLevel.color}, ${currentLevel.color}dd)` }}>
+                <Target className="h-7 w-7 text-white" />
+              </div>
+              <div className="hh-rank-info">
+                <div className="hh-rank-label">Current Level</div>
+                <div className="hh-rank-name" style={{ color: currentLevel.color }}>
+                  {currentLevel.label}
+                </div>
+                <div className="hh-rank-score">Trust Score: <span className="font-black">{trustScore}</span></div>
+              </div>
+              {nextLevel && (
+                <div className="hh-rank-next" style={{ borderColor: nextLevel.color }}>
+                  <div className="hh-rank-next-label">Next: {nextLevel.label}</div>
+                  <div className="hh-rank-next-need">Need <span className="font-black">{nextLevel.need}</span> more points</div>
+                </div>
+              )}
+            </div>
+            {nextLevel && (
+              <div className="hh-rank-progress">
+                <div className="hh-rank-progress-bar">
+                  <div
+                    className="hh-rank-progress-fill"
+                    style={{
+                      width: `${progress}%`,
+                      background: `linear-gradient(90deg, ${currentLevel.color}, ${nextLevel.color})`,
+                    }}
+                  ></div>
+                </div>
+                <div className="hh-rank-progress-labels">
+                  <span>{currentLevel.label}</span>
+                  <span>{progress}%</span>
+                  <span>{nextLevel.label}</span>
+                </div>
+              </div>
+            )}
+            {!nextLevel && (
+              <div className="hh-rank-max">
+                <Sparkles className="h-5 w-5 text-amber-300" />
+                <span className="font-bold text-amber-300">Maximum Level Reached!</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1877,8 +1948,113 @@ function ReferContent() {
         .hh-entry-5 {
           animation: hh-entry 0.5s ease-out 0.4s both;
         }
+        .hh-entry-5b {
+          animation: hh-entry 0.5s ease-out 0.45s both;
+        }
         .hh-entry-6 {
           animation: hh-entry 0.5s ease-out 0.5s both;
+        }
+
+        /* ─── RANK CARD ─── */
+        .hh-rank-card {
+          background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 20px;
+          padding: 20px;
+        }
+        .hh-rank-main {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .hh-rank-icon {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .hh-rank-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .hh-rank-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 4px;
+        }
+        .hh-rank-name {
+          font-size: 24px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .hh-rank-score {
+          font-size: 12px;
+          color: rgba(255,255,255,0.6);
+          margin-top: 4px;
+          font-family: "JetBrains Mono", monospace;
+        }
+        .hh-rank-next {
+          background: rgba(255,255,255,0.03);
+          border: 1px solid;
+          border-radius: 12px;
+          padding: 12px 16px;
+          min-width: 140px;
+        }
+        .hh-rank-next-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 2px;
+        }
+        .hh-rank-next-need {
+          font-size: 14px;
+          font-weight: 700;
+          color: white;
+          font-family: "JetBrains Mono", monospace;
+        }
+        .hh-rank-progress {
+          margin-top: 8px;
+        }
+        .hh-rank-progress-bar {
+          height: 8px;
+          background: rgba(255,255,255,0.08);
+          border-radius: 4px;
+          overflow: hidden;
+          position: relative;
+        }
+        .hh-rank-progress-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.8s ease-out;
+          box-shadow: 0 0 12px rgba(16,185,129,0.5);
+        }
+        .hh-rank-progress-labels {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 8px;
+          font-size: 10px;
+          color: rgba(255,255,255,0.5);
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+        .hh-rank-max {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 12px;
+          padding: 12px;
+          background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(251,191,36,0.05));
+          border: 1px solid rgba(245,158,11,0.3);
+          border-radius: 12px;
         }
 
         @keyframes hh-entry {
