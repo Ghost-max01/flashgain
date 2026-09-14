@@ -677,7 +677,8 @@ export default function TapAndEarnPage() {
       return;
     }
     const plan = AUTO_PLANS.find(p=>p.id===id)!;
-    // Server gate: free1h still free but requires server expiry before activation.
+    // Server gate: free1h still free but requires server confirm before activation.
+    // Expiry comes from PLAN duration (timer/start returns a 60s claim timer).
     try {
       const raw = localStorage.getItem("tivexx-user");
       const u = raw ? JSON.parse(raw) : null;
@@ -690,9 +691,10 @@ export default function TapAndEarnPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) return;
-      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
     } catch { return; }
-    setAutoPlan(id); setAutoTapsDone(0); setAutoStartedAt(Date.now()); setAutoActive(true);
+    const startedFree = Date.now();
+    setAutoExpiresAt(startedFree + plan.durationMs);
+    setAutoPlan(id); setAutoTapsDone(0); setAutoStartedAt(startedFree); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
     if (id !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
@@ -741,7 +743,7 @@ export default function TapAndEarnPage() {
       } catch { return; }
       return;
     }
-    // Server-gated start: confirm via timer/start expiry (paid plans already server-verified above)
+    // Server-gated start: confirm via timer/start, expiry from PLAN duration (not 60s claim timer)
     try {
       const uid = getUid();
       if (!uid) return;
@@ -752,9 +754,10 @@ export default function TapAndEarnPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) return;
-      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
     } catch { return; }
-    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoStartedAt(Date.now()); setAutoActive(true);
+    const startedPaid = Date.now();
+    setAutoExpiresAt(startedPaid + plan.durationMs);
+    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoStartedAt(startedPaid); setAutoActive(true);
     if (reqPlan !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
       const next = { ...autoPlanCooldowns, [reqPlan]: exp };

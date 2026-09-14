@@ -24,6 +24,10 @@ import {
   Clock,
   Star,
   Target,
+  Flame,
+  ShieldCheck,
+  Trophy,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -883,52 +887,61 @@ function ReferContent() {
           </div>
         </div>
 
-        {/* Your Rank — Trust Score Level */}
-        <div className="hh-card hh-entry-5b">
-          <div className="hh-section-title text-center mb-5">Your Rank</div>
-          <div className="hh-rank-card">
-            <div className="hh-rank-main">
-              <div className="hh-rank-icon" style={{ background: `linear-gradient(135deg, ${currentLevel.color}, ${currentLevel.color}dd)` }}>
-                <Target className="h-7 w-7 text-white" />
-              </div>
-              <div className="hh-rank-info">
-                <div className="hh-rank-label">Current Level</div>
-                <div className="hh-rank-name" style={{ color: currentLevel.color }}>
-                  {currentLevel.label}
-                </div>
-                <div className="hh-rank-score">Trust Score: <span className="font-black">{trustScore}</span></div>
-              </div>
-              {nextLevel && (
-                <div className="hh-rank-next" style={{ borderColor: nextLevel.color }}>
-                  <div className="hh-rank-next-label">Next: {nextLevel.label}</div>
-                  <div className="hh-rank-next-need">Need <span className="font-black">{nextLevel.need}</span> more points</div>
-                </div>
-              )}
-            </div>
-            {nextLevel && (
-              <div className="hh-rank-progress">
-                <div className="hh-rank-progress-bar">
-                  <div
-                    className="hh-rank-progress-fill"
-                    style={{
-                      width: `${progress}%`,
-                      background: `linear-gradient(90deg, ${currentLevel.color}, ${nextLevel.color})`,
-                    }}
-                  ></div>
-                </div>
-                <div className="hh-rank-progress-labels">
-                  <span>{currentLevel.label}</span>
-                  <span>{progress}%</span>
-                  <span>{nextLevel.label}</span>
-                </div>
-              </div>
-            )}
-            {!nextLevel && (
-              <div className="hh-rank-max">
-                <Sparkles className="h-5 w-5 text-amber-300" />
-                <span className="font-bold text-amber-300">Maximum Level Reached!</span>
-              </div>
-            )}
+        {/* Your Rank — below Your Performance, above Pro Tip (image style, Beginner→Elite) */}
+        <div className="hh-entry-5b">
+          <div className="hh-rank2-title">YOUR RANK</div>
+          <div className="hh-rank2-card">
+            {(() => {
+              const refCount = userData?.referral_count || 0;
+              const levels = [
+                { label: "Free", color: "#64748b", Icon: Star },
+                { label: "Beginner", color: "#10b981", Icon: Flame },
+                { label: "Trusted", color: "#059669", Icon: ShieldCheck },
+                { label: "Verified", color: "#7c3aed", Icon: Trophy },
+                { label: "Elite", color: "#f59e0b", Icon: Crown },
+              ];
+              const currentIdx = Math.max(0, levels.findIndex(l => l.label === (currentLevel as any)?.label));
+              const CurrentIcon = levels[currentIdx]?.Icon || Star;
+              return (
+                <>
+                  <div className="hh-rank2-top">
+                    <div className="hh-rank2-badge" style={{ background: `${levels[currentIdx]?.color}26`, borderColor: `${levels[currentIdx]?.color}55` }}>
+                      <CurrentIcon className="h-7 w-7" style={{ color: levels[currentIdx]?.color }} />
+                    </div>
+                    <div className="hh-rank2-head">
+                      <div className="hh-rank2-name">{levels[currentIdx]?.label} Rank</div>
+                      <div className="hh-rank2-sub">₦500/ref • Trust {trustScore}</div>
+                    </div>
+                    <div className="hh-rank2-count">{refCount} referrals</div>
+                  </div>
+                  <div className="hh-rank2-bar">
+                    <div className="hh-rank2-fill" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${levels[currentIdx]?.color}, ${nextLevel?.color || levels[currentIdx]?.color})` }} />
+                  </div>
+                  <div className="hh-rank2-meta">
+                    <span>{refCount} referrals</span>
+                    {nextLevel ? (
+                      <span className="hh-rank2-need">{nextLevel.need} needed for {nextLevel.label}</span>
+                    ) : (
+                      <span className="hh-rank2-need">Max rank reached 🎉</span>
+                    )}
+                  </div>
+                  <div className="hh-rank2-levels">
+                    {levels.map((l, i) => {
+                      const active = i === currentIdx;
+                      const done = i < currentIdx;
+                      return (
+                        <div key={l.label} className={`hh-rank2-lvl ${active ? "hh-rank2-lvl-active" : ""}`} style={active ? { borderColor: `${l.color}88`, boxShadow: `0 0 0 1px ${l.color}44, 0 8px 22px ${l.color}22` } : undefined}>
+                          <div className="hh-rank2-lvl-ico" style={{ background: `${l.color}${active || done ? "2e" : "14"}`, opacity: active || done ? 1 : 0.45 }}>
+                            <l.Icon className="h-5 w-5" style={{ color: l.color }} />
+                          </div>
+                          <span className="hh-rank2-lvl-label" style={{ opacity: active || done ? 1 : 0.45 }}>{l.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -1955,7 +1968,30 @@ function ReferContent() {
           animation: hh-entry 0.5s ease-out 0.5s both;
         }
 
-        /* ─── RANK CARD ─── */
+        /* ─── RANK CARD v2 (image style: YOUR RANK + level boxes) ─── */
+        .hh-rank2-title { font-size: 15px; font-weight: 800; letter-spacing: 0.06em; color: rgba(255,255,255,0.55); margin: 2px 2px 8px; }
+        .hh-rank2-card { background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+          border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 18px; }
+        .hh-rank2-top { display: flex; align-items: center; gap: 12px; }
+        .hh-rank2-badge { width: 60px; height: 60px; border-radius: 18px; border: 1px solid;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hh-rank2-head { flex: 1; min-width: 0; }
+        .hh-rank2-name { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.02em; line-height: 1.15; }
+        .hh-rank2-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; font-family: "JetBrains Mono", monospace; }
+        .hh-rank2-count { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); white-space: nowrap; }
+        .hh-rank2-bar { height: 10px; background: rgba(255,255,255,0.07); border-radius: 999px; overflow: hidden; margin-top: 16px; }
+        .hh-rank2-fill { height: 100%; border-radius: 999px; transition: width 0.8s ease-out; }
+        .hh-rank2-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px;
+          font-size: 12px; color: rgba(255,255,255,0.5); }
+        .hh-rank2-need { color: #34d399; font-weight: 700; }
+        .hh-rank2-levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 16px; }
+        .hh-rank2-lvl { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);
+          border-radius: 18px; padding: 12px 4px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .hh-rank2-lvl-ico { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .hh-rank2-lvl-label { font-size: 10px; font-weight: 700; color: white; }
+        .hh-rank2-lvl-active { background: rgba(255,255,255,0.045); }
+
+        /* ─── RANK CARD (legacy) ─── */
         .hh-rank-card {
           background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
           border: 1px solid rgba(255,255,255,0.08);

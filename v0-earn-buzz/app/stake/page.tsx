@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Sparkles, Zap, Trophy, Clock, Users, Flame, Crown, Gift, TrendingUp, ShieldCheck, Timer, Coins, Lock, AlertTriangle } from "lucide-react"
+import { Sparkles, Zap, Trophy, Users, Flame, Crown, ShieldCheck, Timer, Coins, Lock, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 
@@ -303,14 +302,15 @@ export default function StakeWinPage() {
       setSpinResult(target)
       setShowSpinResult(true)
       setSpins(s => s + 1)
-      // Auto-advance to next available tier (compute fresh after cooldown set)
+      // Auto-advance to next available tier — from the just-written
+      // newCooldowns (not stale spinCooldowns closure), 20% first order.
       setTimeout(() => {
         const now = Date.now()
         const updatedTiers = [20, 30, 40].filter(pct => {
-          const expiry = (spinCooldowns[pct] || 0)
+          const expiry = (newCooldowns[pct] || 0)
           return expiry <= now
         })
-        const nextTier = updatedTiers.find(t => t !== tierPct)
+        const nextTier = updatedTiers[0]
         if (nextTier) {
           const stakeAmt = Math.floor(balance * nextTier / 100)
           setAmount(stakeAmt)
@@ -603,11 +603,11 @@ export default function StakeWinPage() {
                     <Sparkles className="h-5 w-5 text-amber-300 animate-pulse" style={{ filter: 'drop-shadow(0 0 8px #fbbf24)' }} />
                   </div>
                 )}
-                {/* Main spin button — SAME gate/action as sticky CTA below (isSpinDisabled + doSpin) */}
+                {/* Main spin button — centered, SAME gate/action as sticky CTA below (isSpinDisabled + doSpin) */}
                 <button
                   onClick={doSpin}
                   disabled={isSpinDisabled}
-                  className="hh-spin-glow relative w-full h-full rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20 z-10"
+                  className="hh-spin-glow-center relative w-full h-full rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20 z-10"
                 >
                   {spinning ? (
                     <span>...</span>
@@ -679,18 +679,13 @@ export default function StakeWinPage() {
             <p className="text-xs text-white/50 text-center mb-6">
               Each tier (20%, 30%, 40%) can be spun once per 24 hours. Come back tomorrow for more spins!
             </p>
+            {/* Sole exit route: 3/3 popup → dashboard (no home/back elsewhere) */}
             <div className="flex gap-3">
               <button
                 onClick={() => router.push("/dashboard")}
                 className="hh-popup-btn hh-popup-btn-confirm flex-1"
               >
                 Back to Dashboard
-              </button>
-              <button
-                onClick={() => setShowSpinCompleteModal(false)}
-                className="hh-popup-btn hh-popup-btn-cancel flex-1"
-              >
-                Cancel
               </button>
             </div>
           </div>
@@ -756,6 +751,14 @@ export default function StakeWinPage() {
         }
         .hh-spin-glow { animation: hh-spin-glow 1.6s ease-in-out infinite; }
         .hh-spin-glow:disabled { animation: none; opacity: 0.6; }
+        /* Wheel-center button: glow WITHOUT translate so it stays dead-center
+           (parent wrapper already handles -translate-x/y centering). */
+        @keyframes hh-spin-glow-center {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.55), 0 6px 20px rgba(245,158,11,0.45); transform: scale(1); }
+          50% { box-shadow: 0 0 0 10px rgba(245,158,11,0), 0 8px 28px rgba(245,158,11,0.7), 0 0 36px rgba(251,191,36,0.55); transform: scale(1.03); }
+        }
+        .hh-spin-glow-center { animation: hh-spin-glow-center 1.6s ease-in-out infinite; }
+        .hh-spin-glow-center:disabled { animation: none; opacity: 0.6; }
         /* thumb-zone button is not centered with translate, so override to keep glow without translate */
         .hh-spin-glow.hh-btn-primary { animation: hh-spin-glow-btn 1.6s ease-in-out infinite; }
         @keyframes hh-spin-glow-btn {

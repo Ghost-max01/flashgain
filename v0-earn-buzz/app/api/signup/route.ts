@@ -83,29 +83,76 @@ export async function POST(request: NextRequest) {
       else console.warn(`[signup] referral_code not found: ${normalizedRef}`)
     }
 
-    // 4. Insert into users table (hashed password; legacy column kept empty)
+    // 4. Insert into users table.
+    // Supabase Auth already stores the real credential; the users-table hash
+    // columns may not exist yet (schema cache: "could not find the password_hash
+    // column"). Try full row first, fall back to minimal columns so signup never
+    // breaks when the migration hasn't been applied.
     const salt = randomBytes(16).toString("hex")
     const password_hash = createHash("sha256").update(salt + password).digest("hex")
-    const { data: newUser, error: insertError } = await supabase
-      .from("users")
-      .insert({
-        id: userId,
-        name,
-        email,
-        password: "",
-        password_hash,
-        password_salt: salt,
-        referral_code: newReferralCode,
-        referred_by: referrerId,
-        referral_count: 0, // Initialize count
-        referral_balance: 0, // Initialize balance
-        balance: 5000, // Initialize main balance with 5,000 (welcome bonus)
-      })
-      .select("id, name, email, referral_code")
-      .single()
-
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    const fullRow: Record<string, unknown> = {
+      id: userId,
+      name,
+      email,
+      password: "",
+      password_hash,
+      password_salt: salt,
+      referral_code: newReferralCode,
+      referred_by: referrerId,
+      referral_count: 0, // Initialize count
+      referral_balance: 0, // Initialize balance
+      balance: 5000, // Initialize main balance with 5,000 (welcome bonus)
+    }
+    const minimalRow: Record<string, unknown> = {
+      id: userId,
+      name,
+      email,
+      referral_code: newReferralCode,
+      referred_by: referrerId,
+      referral_count: 0,
+      referral_balance: 0,
+      balance: 5000,
+    }
+    // If the legacy `password` column is also missing, drop it too on retry.
+    const bareRow: Record<string, unknown> = { ...minimalRow }
+    delete (bareRow as any).password
+    let newUser: any = null
+    {
+      const attempt = await supabase
+        .from("users")
+        .insert(fullRow)
+        .select("id, name, email, referral_code")
+        .single()
+      if (!attempt.error) {
+        newUser = attempt.data
+      } else {
+        const msg = String((attempt.error as any)?.message || "")
+        const isSchemaCache = /schema cache|password_hash|password_salt|column/i.test(msg)
+        console.warn(`[signup] full insert failed (${msg}) — retrying with minimal columns`)
+        void isSchemaCache
+        const retry = await supabase
+          .from("users")
+          .insert({ ...minimalRow, password: "" })
+          .select("id, name, email, referral_code")
+          .single()
+        if (!retry.error) {
+          newUser = retry.data
+        } else {
+          const msg2 = String((retry.error as any)?.message || "")
+          console.warn(`[signup] minimal insert failed (${msg2}) — retrying bare columns`)
+          const retry2 = await supabase
+            .from("users")
+            .insert(bareRow)
+            .select("id, name, email, referral_code")
+            .single()
+          if (retry2.error) {
+            // Run: ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash text;
+            //      ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_salt text;
+            return NextResponse.json({ error: retry2.error.message }, { status: 500 })
+          }
+          newUser = retry2.data
+        }
+      }
     }
 
     // 5. Record referral: count increments immediately, but amount stays pending

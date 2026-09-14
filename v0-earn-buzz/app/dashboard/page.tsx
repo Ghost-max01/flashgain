@@ -901,7 +901,9 @@ export default function DashboardPage() {
       return;
     }
     const plan = AUTO_PLANS.find(p=>p.id===id)!;
-    // Server gate for free1h: POST /api/timer/start (server expiry) before activation.
+    // Server gate for free1h: POST /api/timer/start before activation.
+    // NOTE: /api/timer/start issues a 60s CLAIM timer — auto expiry must come
+    // from the PLAN duration (20min/24h/...) or auto dies in 60s ("not working").
     try {
       const uid = (userData as any)?.id || (userData as any)?.userId || "";
       if (!uid) return;
@@ -912,9 +914,10 @@ export default function DashboardPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) return;
-      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
     } catch { return; }
-    setAutoPlan(id); setAutoTapsDone(0); setAutoStartedAt(Date.now()); setAutoActive(true);
+    const startedFree = Date.now();
+    setAutoExpiresAt(startedFree + plan.durationMs);
+    setAutoPlan(id); setAutoTapsDone(0); setAutoStartedAt(startedFree); setAutoActive(true);
     if (id==="free1h") setAutoFirstFreeUsed(true);
     // lock this plan for 1 week after starting (paid packages)
     if (id !== "free1h") {
@@ -986,7 +989,7 @@ export default function DashboardPage() {
       }
       return;
     }
-    // start auto — server-gated (timer/start expiry); no pure-localStorage unlock.
+    // start auto — server-gated; expiry from PLAN duration (not the 60s claim timer).
     try {
       const uid = (userData as any)?.id || (userData as any)?.userId || "";
       if (!uid) return;
@@ -997,9 +1000,10 @@ export default function DashboardPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) { toast({ title: "Server denied", description: "Could not confirm unlock", variant: "destructive" }); return; }
-      setAutoExpiresAt(new Date(data.timerEndsAt || new Date(Date.now()+plan.durationMs).toISOString()).getTime());
     } catch { return; }
-    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoStartedAt(Date.now()); setAutoActive(true);
+    const startedPaid = Date.now();
+    setAutoExpiresAt(startedPaid + plan.durationMs);
+    setAutoPlan(reqPlan); setAutoTapsDone(0); setAutoStartedAt(startedPaid); setAutoActive(true);
     // lock this plan for 1 week
     if (reqPlan !== "free1h") {
       const exp = Date.now() + AUTO_PLAN_COOLDOWN_MS;
