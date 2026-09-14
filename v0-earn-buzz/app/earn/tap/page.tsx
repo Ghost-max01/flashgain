@@ -254,27 +254,58 @@ export default function TapAndEarnPage() {
   }, [pathname]);
 
   // ─── Rest of the component ───────────────────────────────
+  // Wall-clock exhaust: timestamp keeps moving while the app is closed, so the
+  // FILLING water + countdown catch up on return (same as auto-tap).
+  const tapHydratedRef = useRef(false);
+  const resyncExhaustFromStorage = useCallback(() => {
+    try {
+      const ex = localStorage.getItem(TAP_EXHAUST_KEY);
+      if (!ex) return false;
+      const until = Number(ex);
+      if (until > Date.now()) {
+        setTapExhaustUntil((prev) => (prev === until ? prev : until));
+        setState((prev) => (prev.energy === 0 ? prev : { ...prev, energy: 0 }));
+        return true;
+      }
+      // Cooldown expired while away — snap to full instead of restarting.
+      try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+      setTapExhaustUntil(null);
+      setTapExhaustLeft(0);
+      setState((prev) => ({ ...prev, energy: MAX_ENERGY }));
+      return false;
+    } catch { return false; }
+  }, []);
   useEffect(() => {
     setMounted(true);
     const loaded = loadState();
-    setState(loaded);
-    // Load exhaust state — if still in cooldown, stay at 0 and not tappable
+    // Load exhaust state — wall-clock: active cooldown stays at 0, expired
+    // cooldown refills to full even if it finished while the app was closed.
     try {
       const ex = localStorage.getItem(TAP_EXHAUST_KEY);
       if (ex) {
         const until = Number(ex);
         if (until > Date.now()) {
           setTapExhaustUntil(until);
-          setState((prev) => ({ ...prev, energy: 0 }));
-        } else localStorage.removeItem(TAP_EXHAUST_KEY);
+          setState({ ...loaded, energy: 0 });
+        } else {
+          try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+          setTapExhaustUntil(null);
+          setTapExhaustLeft(0);
+          setState({ ...loaded, energy: MAX_ENERGY });
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...loaded, energy: MAX_ENERGY, lastTime: Date.now() })); } catch {}
+        }
+      } else {
+        setState(loaded);
+        // If loaded state has 0 energy and no exhaust yet, start exhaust
+        if (loaded.energy <= 0) {
+          const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
+          setTapExhaustUntil(until);
+          try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
+        }
       }
-      // If loaded state has 0 energy and no exhaust yet, start exhaust
-      if (loaded.energy <= 0 && !localStorage.getItem(TAP_EXHAUST_KEY)) {
-        const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
-        setTapExhaustUntil(until);
-        try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
-      }
-    } catch {}
+    } catch {
+      setState(loaded);
+    }
     // Load auto tap state
     try {
       const aRaw = localStorage.getItem(AUTO_TAP_KEY);
@@ -290,7 +321,8 @@ export default function TapAndEarnPage() {
       const cd = JSON.parse(localStorage.getItem(AUTO_PLAN_COOLDOWN_KEY)||"{}");
       if (cd && typeof cd==="object") setAutoPlanCooldowns(cd);
     } catch {}
-  }, []);
+    tapHydratedRef.current = true;
+  }, [resyncExhaustFromStorage]);
 
   // persist auto tap
   useEffect(() => {
@@ -419,7 +451,9 @@ export default function TapAndEarnPage() {
     return ()=>{ clearInterval(id); window.removeEventListener("focus",upd); window.removeEventListener("storage",upd as any); };
   }, []);
 
-  // Exhaust countdown — snaps to 100 when done, stays 0 until then (no gradual refill)
+  // Exhaust countdown — wall-clock: snaps to 100 when done, stays 0 until then
+  // (no gradual refill). Timestamp keeps moving while the app is closed, so
+  // returning after the 10 mins gives a full bar immediately.
   useEffect(() => {
     if (!tapExhaustUntil) { setTapExhaustLeft(0); return; }
     const tick = () => {
@@ -433,20 +467,29 @@ export default function TapAndEarnPage() {
     };
     tick();
     const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [tapExhaustUntil]);
+    const onReturn = () => { if (document.visibilityState === "visible") { resyncExhaustFromStorage(); tick(); } };
+    const onFocus = () => { resyncExhaustFromStorage(); tick(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => { clearInterval(id); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onReturn); };
+  }, [tapExhaustUntil, resyncExhaustFromStorage]);
 
   useEffect(() => {
+    if (!tapHydratedRef.current) return;
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ ...state, lastTime: Date.now() }),
     );
     if (state.energy === 0 && !tapExhaustUntil) {
+      try {
+        const ex = localStorage.getItem(TAP_EXHAUST_KEY);
+        if (ex && Number(ex) <= Date.now()) { resyncExhaustFromStorage(); return; }
+      } catch {}
       const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
       setTapExhaustUntil(until);
       try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
     }
-  }, [state]);
+  }, [state, tapExhaustUntil, resyncExhaustFromStorage]);
 
   useEffect(() => {
     return () => {

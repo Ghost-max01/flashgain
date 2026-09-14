@@ -410,21 +410,63 @@ export default function DashboardPage() {
   }, [toast]);
 
   // ── Tap-to-Earn: load + persist + exhaust 10min + auto tap (NO gradual refill) ──
+  // Wall-clock exhaust: tapExhaustUntil timestamp keeps moving while the app
+  // is closed, so the FILLING water + countdown catch up on return (same as auto-tap).
+  const tapHydratedRef = useRef(false);
+  const resyncExhaustFromStorage = useCallback(() => {
+    try {
+      const ex = localStorage.getItem(TAP_EXHAUST_KEY);
+      if (!ex) return false;
+      const until = Number(ex);
+      if (until > Date.now()) {
+        setTapExhaustUntil((prev) => (prev === until ? prev : until));
+        setTapEnergy(0);
+        return true;
+      }
+      // Cooldown expired while away (tab closed/hidden) — snap to full
+      // instead of restarting a new 10-min timer.
+      try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+      setTapExhaustUntil(null);
+      setTapExhaustLeft(0);
+      setTapEnergy(TAP_MAX_ENERGY);
+      try {
+        const raw = localStorage.getItem(TAP_STORAGE_KEY);
+        const s = raw ? JSON.parse(raw) : {};
+        localStorage.setItem(TAP_STORAGE_KEY, JSON.stringify({ energy: TAP_MAX_ENERGY, earned: s.earned || 0, lastTime: Date.now() }));
+      } catch {}
+      return false;
+    } catch { return false; }
+  }, []);
   useEffect(() => {
     try {
       const raw = localStorage.getItem(TAP_STORAGE_KEY);
+      let storedEnergy: number | null = null;
+      let storedEarned = 0;
       if (raw) {
         const s = JSON.parse(raw);
         // No gradual refill: keep exact stored energy; only exhaust countdown refills to 100
-        const energy = s.energy ?? TAP_MAX_ENERGY;
-        setTapEnergy(Math.min(TAP_MAX_ENERGY, Math.max(0, energy)));
-        setTapEarned(s.earned || 0);
+        storedEnergy = Math.min(TAP_MAX_ENERGY, Math.max(0, s.energy ?? TAP_MAX_ENERGY));
+        storedEarned = s.earned || 0;
+        setTapEnergy(storedEnergy);
+        setTapEarned(storedEarned);
       }
       const ex = localStorage.getItem(TAP_EXHAUST_KEY);
       if (ex) {
         const until = Number(ex);
         if (until > Date.now()) { setTapExhaustUntil(until); setTapEnergy(0); }
-        else localStorage.removeItem(TAP_EXHAUST_KEY);
+        else {
+          // Expired while the app was closed — refill to full immediately.
+          try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+          setTapExhaustUntil(null);
+          setTapExhaustLeft(0);
+          setTapEnergy(TAP_MAX_ENERGY);
+          try { localStorage.setItem(TAP_STORAGE_KEY, JSON.stringify({ energy: TAP_MAX_ENERGY, earned: storedEarned, lastTime: Date.now() })); } catch {}
+        }
+      } else if (storedEnergy === 0) {
+        // Legacy 0-energy without a timestamp (or first depletion): start cooldown now.
+        const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
+        setTapExhaustUntil(until);
+        try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
       }
       const aRaw = localStorage.getItem(AUTO_TAP_KEY);
       if (aRaw) {
@@ -451,7 +493,8 @@ export default function DashboardPage() {
         try { const cd = JSON.parse(localStorage.getItem(AUTO_PLAN_COOLDOWN_KEY)||"{}"); if (cd && typeof cd==="object") setAutoPlanCooldowns(cd); } catch {}
       } catch {}
     } catch {}
-  }, []);
+    tapHydratedRef.current = true;
+  }, [resyncExhaustFromStorage]);
   useEffect(()=>{
     const id=setInterval(()=>{ try{ 
       const cMt = JSON.parse(localStorage.getItem("mt-completed-tasks")||"[]"); setMtTaskDone(Array.isArray(cMt)?cMt.length:0);
@@ -504,7 +547,7 @@ export default function DashboardPage() {
     window.addEventListener("focus", onFocus);
     return () => { cancelled = true; clearInterval(id); window.removeEventListener("focus", onFocus); };
   }, []);
-  // exhaust countdown
+  // exhaust countdown (wall-clock: derives from timestamp so background time counts)
   useEffect(() => {
     if (!tapExhaustUntil) { setTapExhaustLeft(0); return; }
     const tick = () => {
@@ -518,18 +561,31 @@ export default function DashboardPage() {
     };
     tick();
     const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [tapExhaustUntil]);
+    // Catch up immediately when the user comes back (hidden tab / closed app).
+    const onReturn = () => { if (document.visibilityState === "visible") { resyncExhaustFromStorage(); tick(); } };
+    const onFocus = () => { resyncExhaustFromStorage(); tick(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => { clearInterval(id); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onReturn); };
+  }, [tapExhaustUntil, resyncExhaustFromStorage]);
   // No gradual regen — energy stays depleted until 10-min exhaust countdown finishes, then snaps to 100 (handled in exhaust countdown effect)
   // (Removed TAP_ENERGY_REGEN_MS interval per requirement)
+  // Guarded by tapHydratedRef so the initial render (energy=100) never
+  // overwrites the stored 0-energy + exhaust timestamp before load runs.
   useEffect(() => {
+    if (!tapHydratedRef.current) return;
     try { localStorage.setItem(TAP_STORAGE_KEY, JSON.stringify({ energy: tapEnergy, earned: tapEarned, lastTime: Date.now() })); } catch {}
     if (tapEnergy === 0 && !tapExhaustUntil) {
+      // Re-check storage first: another tab may have just finished the cooldown.
+      try {
+        const ex = localStorage.getItem(TAP_EXHAUST_KEY);
+        if (ex && Number(ex) <= Date.now()) { resyncExhaustFromStorage(); return; }
+      } catch {}
       const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
       setTapExhaustUntil(until);
       try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
     }
-  }, [tapEnergy, tapEarned]);
+  }, [tapEnergy, tapEarned, tapExhaustUntil, resyncExhaustFromStorage]);
   // ── Trust Score engine (compounding) ──
   useEffect(() => {
     // initial load
