@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Sparkles, Zap, Trophy, Clock, Users, Flame, Crown, Gift, TrendingUp, ShieldCheck, Timer, Coins, Lock } from "lucide-react"
+import { ArrowLeft, Sparkles, Zap, Trophy, Clock, Users, Flame, Crown, Gift, TrendingUp, ShieldCheck, Timer, Coins, Lock, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 
@@ -33,7 +33,7 @@ const SPIN_SEGMENTS = [
 export default function StakeWinPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [amount, setAmount] = useState(1000)
+  const [amount, setAmount] = useState(0)
   const [custom, setCustom] = useState("")
   const [balance, setBalance] = useState(0)
   const [livePool, setLivePool] = useState(2847500)
@@ -115,6 +115,48 @@ export default function StakeWinPage() {
   const [spinSessionActive, setSpinSessionActive] = useState(false)
   const [showSpinCompleteModal, setShowSpinCompleteModal] = useState(false)
   const [availableTiers, setAvailableTiers] = useState<number[]>([])
+  // Exceeded spins modal - shows when user tries to enter after all 3 spins used
+  const [showExceededModal, setShowExceededModal] = useState(false)
+  // Water fill state for spin button - refills over 5 minutes (300 seconds)
+  const [spinRefillEndTime, setSpinRefillEndTime] = useState<number>(0)
+  const [waterFillPercent, setWaterFillPercent] = useState(100)
+  const spinRefillDuration = 5 * 60 * 1000 // 5 minutes in ms
+
+  // Water fill animation timer
+  useEffect(() => {
+    const now = Date.now()
+    const storedEndTime = Number(localStorage.getItem("spin_refill_end_time") || 0)
+    if (storedEndTime > now) {
+      setSpinRefillEndTime(storedEndTime)
+    } else {
+      // Ready to spin - full water
+      setSpinRefillEndTime(0)
+      setWaterFillPercent(100)
+    }
+  }, [])
+
+  // Update water fill percentage based on refill timer
+  useEffect(() => {
+    if (spinRefillEndTime <= 0) {
+      setWaterFillPercent(100)
+      return
+    }
+    const updateFill = () => {
+      const now = Date.now()
+      const remaining = spinRefillEndTime - now
+      if (remaining <= 0) {
+        setSpinRefillEndTime(0)
+        setWaterFillPercent(100)
+        localStorage.removeItem("spin_refill_end_time")
+      } else {
+        const percent = Math.max(0, Math.min(100, 100 - (remaining / spinRefillDuration) * 100))
+        setWaterFillPercent(percent)
+      }
+    }
+    updateFill()
+    const interval = setInterval(updateFill, 1000)
+    return () => clearInterval(interval)
+  }, [spinRefillEndTime])
 
   useEffect(() => {
     try {
@@ -137,6 +179,16 @@ export default function StakeWinPage() {
     } catch {}
   }, [])
 
+  // Check if all spins exhausted on mount - show blocking modal
+  useEffect(() => {
+    const now = Date.now()
+    const allOnCooldown = [20, 30, 40].every(pct => (spinCooldowns[pct] || 0) > now)
+    if (allOnCooldown) {
+      setShowExceededModal(true)
+      setSpinSessionActive(false)
+    }
+  }, []) // Run once on mount
+
   // Persist cooldowns on change
   useEffect(() => {
     try { localStorage.setItem("spin_tier_cooldowns", JSON.stringify(spinCooldowns)) } catch {}
@@ -153,11 +205,8 @@ export default function StakeWinPage() {
     // Start spin session when there are available tiers
     if (tiers.length > 0) {
       setSpinSessionActive(true)
-      // Auto-select first available tier on mount if no tier selected
-      const currentPct = balance === 0 ? 20 : Math.round((amount / balance) * 100)
-      const currentTier = currentPct <= 22 ? 20 : currentPct <= 33 ? 30 : 40
-      const isCurrentTierAvailable = tiers.includes(currentTier)
-      if (!isCurrentTierAvailable) {
+      // Auto-select first available tier (20% first, then 30%, then 40%)
+      if (balance > 0) {
         const firstTier = tiers[0]
         const stakeAmt = Math.floor(balance * firstTier / 100)
         setAmount(stakeAmt)
@@ -166,21 +215,7 @@ export default function StakeWinPage() {
     } else {
       setSpinSessionActive(false)
     }
-  }, [spinCooldowns, amount, balance])
-
-  // Auto-advance to next available tier after spin
-  const advanceToNextTier = useCallback((currentTier: number) => {
-    const nextTier = availableTiers.find(t => t !== currentTier)
-    if (nextTier) {
-      const stakeAmt = Math.floor(balance * nextTier / 100)
-      setAmount(stakeAmt)
-      setCustom(String(stakeAmt))
-    } else {
-      // No more tiers available - show completion modal
-      setShowSpinCompleteModal(true)
-      setSpinSessionActive(false)
-    }
-  }, [availableTiers, balance])
+  }, [spinCooldowns, balance])
 
   const getTierForStake = (stake: number) => {
     if (balance === 0) return 20
@@ -251,8 +286,27 @@ export default function StakeWinPage() {
       setSpinResult(target)
       setShowSpinResult(true)
       setSpins(s => s + 1)
-      // Auto-advance to next available tier
-      advanceToNextTier(tierPct)
+      // Auto-advance to next available tier (compute fresh after cooldown set)
+      setTimeout(() => {
+        const now = Date.now()
+        const updatedTiers = [20, 30, 40].filter(pct => {
+          const expiry = (spinCooldowns[pct] || 0)
+          return expiry <= now
+        })
+        const nextTier = updatedTiers.find(t => t !== tierPct)
+        if (nextTier) {
+          const stakeAmt = Math.floor(balance * nextTier / 100)
+          setAmount(stakeAmt)
+          setCustom(String(stakeAmt))
+        } else {
+          setShowSpinCompleteModal(true)
+          setSpinSessionActive(false)
+        }
+        // Start 5-minute refill timer after spin
+        const refillEndTime = Date.now() + spinRefillDuration
+        setSpinRefillEndTime(refillEndTime)
+        localStorage.setItem("spin_refill_end_time", String(refillEndTime))
+      }, 0)
       // Settle on the SERVER so wins survive refresh/dashboard sync.
       // Local state is only updated from the server's authoritative balance.
       void (async () => {
@@ -290,7 +344,7 @@ export default function StakeWinPage() {
         }
       })()
     }, 3200)
-  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns, advanceToNextTier])
+  }, [spinning, spinStake, balance, rotation, toast, spinCooldowns])
 
   const onStake = () => {
     const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
@@ -328,16 +382,14 @@ export default function StakeWinPage() {
       </div>
       <div className="hh-mesh-overlay" aria-hidden="true"></div>
 
-      {/* Header */}
+      {/* Minimal Header — no navigation */}
       <div className="sticky top-0 z-20 hh-header">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => !spinSessionActive && router.push("/dashboard")} className={`hh-back-btn ${spinSessionActive ? 'opacity-40 cursor-not-allowed' : ''}`} disabled={spinSessionActive}><ArrowLeft className="h-5 w-5" /></button>
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <div className="hh-icon-ring !w-8 !h-8"><Crown className="h-4 w-4 text-amber-300" /></div>
             <span className="font-black tracking-widest text-sm">STAKE & WIN</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">LIVE</span>
           </div>
-          <Link href="/dashboard" className={`text-[11px] font-bold text-emerald-300 ${spinSessionActive ? 'pointer-events-none opacity-40' : ''}`} onClick={(e) => spinSessionActive && e.preventDefault()}>Home →</Link>
         </div>
       </div>
 
@@ -504,7 +556,67 @@ export default function StakeWinPage() {
               </div>
             </div>
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10"><div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[22px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_10px_rgba(245,158,11,0.7)]"></div></div>
-            <button onClick={doSpin} disabled={spinning} className="hh-spin-glow absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20">{spinning ? "..." : <><span>TAP TO</span><span>SPIN</span></>}</button>
+            {/* Water fill spin button */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20">
+              <div className="relative w-full h-full rounded-full">
+                {/* Water fill background - fills from bottom up */}
+                <div
+                  className="absolute bottom-0 left-0 right-0 rounded-full transition-all duration-1000 ease-out"
+                  style={{
+                    background: `linear-gradient(to top, #06b6d4 ${waterFillPercent}%, transparent ${waterFillPercent}%)`,
+                    height: `${waterFillPercent}%`,
+                    opacity: waterFillPercent > 0 ? 0.4 : 0,
+                  }}
+                />
+                {/* Subtle wave animation on water surface */}
+                {waterFillPercent > 0 && waterFillPercent < 100 && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-2 rounded-full"
+                    style={{
+                      bottom: `${waterFillPercent}%`,
+                      background: `linear-gradient(90deg, transparent, #22d3ee, transparent)`,
+                      opacity: 0.6,
+                      animation: 'hh-wave 1.5s ease-in-out infinite',
+                    }}
+                  />
+                )}
+                {/* Sparkle when full */}
+                {waterFillPercent === 100 && !spinning && (
+                  <div className="absolute inset-0 rounded-full flex items-center justify-center pointer-events-none">
+                    <Sparkles className="h-5 w-5 text-amber-300 animate-pulse" style={{ filter: 'drop-shadow(0 0 8px #fbbf24)' }} />
+                  </div>
+                )}
+                {/* Main spin button */}
+                <button
+                  onClick={doSpin}
+                  disabled={spinning || waterFillPercent < 100}
+                  className="hh-spin-glow relative w-full h-full rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black text-[11px] leading-none shadow-[0_6px_20px_rgba(245,158,11,0.45)] disabled:opacity-60 flex flex-col items-center justify-center border-4 border-white/20 z-10"
+                >
+                  {spinning ? (
+                    <span>...</span>
+                  ) : waterFillPercent < 100 ? (
+                    <>
+                      <span className="text-[9px] font-bold">REFILLING</span>
+                      <span className="text-[10px] font-mono font-black">
+                        {(() => {
+                          const remaining = spinRefillEndTime - Date.now()
+                          if (remaining <= 0) return "00:00"
+                          const totalSec = Math.ceil(remaining / 1000)
+                          const mins = Math.floor(totalSec / 60)
+                          const secs = totalSec % 60
+                          return `${String(secs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+                        })()}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span>TAP TO</span>
+                      <span>SPIN</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
           <div className="mt-2 text-[11px] font-bold text-white/50">Stake ₦{spinStake.toLocaleString()} • Spins {spins} • Max 3/day (one per tier)</div>
           {showSpinResult && spinResult && (
@@ -575,6 +687,30 @@ export default function StakeWinPage() {
         </div>
       )}
 
+      {/* Exceeded Spins Modal - blocks entry when all 3 spins used */}
+      {showExceededModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-md w-full">
+            <div className="hh-popup-header">
+              <AlertTriangle className="h-8 w-8 text-amber-400" />
+              <h2 className="text-xl font-bold text-white">Spins Exhausted</h2>
+            </div>
+            <p className="text-gray-300 text-center mb-4">
+              You've used all 3 spins for today.
+            </p>
+            <p className="text-xs text-white/50 text-center mb-6">
+              Each tier (20%, 30%, 40%) can be spun once per 24 hours. Please come back tomorrow for more spins!
+            </p>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="hh-popup-btn hh-popup-btn-confirm w-full"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Thumb-zone sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-20">
         <div className="max-w-md mx-auto px-4 pb-4 pt-2 bg-gradient-to-t from-[#050d14] via-[#050d14]/95 to-transparent">
@@ -583,7 +719,27 @@ export default function StakeWinPage() {
               <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[getTierForStake(amount)]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
               <span className="text-sm font-black text-amber-300">→ Win ₦{win.toLocaleString()}</span>
             </div>
-            <Button onClick={spinSessionActive ? undefined : onStake} disabled={spinSessionActive} className={`rounded-full hh-btn-primary hh-spin-glow font-black px-6 ${spinSessionActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Tap to Spin</Button>
+            <Button
+              onClick={doSpin}
+              disabled={spinning || !spinSessionActive || waterFillPercent < 100}
+              className={`rounded-full hh-btn-primary hh-spin-glow font-black px-6 ${spinning || !spinSessionActive || waterFillPercent < 100 ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              {spinning ? "Spinning..." : waterFillPercent < 100 ? (
+                <>
+                  <span className="text-[10px]">REFILL</span>
+                  <span className="text-[10px] font-mono font-black">
+                    {(() => {
+                      const remaining = spinRefillEndTime - Date.now()
+                      if (remaining <= 0) return "00:00"
+                      const totalSec = Math.ceil(remaining / 1000)
+                      const mins = Math.floor(totalSec / 60)
+                      const secs = totalSec % 60
+                      return `${String(secs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+                    })()}
+                  </span>
+                </>
+              ) : "Tap to Spin"}
+            </Button>
           </div>
         </div>
       </div>
@@ -602,6 +758,11 @@ export default function StakeWinPage() {
         @keyframes hh-spin-glow-btn {
           0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.45), 0 6px 20px rgba(16,185,129,0.35); }
           50% { box-shadow: 0 0 0 8px rgba(16,185,129,0), 0 8px 28px rgba(16,185,129,0.55), 0 0 26px rgba(52,211,153,0.45); }
+        }
+        /* Water wave animation for spin button refill */
+        @keyframes hh-wave {
+          0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.6; }
+          50% { transform: translateX(-50%) scaleX(1.2); opacity: 0.8; }
         }
       `}</style>
     </div>

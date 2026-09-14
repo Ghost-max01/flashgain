@@ -3,14 +3,10 @@
 import { useState, useEffect } from "react";
 import {
   Gift,
-  Users,
-  Wallet,
-  TrendingUp,
-  CheckCircle2,
   Send,
   Sparkles,
+  CheckCircle2,
   Award,
-  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +15,6 @@ interface TutorialModalProps {
 }
 
 export function TutorialModal({ onClose }: TutorialModalProps) {
-  const [currentStep, setCurrentStep] = useState(0);
   const [joinedChannel, setJoinedChannel] = useState(false);
   const [message, setMessage] = useState("");
   const [finished, setFinished] = useState(false);
@@ -43,72 +38,24 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
 
   useEffect(() => {
     setAnimKey((k) => k + 1);
-  }, [currentStep]);
-
-  const steps = [
-    {
-      icon: Gift,
-      title: "Welcome to FlashGain 9ja!",
-      description:
-        "Earn welcome bonus and daily cash by completing easy tasks. But first, join our WhatsApp channel for updates!",
-      color: "emerald",
-      gradient: "from-emerald-500 to-emerald-600",
-    },
-    {
-      icon: Users,
-      title: "Refer & Earn",
-      description:
-        "Invite friends and earn bonuses for each successful referral. The more you refer, the more you earn!",
-      color: "purple",
-      gradient: "from-purple-500 to-purple-600",
-    },
-    {
-      icon: TrendingUp,
-      title: "Daily Earnings",
-      description:
-        "Claim rewards every 60 seconds. Tap the claim button and watch your wallet balance grow instantly.",
-      color: "amber",
-      gradient: "from-amber-500 to-amber-600",
-    },
-    {
-      icon: Wallet,
-      title: "Withdraw Anytime",
-      description:
-        "After completing tasks and reaching minimum earnings, withdrawals unlock instantly.",
-      color: "blue",
-      gradient: "from-blue-500 to-blue-600",
-    },
-  ];
-
-  const current = steps[currentStep];
-  const Icon = current.icon;
-
-  const handleNext = () => {
-    if (currentStep === 0 && !joinedChannel) {
-      setMessage("Please join the WhatsApp channel first before proceeding.");
-      return;
-    }
-
-    setMessage("");
-    if (currentStep < steps.length - 1) {
-      setCurrentStep((s) => s + 1);
-    } else {
-      setFinished(true);
-      setTimeout(() => {
-        try {
-          onClose();
-        } catch (e) {
-          console.error("onClose error", e);
-        }
-      }, 2000);
-    }
-  };
+  }, [joinedChannel]);
 
   const handleJoinChannel = () => {
     window.open("https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", "_blank");
     setJoinedChannel(true);
     setMessage("");
     localStorage.setItem("joined_community", "true");
+  };
+
+  const handleProceedToDashboard = () => {
+    setFinished(true);
+    setTimeout(() => {
+      try {
+        onClose();
+      } catch (e) {
+        console.error("onClose error", e);
+      }
+    }, 500);
   };
 
   return (
@@ -129,13 +76,11 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
         </div>
 
         {/* Icon Section with Gradient */}
-        <div
-          className={`hh-modal-icon-container bg-gradient-to-br ${current.gradient}`}
-        >
+        <div className="hh-modal-icon-container bg-gradient-to-br from-emerald-500 to-emerald-600">
           <div className="hh-modal-icon-wrapper">
-            <Icon className="hh-modal-icon" />
+            <Gift className="hh-modal-icon" />
           </div>
-          {currentStep === 0 && !joinedChannel && (
+          {!joinedChannel && (
             <div className="hh-sparkle-container">
               <Sparkles className="hh-sparkle-icon" />
             </div>
@@ -146,8 +91,10 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
         <div className="hh-modal-content" key={animKey}>
           {!finished ? (
             <>
-              <h3 className="hh-modal-title">{current.title}</h3>
-              <p className="hh-modal-description">{current.description}</p>
+              <h3 className="hh-modal-title">Welcome to FlashGain 9ja!</h3>
+              <p className="hh-modal-description">
+                Earn welcome bonus and daily cash by completing easy tasks. But first, join our WhatsApp channel for updates!
+              </p>
 
               {/* Animated warning message */}
               {message && (
@@ -156,50 +103,28 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
                 </div>
               )}
 
-              {/* Step 1 logic - No proceed button until joined */}
-              {currentStep === 0 ? (
+              {!joinedChannel ? (
                 <div className="hh-modal-actions">
-                  {!joinedChannel && (
-                    <button onClick={handleJoinChannel} className="hh-join-btn">
-                      <Send className="h-4 w-4" />
-                      <span>Join WhatsApp Channel</span>
-                      <Sparkles className="h-3 w-3 text-amber-300 animate-pulse" />
-                    </button>
-                  )}
-                  {/* Only show proceed button after joining channel */}
-                  {joinedChannel && (
-                    <button onClick={handleNext} className="hh-proceed-btn">
-                      Proceed
-                    </button>
-                  )}
+                  <button onClick={handleJoinChannel} className="hh-join-btn">
+                    <Send className="h-4 w-4" />
+                    <span>Join WhatsApp Channel</span>
+                    <Sparkles className="h-3 w-3 text-amber-300 animate-pulse" />
+                  </button>
                 </div>
               ) : (
                 <div className="hh-modal-actions">
-                  <button onClick={handleNext} className="hh-next-btn">
-                    {currentStep === steps.length - 1
-                      ? "Finish Tutorial"
-                      : "Next"}
-                    <Award className="h-4 w-4" />
+                  <button onClick={handleProceedToDashboard} className="hh-dashboard-btn">
+                    Proceed to Dashboard
                   </button>
                 </div>
               )}
-
-              {/* Progress dots */}
-              <div className="hh-progress-dots">
-                {steps.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`hh-dot ${i === currentStep ? "hh-dot-active" : ""}`}
-                  />
-                ))}
-              </div>
             </>
           ) : (
             <>
               <div className="hh-success-animation">
                 <CheckCircle2 className="hh-success-icon" />
               </div>
-              <h3 className="hh-success-title">Congratulations!</h3>
+              <h3 className="hh-success-title">Welcome!</h3>
               <p className="hh-success-text">
                 You're all set to start earning with FlashGain 9ja.
               </p>
@@ -522,61 +447,6 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
           transform: scale(0.98);
         }
 
-        .hh-proceed-btn {
-          width: 100%;
-          padding: 16px;
-          background: linear-gradient(135deg, #10b981, #059669, #047857);
-          border: none;
-          border-radius: 16px;
-          color: white;
-          font-weight: 700;
-          font-size: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
-          animation: hh-btn-glow 2s ease-in-out infinite;
-        }
-
-        .hh-proceed-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5);
-        }
-
-        .hh-proceed-btn:active {
-          transform: scale(0.98);
-        }
-
-        .hh-next-btn {
-          width: 100%;
-          padding: 16px;
-          background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-          border: none;
-          border-radius: 16px;
-          color: white;
-          font-weight: 700;
-          font-size: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
-        }
-
-        .hh-next-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
-        }
-
-        .hh-next-btn:active {
-          transform: scale(0.98);
-        }
-
         .hh-dashboard-btn {
           width: 100%;
           padding: 16px;
@@ -609,38 +479,6 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
             box-shadow:
               0 4px 30px rgba(16, 185, 129, 0.5),
               0 0 20px rgba(16, 185, 129, 0.2);
-          }
-        }
-
-        /* Progress Dots */
-        .hh-progress-dots {
-          display: flex;
-          justify-content: center;
-          gap: 8px;
-        }
-
-        .hh-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.2);
-          transition: all 0.3s ease;
-        }
-
-        .hh-dot-active {
-          background: #10b981;
-          transform: scale(1.2);
-          box-shadow: 0 0 15px #10b981;
-          animation: hh-dot-pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes hh-dot-pulse {
-          0%,
-          100% {
-            box-shadow: 0 0 5px #10b981;
-          }
-          50% {
-            box-shadow: 0 0 15px #10b981;
           }
         }
 
@@ -746,9 +584,6 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
           .hh-modal-icon-wrapper,
           .hh-sparkle-icon,
           .hh-join-btn,
-          .hh-proceed-btn,
-          .hh-next-btn,
-          .hh-dot-active,
           .hh-success-animation,
           .hh-confetti {
             animation: none !important;
