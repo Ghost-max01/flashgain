@@ -231,7 +231,12 @@ export default function StakeWinPage() {
 
     const targetIdx = SPIN_SEGMENTS.indexOf(target)
     const segAngle = 360 / SPIN_SEGMENTS.length
-    const targetAngle = 360 - (targetIdx * segAngle + segAngle / 2)
+    // Wheel uses conic-gradient(from -90deg): segment i is centered at
+    // (i*seg + seg/2 - 90°) from up clockwise, and labels sit on those centers.
+    // Pointer is fixed at top, so rotation must satisfy R ≡ 90 - (idx*seg + seg/2).
+    // (The old formula missed the -90° gradient offset, landing ~2.5 segments off —
+    // users saw WIN but got LOSE and vice versa.)
+    const targetAngle = (((90 - (targetIdx * segAngle + segAngle / 2)) % 360) + 360) % 360
     const spinsCount = 6 + Math.random() * 4
     const total = rotation + spinsCount * 360 + targetAngle - (rotation % 360)
     // spinning=true drives the 3.2s CSS rotation animation; clearing the old
@@ -250,7 +255,12 @@ export default function StakeWinPage() {
     }
     setTimeout(() => {
       setSpinning(false)
-      setSpinResult(target)
+      // Settle from where the pointer ACTUALLY landed (material at top after
+      // rotation `total`), so WIN is WIN and LOSE is LOSE — never the reverse.
+      // (Matches the fixed landing math above; guards against float drift.)
+      const landedIdx = Math.floor(((((90 - (total % 360)) % 360) + 360) % 360) / segAngle) % SPIN_SEGMENTS.length
+      const landed = SPIN_SEGMENTS[landedIdx] || target
+      setSpinResult(landed)
       setShowSpinResult(true)
       setSpins(s => s + 1)
       // Auto-advance to next available tier — from the just-written
@@ -282,7 +292,7 @@ export default function StakeWinPage() {
             toast({ title: "Sign in to keep your winnings", variant: "destructive" })
             return
           }
-          const winAmt = target.win ? spinStake * target.amount : 0
+          const winAmt = landed.win ? spinStake * landed.amount : 0
           const res = await fetch("/api/stake/result", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -298,8 +308,8 @@ export default function StakeWinPage() {
             const raw2 = localStorage.getItem("tivexx-user")
             if (raw2) { const u2 = JSON.parse(raw2); u2.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u2)) }
           } catch {}
-          if (target.win) {
-            toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${target.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% was the winner` })
+          if (landed.win) {
+            toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${landed.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% was the winner` })
           } else {
             toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% was not the winner this spin. The winning tier was ${winningTier}%.` })
           }

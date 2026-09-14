@@ -2426,7 +2426,7 @@ export default function DashboardPage() {
 
         {/* Support card moved below Referral card per request */}
 
-        {/* ── PLAY & WIN — STAKE (guarded: 3/3 exhausted shows popup) ── */}
+        {/* ── SPIN & WIN — STAKE (guarded: 3/3 exhausted shows popup) ── */}
         <div data-tour="play-win" onClick={handlePlayWinClick} role="button" tabIndex={0}
           onKeyDown={(e) => { if (e.key === "Enter") (handlePlayWinClick as any)(e); }}
           className="block hh-entry-4 cursor-pointer">
@@ -2436,11 +2436,11 @@ export default function DashboardPage() {
                 <Trophy className="h-6 w-6 text-white" />
               </div>
               <div>
-                <div className="font-black text-white text-base flex items-center gap-2">Play & Win <span className="px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-black">×2.2</span></div>
+                <div className="font-black text-white text-base flex items-center gap-2">Spin & Win <span className="px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-black">×2.2</span></div>
                 <div className="text-xs font-bold text-white/80">Stake to win — instant payout</div>
               </div>
             </div>
-            <span className="px-4 py-2 rounded-full bg-white text-emerald-700 font-black text-sm shadow-lg">Play →</span>
+            <span className="px-4 py-2 rounded-full bg-white text-emerald-700 font-black text-sm shadow-lg">Spin →</span>
           </div>
         </div>
 
