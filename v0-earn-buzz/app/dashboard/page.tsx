@@ -782,12 +782,13 @@ export default function DashboardPage() {
       try { const g = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]"); if (Array.isArray(g)) generic = g.length; } catch {}
       const all = totalTasks + generic;
       const m = loadMeta();
-      if (all !== m.taskCount) {
-        m.taskCount = all;
+      const previous = Number(m.taskCount || 0);
+      const nextTaskCount = Math.max(previous, all);
+      if (nextTaskCount !== previous) {
+        m.taskCount = nextTaskCount;
         saveMeta(m);
         setTrustScore(computeScore(m));
         setTrustMeta({ ...m });
-        if (all > 0 && all > (m.taskCount - 1) && all <= 20) { /* quiet, no spam */ }
       }
     } catch {}
   }, [mtTaskDone, muTaskDone, autoTaskDone]);
@@ -936,7 +937,7 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, [autoActive]);
   // Manual tap earnings flush: taps are worthless until THIS succeeds.
-  // Sends tap counts (not naira) to /api/tap/accrue, which enforces per-call
+  // Sends tap counts (not naira) to /api/accrue, which enforces per-call
   // and daily caps server-side, then adopts the server's balance as truth.
   // Flushes on a debounce, when the app hides/closes, and on return.
   const flushManualTaps = useCallback(async () => {
@@ -2792,8 +2793,7 @@ export default function DashboardPage() {
         .hh-root {
           font-family: "Syne", sans-serif;
           background: #050d14;
-          color: white;
-        }
+          color: white
 
         /* ─── BUBBLES ─── */
         .hh-bubbles-container {

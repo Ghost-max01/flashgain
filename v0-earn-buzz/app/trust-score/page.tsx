@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   loadMeta,
+  computeBreakdown,
   computeScore,
   getLevel,
   getProgress,
@@ -34,6 +35,7 @@ export default function TrustScorePage() {
   const [trustScore, setTrustScore] = useState(0);
   const [trustMeta, setTrustMeta] = useState<any>(null);
   const [showToast, setShowToast] = useState(false);
+  const breakdown = computeBreakdown(trustMeta || {});
 
   useEffect(() => {
     const refresh = () => {
@@ -58,22 +60,6 @@ export default function TrustScorePage() {
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
-
-  const timePts = Math.floor((trustMeta?.timeMs || 0) / (5 * 60 * 1000)) * 2;
-  const refPts = Math.floor((trustMeta?.referralCount || 0) / 5) * 2;
-  const navPts = Math.floor((trustMeta?.navCount || 0) / 5);
-  const payPts = (trustMeta?.payCount || 0) * 5;
-  const taskPts = Math.floor((trustMeta?.taskCount || 0) / 10) * 2;
-  const tapPts = Math.floor((trustMeta?.tapCount || 0) / 50) * 1;
-
-  const rows = [
-    { label: "Time in app (5m = +2)", value: `${Math.floor((trustMeta?.timeMs || 0) / 60000)}m`, pts: timePts, icon: Clock, color: "text-emerald-400" },
-    { label: "Referrals (5 = +2)", value: `${trustMeta?.referralCount || 0}`, pts: refPts, icon: Users, color: "text-violet-400" },
-    { label: "Tasks done (10 = +2)", value: `${trustMeta?.taskCount || 0}`, pts: taskPts, icon: Gift, color: "text-emerald-300" },
-    { label: "Dashboard taps (50 = +1)", value: `${trustMeta?.tapCount || 0}`, pts: tapPts, icon: Zap, color: "text-cyan-400" },
-    { label: "App navigations (5 = +1)", value: `${trustMeta?.navCount || 0}`, pts: navPts, icon: TrendingUp, color: "text-amber-400" },
-    { label: "Payments into app (+5 each)", value: `${trustMeta?.payCount || 0}`, pts: payPts, icon: CreditCard, color: "text-blue-400" },
-  ];
 
   const level = getLevel(trustScore);
   const progress = getProgress(trustScore);
@@ -140,7 +126,31 @@ export default function TrustScorePage() {
         <div className="hh-card">
           <div className="font-bold text-white mb-4">How Your Score Compounds</div>
           <div className="space-y-3">
-            {rows.map((r, idx) => (
+            {breakdown.rows.map((row) => {
+              const iconMap: Record<string, any> = {
+                time: Clock,
+                referrals: Users,
+                tasks: Gift,
+                taps: Zap,
+                nav: TrendingUp,
+                payments: CreditCard,
+                bonus: Award,
+              };
+              const colorMap: Record<string, string> = {
+                time: "text-emerald-400",
+                referrals: "text-violet-400",
+                tasks: "text-emerald-300",
+                taps: "text-cyan-400",
+                nav: "text-amber-400",
+                payments: "text-blue-400",
+                bonus: "text-amber-300",
+              };
+              return {
+                ...row,
+                icon: iconMap[row.key] || Award,
+                color: colorMap[row.key] || "text-emerald-400",
+              };
+            }).map((r) => (
               <div key={r.label} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center ${r.color}`}>
@@ -258,9 +268,162 @@ export default function TrustScorePage() {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <BottomNav />
-    </div>
-  );
-}
+      <style jsx global>{`
+        .hh-root {
+          font-family: 'Syne', sans-serif;
+          background: #050d14;
+          color: white;
+          min-height: 100vh;
+        }
+        .hh-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .hh-back-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
+          color: white;
+        }
+        .hh-title {
+          font-size: 20px;
+          font-weight: 800;
+          color: white;
+          line-height: 1.2;
+        }
+        .hh-subtitle {
+          font-size: 12px;
+          color: rgba(255,255,255,0.6);
+        }
+        .hh-card {
+          background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 20px;
+          padding: 20px;
+          backdrop-filter: blur(12px);
+          position: relative;
+          overflow: hidden;
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .hh-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(16,185,129,0.05);
+        }
+        .hh-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+        }
+        .hh-rank2-top {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .hh-rank2-badge {
+          width: 60px;
+          height: 60px;
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.12);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .hh-rank2-head {
+          flex: 1;
+          min-width: 0;
+        }
+        .hh-rank2-name {
+          font-size: 22px;
+          font-weight: 800;
+          color: white;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+        }
+        .hh-rank2-sub {
+          font-size: 12px;
+          color: rgba(255,255,255,0.5);
+          margin-top: 2px;
+          font-family: "JetBrains Mono", monospace;
+        }
+        .hh-rank2-count {
+          font-size: 12px;
+          font-weight: 700;
+          color: rgba(255,255,255,0.55);
+          white-space: nowrap;
+        }
+        .hh-rank2-bar {
+          height: 10px;
+          background: rgba(255,255,255,0.07);
+          border-radius: 999px;
+          overflow: hidden;
+          margin-top: 16px;
+        }
+        .hh-rank2-fill {
+          height: 100%;
+          border-radius: 999px;
+          transition: width 0.8s ease-out;
+        }
+        .hh-rank2-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 8px;
+          font-size: 12px;
+          color: rgba(255,255,255,0.5);
+        }
+        .hh-rank2-need {
+          color: #34d399;
+          font-weight: 700;
+        }
+        .hh-rank2-levels {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 16px;
+        }
+        .hh-rank2-lvl {
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.02);
+          border-radius: 18px;
+          padding: 12px 4px 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+        .hh-rank2-lvl-ico {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .hh-rank2-lvl-label {
+          font-size: 10px;
+          font-weight: 700;
+          color: white;
+        }
+        .hh-rank2-lvl-active {
+          background: rgba(255,255,255,0.045);
+        }
+      `}</style>
+ 
+       {/* Bottom Navigation */}
+       <BottomNav />
+     </div>
+   );
+ }
 

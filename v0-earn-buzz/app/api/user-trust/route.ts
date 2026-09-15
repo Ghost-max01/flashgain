@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { computeScore, type TrustMeta } from "@/lib/trust-score-core";
 
-// Server-side trust recompute. Mirrors lib/trust-score (30-point tiers:
-// Free 0-29, Beginner 30-59, Trusted 60-89, Verified 90-119, Elite 120+).
-// Client reports its activity meta (timeMs/navCount/tapCount); the server
-// combines them with server-counted referrals/payments/tasks using the SAME
-// caps as the client, so a referred user who genuinely reaches Beginner (30)
-// on the client also reaches it here — which is what credits the referrer.
-// Anti-cheat: client time is capped by account age, nav/tap are sanity-capped.
-const REF_POINTS_CAP = 20;
-const PAY_POINTS_CAP = 50;
-const TASK_POINTS_CAP = 20;
-const TIME_POINTS_CAP = 20;
-const NAV_POINTS_CAP = 20;
-const TAP_POINTS_CAP = 20;
+// Server-side trust recompute. Mirrors lib/trust-score-core EXACTLY (same
+// single source of truth, no per-category caps): the client reports its
+// activity meta (timeMs/navCount/tapCount); the server combines them with
+// SERVER-COUNTED referrals/payments/tasks using the same computeScore(), so a
+// referred user who genuinely reaches Beginner (30) on the client also reaches
+// it here — which is what credits the referrer.
+// Anti-cheat stays: client time is capped by account age; nav/tap/task/referral
+// counters are sanity-clamped to plausible ceilings by sanitizeMeta().
+const TIME_MS_MAX = 30 * 24 * 60 * 60 * 1000;
 
 function computeServerScore(
   referralCount: number,
@@ -23,13 +20,15 @@ function computeServerScore(
   navCount: number,
   tapCount: number,
 ): number {
-  const refPoints = Math.min(Math.floor(Math.max(0, referralCount) / 5) * 2, REF_POINTS_CAP);
-  const payPoints = Math.min(Math.max(0, payCount) * 5, PAY_POINTS_CAP);
-  const taskPoints = Math.min(Math.floor(Math.max(0, taskCount) / 10) * 2, TASK_POINTS_CAP);
-  const timePoints = Math.min(Math.floor(Math.max(0, timeMs) / (5 * 60 * 1000)) * 2, TIME_POINTS_CAP);
-  const navPoints = Math.min(Math.floor(Math.max(0, navCount) / 5), NAV_POINTS_CAP);
-  const tapPoints = Math.min(Math.floor(Math.max(0, tapCount) / 50), TAP_POINTS_CAP);
-  return refPoints + payPoints + taskPoints + timePoints + navPoints + tapPoints;
+  const meta: Partial<TrustMeta> = {
+    timeMs: Math.min(Math.max(0, timeMs), TIME_MS_MAX),
+    referralCount,
+    navCount,
+    tapCount,
+    payCount,
+    taskCount,
+  };
+  return computeScore(meta);
 }
 
 async function getOwnedUid(req: NextRequest, claimedUserId: string | null): Promise<string | null> {
