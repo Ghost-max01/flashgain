@@ -14,6 +14,47 @@ function setHidden(v: boolean) {
 }
 
 export function useTaskTimer() {
+  const processTimers = (
+    onTaskSuccess: (taskId: string, elapsed: number) => void,
+    onTaskIncomplete: (taskId: string, elapsed: number) => void,
+    isTaskCompleted: (taskId: string) => boolean
+  ) => {
+    try {
+      const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
+      if (!timers || Object.keys(timers).length === 0) return false;
+
+      const now = Date.now();
+      const tasksToDelete: string[] = [];
+      let processed = false;
+
+      Object.entries(timers).forEach(([taskId, startTime]) => {
+        const elapsed = now - (startTime as number);
+        if (isTaskCompleted(taskId)) {
+          tasksToDelete.push(taskId);
+          return;
+        }
+        if (elapsed >= TASK_VISIT_SECONDS * 1000) {
+          onTaskSuccess(taskId, elapsed / 1000);
+          tasksToDelete.push(taskId);
+          processed = true;
+        } else {
+          onTaskIncomplete(taskId, elapsed / 1000);
+        }
+      });
+
+      tasksToDelete.forEach((taskId) => { delete timers[taskId]; });
+      if (Object.keys(timers).length > 0) {
+        sessionStorage.setItem(TIMER_KEY, JSON.stringify(timers));
+      } else {
+        sessionStorage.removeItem(TIMER_KEY);
+      }
+      return processed;
+    } catch (e) {
+      console.error("Error processing task timers:", e);
+      return false;
+    }
+  };
+
   const startTaskTimer = (taskId: string) => {
     try {
       const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
@@ -31,52 +72,21 @@ export function useTaskTimer() {
   ) => {
     let pageWasHidden = wasHidden() || document.hidden || !document.hasFocus();
 
-    const processTimers = () => {
-      pageWasHidden = false;
-      setHidden(false);
-
-      try {
-        const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
-        if (!timers || Object.keys(timers).length === 0) return;
-
-        const now = Date.now();
-        const tasksToDelete: string[] = [];
-
-        Object.entries(timers).forEach(([taskId, startTime]) => {
-          const elapsed = now - (startTime as number);
-          if (isTaskCompleted(taskId)) {
-            tasksToDelete.push(taskId);
-            return;
-          }
-          if (elapsed >= TASK_VISIT_SECONDS * 1000) {
-            onTaskSuccess(taskId, elapsed / 1000);
-            tasksToDelete.push(taskId);
-          } else {
-            onTaskIncomplete(taskId, elapsed / 1000);
-          }
-        });
-
-        tasksToDelete.forEach((taskId) => { delete timers[taskId]; });
-        if (Object.keys(timers).length > 0) {
-          sessionStorage.setItem(TIMER_KEY, JSON.stringify(timers));
-        } else {
-          sessionStorage.removeItem(TIMER_KEY);
-        }
-      } catch (e) {
-        console.error("Error processing task timers on return:", e);
-      }
-    };
-
     const handleVisibilityChange = () => {
       if (document.hidden) {
         pageWasHidden = true;
         setHidden(true);
       } else {
-        processTimers();
+        processTimers(onTaskSuccess, onTaskIncomplete, isTaskCompleted);
       }
     };
-    const handleFocus = () => { processTimers(); };
+    const handleFocus = () => { processTimers(onTaskSuccess, onTaskIncomplete, isTaskCompleted); };
     const handleBlur = () => { pageWasHidden = true; setHidden(true); };
+    const timerInterval = window.setInterval(() => {
+      if (!document.hidden && document.hasFocus()) {
+        processTimers(onTaskSuccess, onTaskIncomplete, isTaskCompleted);
+      }
+    }, 1000);
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
@@ -86,6 +96,7 @@ export function useTaskTimer() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
+      window.clearInterval(timerInterval);
     };
   };
 
