@@ -36,6 +36,17 @@ export default function ProfileInformationPage() {
     }
 
     const user = JSON.parse(storedUser)
+    // Re-attach persisted picture (survives reloads unless storage cleared).
+    import("@/lib/session-client").then((s) => {
+      try {
+        const kept = (s as any).getPersistedProfilePicture?.(user)
+        if (kept && !user.profilePicture) {
+          user.profilePicture = kept
+          try { localStorage.setItem("tivexx-user", JSON.stringify(user)) } catch {}
+          setUserData({ ...user })
+        }
+      } catch {}
+    }).catch(() => {})
     // Set default level if not present
     if (!user.level) {
       user.level = "Basic"

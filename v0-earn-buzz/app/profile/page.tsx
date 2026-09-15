@@ -39,6 +39,16 @@ export default function ProfilePage() {
       router.push("/login")
       return
     }
+    // Re-attach persisted picture (survives reloads unless storage cleared).
+    import("@/lib/session-client").then((s) => {
+      try {
+        const kept = (s as any).getPersistedProfilePicture?.(user)
+        if (kept && !user.profilePicture) {
+          user.profilePicture = kept
+          try { localStorage.setItem("tivexx-user", JSON.stringify(user)) } catch {}
+        }
+      } catch {}
+    }).catch(() => {})
     setUserData(user)
     try { setTrustScore(computeScore(loadMeta())) } catch {}
     // Live-sync if dashboard/other tab updates picture or name.

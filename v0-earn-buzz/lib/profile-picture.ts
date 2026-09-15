@@ -1,14 +1,24 @@
 "use client";
 
-import { persistUserSession } from "@/lib/session-client";
+import { persistUserSession, getPersistedProfilePicture } from "@/lib/session-client";
 import { safeParse } from "@/lib/safe-storage";
 
 export const USER_KEY = "tivexx-user";
+export const PICTURE_KEY = "tivexx-profile-picture";
 export const USER_UPDATED_EVENT = "tivexx:update";
 
 export function getStoredUser<T = any>(): T | null {
   try {
-    return safeParse<T>(localStorage.getItem(USER_KEY), null as any);
+    const user = safeParse<T>(localStorage.getItem(USER_KEY), null as any) as any;
+    if (user && !(user as any).profilePicture) {
+      // Re-attach persisted picture — survives reloads, balance syncs, cookie restores.
+      const kept = getPersistedProfilePicture(user);
+      if (kept) {
+        (user as any).profilePicture = kept;
+        try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch {}
+      }
+    }
+    return user;
   } catch {
     return null;
   }
@@ -24,6 +34,11 @@ export function broadcastUserUpdate(user: any) {
 /** Persist user to localStorage + session cookie and broadcast. Returns true on success. */
 export function saveStoredUser(user: any): boolean {
   try {
+    // Never drop picture when caller passes a fresh object without one.
+    if (!user?.profilePicture) {
+      const kept = getPersistedProfilePicture(user);
+      if (kept) user = { ...user, profilePicture: kept };
+    }
     persistUserSession(user);
   } catch {}
   try {

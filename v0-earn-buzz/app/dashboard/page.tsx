@@ -161,10 +161,32 @@ export default function DashboardPage() {
     setShowInbox(true);
   };
   // Live-sync round avatar when profile picture/name changes in Profile tab.
+  // Also re-attach persisted picture on mount (survives reloads/cookie restores).
   useEffect(() => {
     let unsub: (() => void) | undefined;
     import("@/lib/profile-picture").then((m) => {
-      try { unsub = m.subscribeToUserUpdates((u: any) => { if (u) setUserData((prev: any) => ({ ...(prev || {}), ...u })); }); } catch {}
+      try {
+        // Re-attach on mount first.
+        try {
+          const raw = localStorage.getItem("tivexx-user");
+          if (raw) {
+            const stored = JSON.parse(raw);
+            if (!stored?.profilePicture) {
+              import("@/lib/session-client").then((s) => {
+                try {
+                  const kept = (s as any).getPersistedProfilePicture?.(stored);
+                  if (kept) {
+                    const merged = { ...stored, profilePicture: kept };
+                    try { localStorage.setItem("tivexx-user", JSON.stringify(merged)); } catch {}
+                    setUserData((prev: any) => ({ ...((prev || {}) as any), ...merged }));
+                  }
+                } catch {}
+              }).catch(() => {});
+            }
+          }
+        } catch {}
+        unsub = m.subscribeToUserUpdates((u: any) => { if (u) setUserData((prev: any) => ({ ...(prev || {}), ...u })); });
+      } catch {}
     }).catch(() => {});
     return () => { try { unsub?.(); } catch {} };
   }, []);
