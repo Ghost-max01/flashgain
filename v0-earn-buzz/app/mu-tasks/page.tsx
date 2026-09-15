@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
+import { recordTaskEarning } from "@/lib/task-ledger";
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 interface Task {
   id: string
@@ -1162,6 +1164,8 @@ function MuTaskPageInner() {
     const newCompleted = [...completedTasks, task.id]
     setCompletedTasks(newCompleted)
     localStorage.setItem(taskStorageKey, JSON.stringify(newCompleted))
+    // History ledger (Profile → History → Task Earnings)
+    recordTaskEarning(task.id, (task as any).platform || task.id, (task as any).reward || 1000)
 
     const now = new Date()
     const nextReset = getNextResetBoundary(now).getTime()
@@ -1465,20 +1469,7 @@ function MuTaskPageInner() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

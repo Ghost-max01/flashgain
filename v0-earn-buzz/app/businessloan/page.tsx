@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, CheckCircle, Search, Sparkles, Home, Gamepad2, User, Shield, Award, Landmark, Hash, User2 } from "lucide-react"
+import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -571,20 +572,7 @@ export default function BusinessLoanPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

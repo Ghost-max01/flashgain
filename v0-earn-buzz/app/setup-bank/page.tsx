@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Search, Sparkles, Home, Gamepad2, User, ChevronRight, X, Lock } from "lucide-react"
 import { saveBankDetails, getBankDetails } from "@/lib/bank-details"
+import { loadMeta, computeScore } from "@/lib/trust-score"
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function SetupBankAfterSignupPage() {
   const router = useRouter()
@@ -36,16 +38,38 @@ export default function SetupBankAfterSignupPage() {
     })
   })()
 
-  // If already completed bank setup, show locked view / skip to welcome
+  // If already completed bank setup, show locked view — UNLESS opened with
+  // ?edit=1 from Profile by a Beginner+ user (trust score 30+), who may change
+  // the account number. Saving re-locks the details.
+  const [editMode, setEditMode] = useState(false)
   useEffect(() => {
     const existing = getBankDetails()
     if (existing?.locked) {
-      setIsLocked(true)
-      setBank(existing.bank)
-      setBankCode(existing.bankCode)
-      setAccountNumber(existing.accountNumber)
-      setAccountName(existing.accountName)
-      setVerified(true)
+      let canEdit = false
+      try {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get("edit") === "1") {
+          const score = computeScore(loadMeta())
+          canEdit = score >= 30 // Beginner level
+        }
+      } catch {}
+      if (canEdit) {
+        // Prefilled but editable — user must re-verify before saving.
+        setIsLocked(false)
+        setEditMode(true)
+        setBank(existing.bank)
+        setBankCode(existing.bankCode)
+        setAccountNumber(existing.accountNumber)
+        setAccountName(existing.accountName)
+        setVerified(false)
+      } else {
+        setIsLocked(true)
+        setBank(existing.bank)
+        setBankCode(existing.bankCode)
+        setAccountNumber(existing.accountNumber)
+        setAccountName(existing.accountName)
+        setVerified(true)
+      }
     }
   }, [])
 
@@ -285,7 +309,11 @@ export default function SetupBankAfterSignupPage() {
               {isLocked && <span className="ml-auto flex items-center gap-1 text-xs text-amber-300"><Lock className="h-3 w-3"/> Secured</span>}
             </div>
             <p className="text-white/80 text-sm">
-              {isLocked ? "Your bank details are secured and will be used for all withdrawals. They cannot be changed." : "Fill in your withdrawal details to receive payouts securely. Your information is protected and will be secured after saving."}
+              {isLocked
+                ? "Your bank details are secured and will be used for all withdrawals. Reach Beginner level to change them from your Profile."
+                : editMode
+                  ? "You are editing your payout account (Beginner+). Re-verify and save — details lock again afterwards."
+                  : "Fill in your withdrawal details to receive payouts securely. Your information is protected and will be secured after saving."}
             </p>
           </div>
         </div>
@@ -442,11 +470,7 @@ export default function SetupBankAfterSignupPage() {
         </div>
       </div>
 
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item"><Home className="h-5 w-5" /><span>Home</span></Link>
-        <Link href="/abouttivexx" className="hh-nav-item"><Gamepad2 className="h-5 w-5" /><span>About</span></Link>
-        <Link href="/refer" className="hh-nav-item"><User className="h-5 w-5" /><span>Refer</span></Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');

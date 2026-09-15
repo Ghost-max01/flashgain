@@ -2,60 +2,49 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Camera, LogOut, User, Bell, BellOff, Info, HelpCircle, Key, GitBranch } from "lucide-react" // Added Key, GitBranch
+import { ArrowLeft, Camera, LogOut, User, Key, Landmark, History, HelpCircle, ChevronRight, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
 import { LogoutConfirmation } from "@/components/logout-confirmation"
-import { requestNotificationPermission, showLocalNotification } from "@/services/notification-service"
 import { clearUserSession } from "@/lib/session-client"
+import { loadMeta, computeScore, getLevel } from "@/lib/trust-score"
+import { safeParse } from "@/lib/safe-storage"
+import { BottomNav } from "@/components/bottom-nav"
 
 interface UserData {
   name: string
   email: string
   balance: number
-  weeklyRewards: number
-  hasMomoNumber: boolean
   profilePicture?: string
-  level?: string
+  id?: string
+  userId?: string
 }
 
 export default function ProfilePage() {
   const router = useRouter()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
+  const [showBeginnerPopup, setShowBeginnerPopup] = useState(false)
+  const [trustScore, setTrustScore] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
   useEffect(() => {
-    // Check if user is logged in
     const storedUser = localStorage.getItem("tivexx-user")
-
     if (!storedUser) {
       router.push("/login")
       return
     }
-
-    const user = JSON.parse(storedUser)
-    // Set default level if not present
-    if (!user.level) {
-      user.level = "Basic"
+    const user = safeParse<any>(storedUser, null)
+    if (!user) {
+      router.push("/login")
+      return
     }
-
     setUserData(user)
-
-    // Check notification permission
-    if ("Notification" in window) {
-      setNotificationsEnabled(Notification.permission === "granted")
-    }
+    try { setTrustScore(computeScore(loadMeta())) } catch {}
   }, [router])
-
-  const handleLogoutClick = () => {
-    setShowLogoutConfirmation(true)
-  }
 
   const handleLogoutConfirm = () => {
     localStorage.removeItem("tivexx-user")
@@ -63,250 +52,206 @@ export default function ProfilePage() {
     router.push("/login")
   }
 
-  const handleLogoutCancel = () => {
-    setShowLogoutConfirmation(false)
-  }
-
-  const handleProfilePictureClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click()
-    }
-  }
+  const handleProfilePictureClick = () => fileInputRef.current?.click()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const result = event.target?.result as string
-        setPreviewImage(result)
-      }
-      reader.readAsDataURL(file)
-    }
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => setPreviewImage(event.target?.result as string)
+    reader.readAsDataURL(file)
   }
 
   const handleSaveProfilePicture = () => {
-    if (previewImage && userData) {
-      const updatedUser = {
-        ...userData,
-        profilePicture: previewImage,
-      }
-      localStorage.setItem("tivexx-user", JSON.stringify(updatedUser))
-      setUserData(updatedUser)
-      setPreviewImage(null)
-    }
-  }
-
-  const handleCancelProfilePicture = () => {
+    if (!previewImage || !userData) return
+    const updatedUser = { ...userData, profilePicture: previewImage }
+    try { localStorage.setItem("tivexx-user", JSON.stringify(updatedUser)) } catch {}
+    setUserData(updatedUser)
     setPreviewImage(null)
   }
 
-  const handleToggleNotifications = useCallback(async () => {
-    if (!notificationsEnabled) {
-      // Request permission
-      const permission = await requestNotificationPermission()
-      if (permission === "granted") {
-        setNotificationsEnabled(true)
-        localStorage.setItem("momo-credit-notification-permission", "granted")
-
-        // Show a test notification
-        showLocalNotification("Notifications Enabled", {
-          body: "You will now receive updates about new features and important information.",
-        })
-      }
+  // Change account number is gated at Beginner (trust score 30+).
+  const handleChangeAccountNumber = () => {
+    if (trustScore >= 30) {
+      router.push("/setup-bank?edit=1")
     } else {
-      // We can't programmatically revoke permission, so just inform the user
-      alert("To disable notifications, please change the permission in your browser settings.")
+      setShowBeginnerPopup(true)
     }
-  }, [notificationsEnabled])
-
-  if (!userData) {
-    return <div className="p-6 text-center">Loading...</div>
   }
 
+  if (!userData) {
+    return <div className="p-6 text-center text-white">Loading...</div>
+  }
+
+  const level = getLevel(trustScore)
+  const initial = String(userData.name || "U").trim().charAt(0).toUpperCase()
+
+  const rows: {
+    icon: React.ElementType
+    tint: string
+    title: string
+    sub: string
+    action: "link" | "account" | "picture"
+    href?: string
+  }[] = [
+    { icon: Camera, tint: "pf-tint-emerald", title: "Change profile picture", sub: "Tap to upload a new photo", action: "picture" },
+    { icon: User, tint: "pf-tint-emerald", title: "Edit details", sub: "Change your name and profile info", action: "link", href: "/profile/information" },
+    { icon: Key, tint: "pf-tint-violet", title: "Change password", sub: "Update your account password", action: "link", href: "/profile/change-password" },
+    { icon: Landmark, tint: "pf-tint-amber", title: "Change account number", sub: trustScore >= 30 ? "Update your payout account" : "Reach Beginner to unlock", action: "account" },
+    { icon: History, tint: "pf-tint-cyan", title: "History", sub: "Tasks, referrals, withdrawals, purchases", action: "link", href: "/history" },
+    { icon: HelpCircle, tint: "pf-tint-blue", title: "Help & Support", sub: "Chat with support", action: "link", href: "/chats" },
+  ]
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fff5f0] to-[#fff0e6] pb-6">
+    <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
+      <div className="hh-bubbles-container" aria-hidden="true">
+        {[...Array(12)].map((_, i) => (
+          <div key={i} className={`hh-bubble hh-bubble-${i + 1}`}></div>
+        ))}
+      </div>
+      <div className="hh-mesh-overlay" aria-hidden="true"></div>
+
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="font-bold text-lg">Profile</div>
+      <div className="sticky top-0 z-10 hh-header">
+        <div className="max-w-md mx-auto px-6 pt-8 pb-4">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <button className="hh-back-btn" aria-label="Back">
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+            </Link>
+            <div>
+              <h1 className="hh-title">Profile</h1>
+              <p className="hh-subtitle">Manage your account</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Profile Content */}
-      <div className="max-w-md mx-auto mt-6 px-4">
-        {/* Profile Picture */}
-        <div className="flex flex-col items-center mb-8">
-          <div
-            className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer mb-2 border-2 border-orange-500"
-            onClick={handleProfilePictureClick}
-          >
-            {userData.profilePicture ? (
-              <img
-                src={userData.profilePicture || "/placeholder.svg"}
-                alt={userData.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-orange-100 flex items-center justify-center">
-                <User className="h-12 w-12 text-orange-500" />
-              </div>
-            )}
-            <div className="absolute bottom-0 right-0 bg-orange-600 rounded-full p-1.5">
-              <Camera className="h-4 w-4 text-white" />
+      <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
+        {/* Identity card */}
+        <div className="hh-card hh-entry-1">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0 cursor-pointer" onClick={handleProfilePictureClick} title="Change profile picture">
+              {userData.profilePicture ? (
+                <img src={userData.profilePicture} alt={userData.name} className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-emerald-500/15 border-2 border-emerald-500/50 flex items-center justify-center">
+                  <span className="text-2xl font-black text-emerald-300">{initial}</span>
+                </div>
+              )}
+              <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-emerald-500 border-2 border-[#050d14] flex items-center justify-center">
+                <Camera className="h-3 w-3 text-white" />
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-lg font-black text-white truncate">{userData.name}</div>
+              <div className="text-xs text-white/50 truncate">{userData.email}</div>
+              <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-black px-2.5 py-0.5 rounded-full border" style={{ color: level.color, borderColor: `${level.color}55`, background: `${level.color}18` }}>
+                <ShieldCheck className="h-3 w-3" /> {level.label} • {trustScore}
+              </span>
             </div>
           </div>
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-          <p className="text-sm text-gray-500">Tap to change profile picture</p>
-        </div>
-
-        {/* Preview and Save Controls */}
-        {previewImage && (
-          <div className="mb-8 bg-white p-4 rounded-xl shadow">
-            <h3 className="font-medium mb-3">Preview</h3>
-            <div className="flex justify-center mb-4">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-orange-500">
-                <img src={previewImage || "/placeholder.svg"} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            </div>
-            <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={handleCancelProfilePicture} className="rounded-full bg-transparent">
-                Cancel
-              </Button>
-              <Button onClick={handleSaveProfilePicture} className="bg-orange-600 hover:bg-orange-700 rounded-full">
-                Save Picture
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Menu Options */}
-        <div className="space-y-4">
-          {/* Profile Information */}
-          <Link href="/profile/information">
-            <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                  <User className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="font-medium">Profile Information</p>
-                  <p className="text-sm text-gray-500">View and edit your profile details</p>
-                </div>
-              </div>
-              <ArrowLeft className="h-5 w-5 text-gray-400 rotate-180" />
-            </div>
-          </Link>
-
-          {/* Change Password */}
-          <Link href="/profile/change-password">
-            <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                  <Key className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium">Change Password</p>
-                  <p className="text-sm text-gray-500">Update your account password</p>
-                </div>
-              </div>
-              <ArrowLeft className="h-5 w-5 text-gray-400 rotate-180" />
-            </div>
-          </Link>
-
-          {/* Help & Support */}
-          <Link href="/support">
-            <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-                  <HelpCircle className="h-5 w-5 text-teal-600" />
-                </div>
-                <div>
-                  <p className="font-medium">Help & Support</p>
-                  <p className="text-sm text-gray-500">Get help with using Momo Credit</p>
-                </div>
-              </div>
-              <ArrowLeft className="h-5 w-5 text-gray-400 rotate-180" />
-            </div>
-          </Link>
-
-          {/* About */}
-          <Link href="/about">
-            <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Info className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium">About</p>
-                  <p className="text-sm text-gray-500">Learn more about Momo Credit</p>
-                </div>
-              </div>
-              <ArrowLeft className="h-5 w-5 text-gray-400 rotate-180" />
-            </div>
-          </Link>
-
-          {/* Version */}
-          <Link href="/profile/version">
-            <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                  <GitBranch className="h-5 w-5 text-gray-600" />
-                </div>
-                <div>
-                  <p className="font-medium">App Version</p>
-                  <p className="text-sm text-gray-500">Check for updates</p>
-                </div>
-              </div>
-              <ArrowLeft className="h-5 w-5 text-gray-400 rotate-180" />
-            </div>
-          </Link>
-
-          {/* Notification Settings */}
-          {"Notification" in window && (
-            <div className="bg-white rounded-xl shadow p-5 mb-6">
-              <h2 className="text-lg font-semibold mb-4">Notification Settings</h2>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {notificationsEnabled ? (
-                    <Bell className="h-5 w-5 text-orange-600" />
-                  ) : (
-                    <BellOff className="h-5 w-5 text-gray-400" />
-                  )}
-                  <div>
-                    <p className="font-medium">Push Notifications</p>
-                    <p className="text-sm text-gray-500">
-                      {notificationsEnabled
-                        ? "You'll receive notifications about new features and updates"
-                        : "Enable to receive important updates"}
-                    </p>
-                  </div>
-                </div>
-                <Switch checked={notificationsEnabled} onCheckedChange={handleToggleNotifications} />
-              </div>
+          {previewImage && (
+            <div className="mt-4 rounded-2xl bg-black/30 border border-white/10 p-3 flex items-center gap-3">
+              <img src={previewImage} alt="Preview" className="w-12 h-12 rounded-full object-cover border border-emerald-500/50" />
+              <span className="text-xs text-white/60 flex-1">New picture preview</span>
+              <Button variant="outline" onClick={() => setPreviewImage(null)} className="rounded-full border-white/15 text-white text-xs">Cancel</Button>
+              <Button onClick={handleSaveProfilePicture} className="rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-black">Save</Button>
             </div>
           )}
-
-          {/* Logout Button */}
-          <Button
-            variant="outline"
-            className="w-full rounded-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center justify-center gap-2 mt-6 bg-transparent"
-            onClick={handleLogoutClick}
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
         </div>
+
+        {/* Menu rows */}
+        <div className="space-y-3 hh-entry-2">
+          {rows.map((r) => {
+            const Ico = r.icon
+            const inner = (
+              <div className="hh-card !p-4 flex items-center gap-3 hover:border-emerald-500/30 transition cursor-pointer">
+                <span className={`pf-ico ${r.tint}`}>
+                  <Ico className="h-5 w-5" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-bold text-white">{r.title}</span>
+                  <span className="block text-xs text-white/50">{r.sub}</span>
+                </span>
+                <ChevronRight className="h-5 w-5 text-white/30" />
+              </div>
+            )
+            if (r.action === "link") return <Link key={r.title} href={r.href!}>{inner}</Link>
+            if (r.action === "picture") return <button key={r.title} onClick={handleProfilePictureClick} className="w-full text-left">{inner}</button>
+            return <button key={r.title} onClick={handleChangeAccountNumber} className="w-full text-left">{inner}</button>
+          })}
+        </div>
+
+        {/* Logout */}
+        <Button
+          variant="outline"
+          className="w-full rounded-full border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center justify-center gap-2 bg-transparent"
+          onClick={() => setShowLogoutConfirmation(true)}
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
 
-      {/* Logout Confirmation Popup */}
-      {showLogoutConfirmation && <LogoutConfirmation onConfirm={handleLogoutConfirm} onCancel={handleLogoutCancel} />}
+      {/* Beginner gate popup */}
+      {showBeginnerPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4 text-center">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-3">
+              <Landmark className="h-7 w-7 text-amber-300" />
+            </div>
+            <h2 className="text-xl font-black text-white">Beginner level required</h2>
+            <p className="text-sm text-white/70 mt-2 leading-relaxed">
+              You need to reach <span className="font-black text-emerald-300">Beginner</span> (trust score {trustScore}/30) to change your account number. Keep tapping, doing tasks and inviting friends.
+            </p>
+            <button onClick={() => setShowBeginnerPopup(false)} className="hh-popup-btn hh-popup-btn-confirm w-full mt-5">
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showLogoutConfirmation && <LogoutConfirmation onConfirm={handleLogoutConfirm} onCancel={() => setShowLogoutConfirmation(false)} />}
+
+      <BottomNav />
+
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&display=swap');
+        .hh-root { font-family: 'Syne', sans-serif; background: #050d14; color: white; min-height: 100vh; }
+        .hh-bubbles-container { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+        .hh-bubble { position: absolute; border-radius: 50%; opacity: 0; animation: hh-bubble-rise linear infinite; }
+        .hh-bubble-1 { width: 8px; height: 8px; left: 10%; background: radial-gradient(circle, rgba(16,185,129,0.6), transparent); animation-duration: 8s; }
+        .hh-bubble-2 { width: 14px; height: 14px; left: 25%; background: radial-gradient(circle, rgba(59,130,246,0.5), transparent); animation-duration: 11s; animation-delay: 1.5s; }
+        .hh-bubble-3 { width: 6px; height: 6px; left: 40%; background: radial-gradient(circle, rgba(16,185,129,0.7), transparent); animation-duration: 9s; animation-delay: 3s; }
+        .hh-bubble-4 { width: 18px; height: 18px; left: 55%; background: radial-gradient(circle, rgba(139,92,246,0.4), transparent); animation-duration: 13s; animation-delay: 0.5s; }
+        .hh-bubble-5 { width: 10px; height: 10px; left: 70%; background: radial-gradient(circle, rgba(16,185,129,0.5), transparent); animation-duration: 10s; animation-delay: 2s; }
+        .hh-bubble-6 { width: 5px; height: 5px; left: 82%; background: radial-gradient(circle, rgba(52,211,153,0.8), transparent); animation-duration: 7s; animation-delay: 4s; }
+        .hh-bubble-7 { width: 12px; height: 12px; left: 15%; background: radial-gradient(circle, rgba(59,130,246,0.4), transparent); animation-duration: 12s; animation-delay: 5s; }
+        .hh-bubble-8 { width: 7px; height: 7px; left: 35%; background: radial-gradient(circle, rgba(16,185,129,0.6), transparent); animation-duration: 9.5s; animation-delay: 2.5s; }
+        .hh-bubble-9 { width: 20px; height: 20px; left: 60%; background: radial-gradient(circle, rgba(16,185,129,0.2), transparent); animation-duration: 15s; animation-delay: 1s; }
+        .hh-bubble-10 { width: 9px; height: 9px; left: 88%; background: radial-gradient(circle, rgba(139,92,246,0.5), transparent); animation-duration: 10.5s; animation-delay: 6s; }
+        .hh-bubble-11 { width: 4px; height: 4px; left: 5%; background: radial-gradient(circle, rgba(52,211,153,0.9), transparent); animation-duration: 6.5s; animation-delay: 3.5s; }
+        .hh-bubble-12 { width: 16px; height: 16px; left: 48%; background: radial-gradient(circle, rgba(59,130,246,0.3), transparent); animation-duration: 14s; animation-delay: 7s; }
+        @keyframes hh-bubble-rise { 0% { transform: translateY(100vh) scale(0.5); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 0.6; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+        .hh-mesh-overlay { position: fixed; inset: 0; background: radial-gradient(ellipse 60% 40% at 20% 80%, rgba(16,185,129,0.07) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 80% 20%, rgba(59,130,246,0.06) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+        .hh-header { background: linear-gradient(180deg, rgba(5,13,20,0.95) 0%, rgba(5,13,20,0.8) 100%); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(16,185,129,0.15); }
+        .hh-back-btn { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: white; }
+        .hh-title { font-size: 20px; font-weight: 800; color: white; line-height: 1.2; }
+        .hh-subtitle { font-size: 12px; color: rgba(16,185,129,0.8); }
+        .hh-card { background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 20px; backdrop-filter: blur(12px); position: relative; overflow: hidden; }
+        .pf-ico { width: 42px; height: 42px; border-radius: 13px; display: flex; align-items: center; justify-content: center; shrink-0; border: 1px solid; }
+        .pf-tint-emerald { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: #34d399; }
+        .pf-tint-violet { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); color: #a78bfa; }
+        .pf-tint-amber { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); color: #fbbf24; }
+        .pf-tint-cyan { background: rgba(6,182,212,0.12); border-color: rgba(6,182,212,0.3); color: #22d3ee; }
+        .pf-tint-blue { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.3); color: #60a5fa; }
+        .hh-popup { background: linear-gradient(135deg, #0d1f2d, #0a1628); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
+        .hh-popup-btn { display: block; width: 100%; padding: 15px 16px; border-radius: 14px; font-weight: 800; font-size: 15px; border: none; cursor: pointer; }
+        .hh-popup-btn-confirm { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+      `}</style>
     </div>
   )
 }

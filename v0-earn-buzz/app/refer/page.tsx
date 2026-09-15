@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 import {
   ArrowLeft,
   Copy,
@@ -678,6 +679,12 @@ function ReferContent() {
                       const j = await res.json();
                       if(!res.ok){ alert(j.error||"Withdraw failed"); return; }
                       alert("Referral withdrawal requested: ₦"+avail.toLocaleString());
+                      // Local mirror for Profile → History → Referrals tab.
+                      try {
+                        const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
+                        prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random()*1e9)}`, amount: avail, date: new Date().toISOString() });
+                        localStorage.setItem("tivexx-referral-withdrawals", JSON.stringify(prev.slice(0, 200)));
+                      } catch {}
                       const nb = Number(j.referral_balance ?? j.available ?? 0);
                       const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
                       setAnimatedEarnings(nb);
@@ -965,20 +972,7 @@ function ReferContent() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item hh-nav-active">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

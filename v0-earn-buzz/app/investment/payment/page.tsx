@@ -3,6 +3,7 @@
 import React, { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { BottomNav } from "@/components/bottom-nav";
 import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmark, Hash, User2, AlertCircle } from "lucide-react";
 import { OpayWarningPopup } from "@/components/opay-warning-popup";
 import { safeParse } from "@/lib/safe-storage";
@@ -211,11 +212,7 @@ function InvestmentPaymentContent() {
         </div>
       </div>
 
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item"><Home className="h-5 w-5" /><span>Home</span></Link>
-        <Link href="/about" className="hh-nav-item hh-nav-active"><Gamepad2 className="h-5 w-5" /><span>About</span></Link>
-        <Link href="/refer" className="hh-nav-item"><User className="h-5 w-5" /><span>Refer</span></Link>
-      </div>
+      <BottomNav />
 
       {showOpayWarning && <OpayWarningPopup onClose={() => setShowOpayWarning(false)} />}
 

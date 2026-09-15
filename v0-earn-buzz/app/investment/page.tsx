@@ -41,6 +41,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { BottomNav } from "@/components/bottom-nav";
 import { useRouter } from "next/navigation";
 
 export default function InvestmentPlatformPage() {
@@ -1088,20 +1089,7 @@ export default function InvestmentPlatformPage() {
       </footer>
 
       {/* Bottom Navigation - Matching Dashboard */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/about" className="hh-nav-item hh-nav-active">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

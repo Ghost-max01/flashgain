@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Info, CheckCircle, Home, Gamepad2, User, Shield, Sparkles, Award } from "lucide-react"
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function LoanFeeInstructionPage() {
   const router = useRouter()
@@ -213,20 +214,7 @@ export default function LoanFeeInstructionPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

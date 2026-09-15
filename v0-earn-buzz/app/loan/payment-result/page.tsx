@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { XCircle, RefreshCw, Home, Headphones, ArrowLeft, AlertTriangle, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { BottomNav } from "@/components/bottom-nav";
 import { Suspense } from "react"
 
 function LoanPaymentResultContent() {
@@ -148,21 +149,8 @@ function LoanPaymentResultContent() {
 
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <span className="text-xl">🎮</span>
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <span className="text-xl">👤</span>
-          <span>Refer</span>
-        </Link>
-      </div>
+      {/* Bottom Navigation (shared 5-button nav) */}
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

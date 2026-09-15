@@ -15,6 +15,7 @@ import {
   Gift,
   Clock,
   Headphones,
+  Mail,
   Shield,
   TrendingUp,
   Users,
@@ -36,6 +37,8 @@ import { LiveChat } from "@/components/live-chat";
 import dynamic from "next/dynamic";
 const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").then(m => m.GuidedOnboarding), { ssr: false }) as any;
 import { getBankDetails } from "@/lib/bank-details";
+import { readyUnseenCount, refreshPendingStatuses } from "@/lib/pending-withdrawals";
+import { BottomNav } from "@/components/bottom-nav";
 import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, getEarnPerTap, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -113,6 +116,33 @@ export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawalNotification, setShowWithdrawalNotification] =
     useState(false);
+  // Mail badge (red count): pending withdrawals approved by support (24h) +
+  // channel updates. Tapping goes to History → Withdrawals to collect.
+  const [mailCount, setMailCount] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      try {
+        refreshPendingStatuses();
+        const pend = readyUnseenCount();
+        let unread = 0;
+        try { unread = Number(localStorage.getItem("tivexx-support-unread") || 0) || 0; } catch {}
+        setMailCount(pend + unread);
+      } catch {}
+    };
+    update();
+    const id = setInterval(update, 30000);
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("tivexx:support-unread", update as EventListener);
+    window.addEventListener("tivexx:update", update as EventListener);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", update);
+      document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("tivexx:support-unread", update as EventListener);
+      window.removeEventListener("tivexx:update", update as EventListener);
+    };
+  }, []);
   const [balance, setBalance] = useState(50000);
   const [animatedBalance, setAnimatedBalance] = useState(50000);
   const [isBalanceChanging, setIsBalanceChanging] = useState(false);
@@ -2312,6 +2342,22 @@ export default function DashboardPage() {
             </div>
             <div className="text-right flex items-center gap-2">
               <button
+                onClick={() => router.push("/history?tab=withdrawals")}
+                className="hh-support-btn hh-support-blue relative"
+                aria-label="Updates"
+                title="Updates — pending withdrawals & messages"
+              >
+                <Mail className="h-5 w-5 text-white" />
+                {mailCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse"
+                    style={{ boxShadow: "0 0 10px rgba(220,38,38,0.9)" }}
+                  >
+                    {mailCount > 9 ? "9+" : mailCount}
+                  </span>
+                )}
+              </button>
+              <button
                 onClick={() => setShowLiveChat(true)}
                 className="hh-support-btn hh-support-blue"
               >
@@ -2701,21 +2747,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── BOTTOM NAV ── */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item hh-nav-active">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer & Earn</span>
-        </Link>
-      </div>
+      {/* ── BOTTOM NAV (shared 5-button: Home • About • Chats • Refer & Earn • Profile) ── */}
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

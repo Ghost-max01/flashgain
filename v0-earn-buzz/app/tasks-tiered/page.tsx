@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
+import { recordTaskEarning } from "@/lib/task-ledger";
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 interface Task {
   id: string
@@ -72,7 +74,9 @@ const AVAILABLE_TASKS: Task[] = [
   { id: "tiered-task-48", platform: "Power Earn", description: "Power earn mode activated", category: "Tasks", reward: 9700, link: "https://creditbuzz.online", icon: "🎬", tier: "silver" },
   { id: "tiered-task-49", platform: "Maximum Payout", description: "Maximum payout available", category: "Ads", reward: 9800, link: "https://omg10.com/4/10676426", icon: "🎮", tier: "silver" },
   { id: "tiered-task-50", platform: "Legendary Reward", description: "Legendary reward final task", category: "Advertisement", reward: 9900, link: "https://otieu.com/4/10575212", icon: "🎪", tier: "silver" },
-]
+// NOTE: every task pays ₦1,000 flat (per request) — normalize below so the
+// old compounding values (5000→9900) never reach credit/toast/badge/ledger.
+].map((t) => ({ ...t, reward: 1000 }))
 
 export default function TieredTaskPage() {
   const router = useRouter()
@@ -288,6 +292,8 @@ export default function TieredTaskPage() {
     const newCompleted = [...completedTasks, task.id]
     setCompletedTasks(newCompleted)
     localStorage.setItem("tivexx-tiered-completed-tasks", JSON.stringify(newCompleted))
+    // History ledger (Profile → History → Task Earnings)
+    recordTaskEarning(task.id, task.platform || task.id, task.reward)
 
     // Completed tasks are persistent and removed from the list permanently.
     // No cooldown is required for permanently completed tasks; ensure cooldown entry is cleared.
@@ -716,20 +722,7 @@ export default function TieredTaskPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

@@ -10,6 +10,7 @@ import { Copy, Check, Lightbulb, Hash, Landmark, User2, X, ArrowLeft, Home, Game
 import { useToast } from "@/hooks/use-toast"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function LoanPaymentPage() {
   const router = useRouter()
@@ -279,20 +280,7 @@ export default function LoanPaymentPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

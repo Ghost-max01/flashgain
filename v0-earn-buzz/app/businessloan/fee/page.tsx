@@ -6,6 +6,7 @@ import { ArrowLeft, Home, Gamepad2, User, Shield, Sparkles, Award, Clock } from 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMemo, Suspense } from "react"
 import Link from "next/link"
+import { BottomNav } from "@/components/bottom-nav";
 
 function LoanFeeContent() {
   const router = useRouter()
@@ -185,20 +186,7 @@ function LoanFeeContent() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

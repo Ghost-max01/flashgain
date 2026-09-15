@@ -4,6 +4,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BottomNav } from "@/components/bottom-nav";
 import { ArrowLeft, Copy, Share2, Gift, Users, Wallet, Send, Check, Sparkles, TrendingUp, Award, Clock } from "lucide-react";
 import { safeParse } from "@/lib/safe-storage";
 
@@ -181,7 +182,7 @@ function AutoTapReferContent() {
 
         {/* Intentionally STOP here — no How It Works, no Stats Dashboard */}
       </div>
-      <div className="hh-bottom-nav"><Link href="/dashboard" className="hh-nav-item"><span>Home</span></Link><Link href="/about" className="hh-nav-item"><span>About</span></Link><Link href="/refer" className="hh-nav-item hh-nav-active"><Users className="h-5 w-5" /><span>Refer</span></Link></div>
+      <BottomNav />
       <style jsx global>{`
         .hh-root { font-family: 'Syne', sans-serif; background: #050d14; color: white; min-height: 100vh; }
         .hh-bubbles-container { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }

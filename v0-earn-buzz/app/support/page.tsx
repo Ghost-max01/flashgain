@@ -7,6 +7,7 @@ import { ArrowLeft, MessageSquare, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function SupportPage() {
   const router = useRouter()
@@ -102,6 +103,7 @@ export default function SupportPage() {
           EarnBuzz © 2025. All rights reserved.
         </div>
       </div>
+      <BottomNav />
     </div>
   )
 }

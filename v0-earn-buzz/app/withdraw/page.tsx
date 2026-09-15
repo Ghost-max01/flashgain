@@ -9,6 +9,7 @@ import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 import { getBankDetails, type BankDetails } from "@/lib/bank-details"
 import { loadMeta, computeScore, TRUST_LEVELS } from "@/lib/trust-score"
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -959,20 +960,7 @@ export default function WithdrawPage() {
       )}
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

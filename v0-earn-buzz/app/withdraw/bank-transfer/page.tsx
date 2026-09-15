@@ -8,6 +8,7 @@ import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmar
 import { OpayWarningPopup } from "@/components/opay-warning-popup"
 import Link from "next/link"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
+import { BottomNav } from "@/components/bottom-nav";
 
 function PayKeyPaymentContent() {
   const router = useRouter()
@@ -240,20 +241,7 @@ function PayKeyPaymentContent() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       {/* Opay Warning Popup */}
       {showOpayWarning && <OpayWarningPopup onClose={() => setShowOpayWarning(false)} />}

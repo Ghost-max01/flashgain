@@ -7,6 +7,7 @@ import { ArrowLeft, Home, Gamepad2, User, Sparkles, Shield, Users, Award, Trendi
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function AboutPage() {
   const router = useRouter()
@@ -367,20 +368,7 @@ export default function AboutPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item hh-nav-active">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

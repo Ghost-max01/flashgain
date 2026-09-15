@@ -4,6 +4,9 @@ import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { BottomNav } from "@/components/bottom-nav"
+import { getBankDetails } from "@/lib/bank-details"
+import { placePendingWithdrawal } from "@/lib/pending-withdrawals"
 
 interface ServerWithdrawal {
   reference: string
@@ -41,6 +44,22 @@ function ResultInner() {
             method: String(j.method || ""),
             created_at: j.created_at || null,
           })
+          // First time this withdrawal succeeds: hold the balance (it vanishes
+          // from available) and create the pending record. The transaction only
+          // appears under History → Withdrawals, where it is completed after
+          // the 24h support verification. Idempotent per reference.
+          if (amount > 0) {
+            try {
+              const bd = getBankDetails();
+              void placePendingWithdrawal({
+                reference: String(j.reference || reference),
+                amount,
+                bank: bd?.bank || String(j.method || ""),
+                accountNumber: bd?.accountNumber || "",
+                accountName: bd?.accountName || "",
+              });
+            } catch {}
+          }
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Could not load withdrawal")
@@ -132,6 +151,11 @@ function ResultInner() {
       <Button onClick={handleBackToDash} className="w-full max-w-md bg-orange-600 hover:bg-orange-700">
         Back to Dashboard
       </Button>
+      <p className="text-xs text-gray-500 text-center max-w-md mt-3">
+        Your balance is held for verification. Track it under Profile → History → Withdrawals — you will be notified here once support approves it (within 24 hours).
+      </p>
+      <div className="h-20" />
+      <BottomNav />
     </div>
   )
 }

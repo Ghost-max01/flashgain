@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
+import { recordTaskEarning } from "@/lib/task-ledger";
 import { safeParse } from "@/lib/safe-storage";
+import { BottomNav } from "@/components/bottom-nav";
 
 interface Task {
   id: string
@@ -25,7 +27,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Monetage Spin-to-Win Ad..",
     description: "Tap our premium ad link for extra rewards.",
     category: "Ads",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "📢",
   },
@@ -34,7 +36,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Bloggersin Promo",
     description: "Tap our premium ad link for extra rewards",
     category: "Tasks",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "💬",
   },
@@ -43,7 +45,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "EffectiveGate CPM Ad",
     description: "Tap our ad link to earn Extra money",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://otieu.com/4/10575212",
     icon: "🎯",
   },
@@ -52,7 +54,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "EffectiveGate Offer",
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://omg10.com/4/10676426",
     icon: "🎁",
   },
@@ -61,7 +63,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Spin-to-Win Hub",
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "🎡",
   },
@@ -70,7 +72,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Winners Hub Promo",
     description: "Tap our ad link to earn Extra money",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://omg10.com/4/10676426",
     icon: "💸💲",
   },
@@ -79,7 +81,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Quick Survey Task",
     description: "Join Nova Cash",
     category: "Tasks",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "🎵",
   },
@@ -88,7 +90,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Sponsored ads 1",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
-    reward: 5000,
+    reward: 1000,
     link: "https://otieu.com/4/10575212",
     icon: "🤖",
   },
@@ -97,7 +99,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Sponsored ads 2",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
-    reward: 5000,
+    reward: 1000,
     link: "https://creditbuzz.online",
     icon: "🎁",
   },
@@ -107,7 +109,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Sponsored ads 3",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
-    reward: 5000,
+    reward: 1000,
     link: "https://omg10.com/4/10676426",
     icon: "🌐",
   },
@@ -117,7 +119,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Monetage Spin-to-Win Ad.. (2)",
     description: "Tap our premium ad link for extra rewards.",
     category: "Ads",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "📢",
   },
@@ -126,7 +128,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Bloggersin Promo (2)",
     description: "Tap our premium ad link for extra rewards",
     category: "Tasks",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "💬",
   },
@@ -135,7 +137,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "EffectiveGate CPM Ad (2)",
     description: "Tap our ad link to earn Extra money",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://otieu.com/4/10575212",
     icon: "🎯",
   },
@@ -144,7 +146,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "EffectiveGate Offer (2)",
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://omg10.com/4/10676426",
     icon: "🎁",
   },
@@ -153,7 +155,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Spin-to-Win Hub (2)",
     description: "Tap our premium ad link for extra rewards",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "🎡",
   },
@@ -162,7 +164,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Winners Hub Promo (2)",
     description: "Tap our ad link to earn Extra money",
     category: "Advertisement",
-    reward: 5000,
+    reward: 1000,
     link: "https://omg10.com/4/10676426",
     icon: "💸💲",
   },
@@ -171,7 +173,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Quick Survey Task (2)",
     description: "Join Nova Cash",
     category: "Tasks",
-    reward: 5000,
+    reward: 1000,
     link: "https://newadsrewardss-coral.vercel.app/",
     icon: "🎵",
   },
@@ -180,7 +182,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Sponsored ads 1 (2)",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
-    reward: 5000,
+    reward: 1000,
     link: "https://otieu.com/4/10575212",
     icon: "🤖",
   },
@@ -189,7 +191,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Sponsored ads 2 (2)",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
-    reward: 5000,
+    reward: 1000,
     link: "https://creditbuzz.online",
     icon: "🎁",
   },
@@ -199,7 +201,7 @@ const AVAILABLE_TASKS: Task[] = [
     platform: "Sponsored ads 3 (2)",
     description: "Tap our premium ad link for extra rewards",
     category: "Social Media",
-    reward: 5000,
+    reward: 1000,
     link: "https://omg10.com/4/10676426",
     icon: "🌐",
   },
@@ -426,6 +428,8 @@ export default function AutoTapTaskPage() {
     const newCompleted = [...completedTasks, task.id]
     setCompletedTasks(newCompleted)
     localStorage.setItem("auto-tap-completed-tasks", JSON.stringify(newCompleted))
+    // History ledger (Profile → History → Task Earnings)
+    recordTaskEarning(task.id, task.platform || task.id, task.reward)
 
     const now = new Date()
     const nextReset = getNextResetBoundary(now).getTime()
@@ -729,20 +733,7 @@ export default function AutoTapTaskPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="hh-bottom-nav">
-        <Link href="/dashboard" className="hh-nav-item">
-          <Home className="h-5 w-5" />
-          <span>Home</span>
-        </Link>
-        <Link href="/abouttivexx" className="hh-nav-item">
-          <Gamepad2 className="h-5 w-5" />
-          <span>About</span>
-        </Link>
-        <Link href="/refer" className="hh-nav-item">
-          <User className="h-5 w-5" />
-          <span>Refer</span>
-        </Link>
-      </div>
+      <BottomNav />
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */
