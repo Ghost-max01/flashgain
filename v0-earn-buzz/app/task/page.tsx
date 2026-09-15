@@ -32,6 +32,7 @@ const AVAILABLE_TASKS: Task[] = [
   { id: "survey-task-7", platform: "Survey Task 7", description: "Join Nova Cash", category: "Tasks", reward: 1000, link: "https://newadsrewardss-coral.vercel.app/", icon: "🎵" },
   { id: "survey-task-8", platform: "Survey Task 8", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://otieu.com/4/10575212", icon: "🤖" },
   { id: "survey-task-9", platform: "Survey Task 9", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://creditbuzz.online", icon: "🎁" },
+  { id: "survey-task-10", platform: "Survey Task 10", description: "Tap our premium ad link for extra rewards", category: "Advertisement", reward: 1000, link: "https://creditbuzz.online", icon: "🎁" },
 ];
 
 const AVAILABLE_TASKS_DEDUPED: Task[] = (() => {

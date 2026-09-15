@@ -32,7 +32,6 @@ export function useTaskTimer() {
     let pageWasHidden = wasHidden() || document.hidden || !document.hasFocus();
 
     const processTimers = () => {
-      if (!pageWasHidden) return;
       pageWasHidden = false;
       setHidden(false);
 
@@ -95,9 +94,9 @@ export function useTaskTimer() {
     onTaskIncomplete: (taskId: string, elapsed: number) => void,
     isTaskCompleted: (taskId: string) => boolean
   ) => {
-    if (!wasHidden()) return false;
-    setHidden(false);
     try {
+      if (!wasHidden()) return false;
+      setHidden(false);
       const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
       if (!timers || Object.keys(timers).length === 0) return false;
       const now = Date.now();
