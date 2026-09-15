@@ -13,7 +13,6 @@ const ITEMS = [
   { href: "/abouttivexx", label: "About", Icon: Gamepad2, match: ["/abouttivexx", "/about"] },
   { href: "/chats", label: "Chats", Icon: MessagesSquare, match: ["/chats", "/support"] },
   { href: "/refer", label: "Refer & Earn", Icon: UserIcon, match: ["/refer"] },
-  { href: "/trust-score", label: "Trust Score", Icon: Award, match: ["/trust-score"] },
   { href: "/profile", label: "Profile", Icon: CircleUserRound, match: ["/profile", "/history", "/setup-bank"] },
 ];
 
