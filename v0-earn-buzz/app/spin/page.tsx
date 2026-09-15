@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { safeParse } from "@/lib/safe-storage";
 
 // Prize images - using public directory paths
 const imgIphone15 = "/assets/prizes/iphone15pro.png";
@@ -521,7 +522,7 @@ const SpinWheel = ({ canSpin, onSpinStart, remainingSpins }: SpinWheelProps) => 
                           setClaimMsg(null);
                           try {
                             const raw = localStorage.getItem("tivexx-user");
-                            const u = raw ? JSON.parse(raw) : null;
+                            const u = safeParse(raw, null);
                             const uid = u?.id || u?.userId || "";
                             if (!uid) {
                               setClaimMsg("Please sign in first to claim.");
@@ -735,7 +736,7 @@ const Index = () => {
   useEffect(() => {
     const loadSpinData = () => {
       const stored = localStorage.getItem("spinTimestamps");
-      const timestamps: number[] = stored ? JSON.parse(stored) : [];
+      const timestamps: number[] = safeParse(stored, []);
       
       // Filter timestamps from last 24 hours
       const now = Date.now();

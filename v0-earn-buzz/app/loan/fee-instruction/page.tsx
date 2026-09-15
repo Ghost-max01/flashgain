@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Info, CheckCircle, Home, Gamepad2, User, Shield, Sparkles, Award } from "lucide-react"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function LoanFeeInstructionPage() {
   const router = useRouter()
@@ -15,7 +16,7 @@ export default function LoanFeeInstructionPage() {
       router.push("/loan")
       return
     }
-    setLoanData(JSON.parse(storedLoanData))
+    setLoanData(safeParse(storedLoanData, null))
   }, [router])
 
   if (!loanData) {

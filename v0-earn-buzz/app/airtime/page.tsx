@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PaykeyError } from "@/components/paykey-error"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function AirtimePage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function AirtimePage() {
       return
     }
 
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   const networks = ["Airtel", "MTN", "Glo", "9mobile"]
@@ -57,7 +58,7 @@ export default function AirtimePage() {
     }
 
     const existing = localStorage.getItem("momo-credit-notifications")
-    const notifications = existing ? JSON.parse(existing) : []
+    const notifications = safeParse(existing, [])
     notifications.unshift(notification)
     localStorage.setItem("momo-credit-notifications", JSON.stringify(notifications))
   }

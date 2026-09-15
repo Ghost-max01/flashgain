@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Bell, CheckCircle, AlertCircle, Clock, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { safeParse } from "@/lib/safe-storage";
 
 interface Notification {
   id: string
@@ -35,7 +36,7 @@ export default function NotificationsPage() {
       router.push("/login")
       return
     }
-    try { setUserData(JSON.parse(storedUser)) } catch { router.push("/login"); return; }
+    try { setUserData(safeParse(storedUser, null)) } catch { router.push("/login"); return; }
 
     // Load notifications
     loadNotifications()

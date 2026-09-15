@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { supabase } from "@/lib/supabase/client"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function ChangePasswordPage() {
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function ChangePasswordPage() {
       router.push("/login")
       return
     }
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   const handleChangePassword = async (e: React.FormEvent) => {

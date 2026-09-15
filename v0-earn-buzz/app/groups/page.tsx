@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Send, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function GroupsPage() {
   const router = useRouter()
@@ -19,7 +20,7 @@ export default function GroupsPage() {
       return
     }
 
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   const handleJoinTelegram = () => {

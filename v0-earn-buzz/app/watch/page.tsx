@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import Script from "next/script"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function WatchPage() {
   const router = useRouter()
@@ -17,7 +18,7 @@ export default function WatchPage() {
       router.push("/login")
       return
     }
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   if (!userData) {

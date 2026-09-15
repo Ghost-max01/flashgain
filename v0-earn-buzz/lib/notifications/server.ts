@@ -1,6 +1,7 @@
 import { getFirebaseMessaging } from "@/lib/notifications/firebase-admin"
 import { configureWebPush, webpush } from "@/lib/notifications/web-push"
 import type { NotificationSendPayload, NotificationSubscribePayload } from "@/lib/notifications/types"
+import { safeParse } from "@/lib/safe-storage";
 
 const DEFAULT_ICON = "/icons/icon-192x192.png"
 const DEFAULT_BADGE = "/icons/icon-192x192.png"
@@ -61,7 +62,7 @@ async function supabaseRest(path: string, init?: RequestInit) {
   let data: any = null
 
   try {
-    data = text ? JSON.parse(text) : null
+    data = safeParse(text, null)
   } catch {
     data = text
   }

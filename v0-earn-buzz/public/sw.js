@@ -1,4 +1,4 @@
-const CACHE_NAME = "earn-buzz-v4"
+const CACHE_NAME = "earn-buzz-v5"
 const urlsToCache = [
   "/",
   "/manifest.webmanifest?v=20260317",

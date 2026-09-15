@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function WithdrawLoadingPage() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export default function WithdrawLoadingPage() {
 
     // Add transaction to history
     const storedTransactions = localStorage.getItem("earnbuzz-transactions")
-    const transactions = storedTransactions ? JSON.parse(storedTransactions) : []
+    const transactions = safeParse(storedTransactions, [])
     const withdrawData = JSON.parse(withdrawalData)
 
     const newTransaction = {

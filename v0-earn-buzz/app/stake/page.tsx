@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Sparkles, Zap, Trophy, Users, Flame, Crown, ShieldCheck, Timer, Coins, Lock, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { safeParse } from "@/lib/safe-storage";
 
 const STAKE_TIERS = [
   { pct: 20, label: "20%", desc: "Conservative" },
@@ -294,7 +295,7 @@ export default function StakeWinPage() {
       void (async () => {
         try {
           const raw = localStorage.getItem("tivexx-user")
-          const u = raw ? JSON.parse(raw) : null
+          const u = safeParse(raw, null)
           const uid = u?.id || u?.userId || ""
           if (!uid) {
             toast({ title: "Sign in to keep your winnings", variant: "destructive" })

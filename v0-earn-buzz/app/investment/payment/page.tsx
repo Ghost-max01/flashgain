@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmark, Hash, User2, AlertCircle } from "lucide-react";
 import { OpayWarningPopup } from "@/components/opay-warning-popup";
+import { safeParse } from "@/lib/safe-storage";
 
 function InvestmentPaymentContent() {
   const searchParams = useSearchParams();
@@ -46,7 +47,7 @@ function InvestmentPaymentContent() {
     if (!amountNum || amountNum < 100) return;
     try {
       const rawUser = typeof window !== "undefined" ? localStorage.getItem("tivexx-user") : null;
-      const u = rawUser ? JSON.parse(rawUser) : null;
+      const u = safeParse(rawUser, null);
       const email = u?.email || "";
       if (!email) {
         alert("Please update your profile email first");

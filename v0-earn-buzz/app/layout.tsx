@@ -7,6 +7,7 @@ import PageShell from "@/components/PageShell"
 import { NotificationHelperTools } from "@/components/notification-helper-tools"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 import { ServiceWorkerUpdater } from "@/components/service-worker-updater"
+import { ClientCrashGuard } from "@/components/client-crash-guard"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -59,6 +60,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ClientCrashGuard />
           <ServiceWorkerUpdater />
           <PageShell exclude={["/dashboard"]}>
             <main className="min-h-screen w-full relative overflow-hidden">

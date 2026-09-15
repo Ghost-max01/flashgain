@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 import { getBankDetails, type BankDetails } from "@/lib/bank-details"
 import { loadMeta, computeScore, TRUST_LEVELS } from "@/lib/trust-score"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -30,7 +31,7 @@ export default function WithdrawPage() {
   const [showHoursPopup, setShowHoursPopup] = useState(false)
   const [spinPlayedToday, setSpinPlayedToday] = useState(false)
   const [balanceInitialized, setBalanceInitialized] = useState(false)
-  const TOTAL_DAILY_TASKS = 20
+  const TOTAL_DAILY_TASKS = 10
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
   // REVIEW DAY: requirements show as met all day today, no link needed.
@@ -52,7 +53,11 @@ export default function WithdrawPage() {
       return
     }
 
-    const user = JSON.parse(storedUser)
+    const user = safeParse(storedUser, null)
+    if (!user) {
+      router.push("/login")
+      return
+    }
     setUserData(user)
     // Display fallback from localStorage; authoritative sync from server below.
     if (!balanceInitialized) {
@@ -94,7 +99,7 @@ export default function WithdrawPage() {
       setSpinPlayedToday(false)
     } else {
       // Get completed tasks for the current day
-      const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+      const completedTasks = safeParse(localStorage.getItem("tivexx-completed-tasks"), [])
       setCompletedTasksCount(completedTasks.length)
       const spinDate = localStorage.getItem("tivexx-spin-played-date") || ""
       setSpinPlayedToday(today === spinDate)
@@ -146,7 +151,7 @@ export default function WithdrawPage() {
   useEffect(() => {
     const updateCompleted = () => {
       try {
-        const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+        const completed = safeParse(localStorage.getItem("tivexx-completed-tasks"), [])
         setCompletedTasksCount(Array.isArray(completed) ? completed.length : 0)
       } catch {
         setCompletedTasksCount(0)
@@ -157,7 +162,8 @@ export default function WithdrawPage() {
       try {
         const storedUser = localStorage.getItem("tivexx-user")
         if (!storedUser) return
-        const user = JSON.parse(storedUser)
+        const user = safeParse(storedUser, null)
+        if (!user) return
         setUserData(user)
         // Don't update balance from localStorage to avoid glitching; use serverBalance as source of truth
         // refresh referral count if user id changed
@@ -234,7 +240,7 @@ export default function WithdrawPage() {
     // Poll completed tasks + spin-played every 500ms to catch updates from same tab (instant 0/1 -> 1/1)
     const pollInterval = setInterval(() => {
       try {
-        const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+        const completed = safeParse(localStorage.getItem("tivexx-completed-tasks"), [])
         const count = Array.isArray(completed) ? completed.length : 0
         setCompletedTasksCount(count)
         updateBankDetails()
@@ -369,14 +375,14 @@ export default function WithdrawPage() {
   const referralKey = Number(userData?.referral_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const bankLast4 = bankDetails?.accountNumber ? String(bankDetails.accountNumber).slice(-4) : '0000'
 
-  // Abbreviate account name: "Faith Wali" -> "F. Wali"
+  // Abbreviate account name: "Lawal Emmanuel" -> "Lawal E."
   const getAbbreviatedName = (fullName: string) => {
     if (!fullName) return ""
     const parts = fullName.trim().split(/\s+/)
     if (parts.length === 1) return parts[0]
-    const firstInitial = parts[0][0].toUpperCase()
-    const lastName = parts[parts.length - 1]
-    return `${firstInitial}. ${lastName}`
+    const firstName = parts[0]
+    const lastInitial = parts[parts.length - 1][0].toUpperCase()
+    return `${firstName} ${lastInitial}.`
   }
 
   const abbreviatedAccountName = bankDetails?.accountName ? getAbbreviatedName(bankDetails.accountName) : ""
@@ -789,7 +795,14 @@ export default function WithdrawPage() {
         {/* Instant Withdraw Blocked Popup */}
         {showInstantWithdrawBlockedPopup && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="hh-popup">
+            <div className="hh-popup relative">
+              <button
+                onClick={() => { setShowInstantWithdrawBlockedPopup(false); setToggleActive(false); }}
+                aria-label="Close"
+                className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center bg-white/10 border border-white/15 text-white/70 hover:bg-white/20 hover:text-white transition"
+              >
+                ✕
+              </button>
               <div className="hh-popup-header">
                 <AlertTriangle className="h-8 w-8 text-amber-400" />
                 <h2 className="text-xl font-bold text-white">Premium Feature Locked</h2>

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Link from "next/link"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function BusinessLoanPage() {
   const router = useRouter()
@@ -142,7 +143,7 @@ export default function BusinessLoanPage() {
     try {
       // Get user email/id for Paystack
       const raw = localStorage.getItem("tivexx-user")
-      const user = raw ? JSON.parse(raw) : null
+      const user = safeParse(raw, null)
       const email = user?.email || ""
       const userId = user?.id || user?.userId || user?.user_id || ""
       if (!email) {

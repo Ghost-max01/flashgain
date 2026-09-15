@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { NotificationPermissionPopup } from "@/components/notification-permission-popup"
 import { useNotification } from "@/hooks/useNotification"
+import { safeParse } from "@/lib/safe-storage";
 
 function resolveUserId(): string {
   if (typeof window === "undefined") {
@@ -71,7 +72,7 @@ export function NotificationHelperTools() {
   useEffect(() => {
     const checkUserLogin = () => {
       const userData = localStorage.getItem("tivexx-user")
-      const hasUser = userData && JSON.parse(userData).id
+      const hasUser = userData && safeParse<{ id?: unknown }>(userData, null)?.id
 
       if (hasUser && !userLoggedIn) {
         setUserLoggedIn(true)

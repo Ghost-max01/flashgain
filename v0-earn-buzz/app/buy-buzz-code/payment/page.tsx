@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, AlertTriangle, X, Volume2 } from "lucide-react"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function BuyBuzzCodePayment() {
   const [userInfo, setUserInfo] = useState<{ fullName: string; email: string } | null>(null)
@@ -15,7 +16,7 @@ export default function BuyBuzzCodePayment() {
   useEffect(() => {
     const stored = localStorage.getItem("buzzCodePurchase")
     if (stored) {
-      setUserInfo(JSON.parse(stored))
+      setUserInfo(safeParse(stored, null))
     } else {
       router.push("/buy-buzz-code")
     }

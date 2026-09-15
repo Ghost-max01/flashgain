@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Copy, Check, Lightbulb, Hash, Landmark, User2, X, ArrowLeft, Home, Gamepad2, User, Sparkles, Shield } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function LoanPaymentPage() {
   const router = useRouter()
@@ -27,7 +28,7 @@ export default function LoanPaymentPage() {
       router.push("/loan")
       return
     }
-    setLoanData(JSON.parse(storedLoanData))
+    setLoanData(safeParse(storedLoanData, null))
   }, [router])
 
   if (!loanData) {

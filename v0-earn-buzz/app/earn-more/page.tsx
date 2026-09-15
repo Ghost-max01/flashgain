@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ExternalLink } from "lucide-react"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function EarnMorePage() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export default function EarnMorePage() {
       return
     }
 
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   if (!userData) {

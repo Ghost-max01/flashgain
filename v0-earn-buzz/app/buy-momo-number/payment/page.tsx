@@ -10,6 +10,7 @@ import { Copy, Check, Lightbulb, Hash, Landmark, User2, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { OpayWarningPopup } from "@/components/opay-warning-popup" // Import OpayWarningPopup
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function PaymentPage() {
   const router = useRouter()
@@ -32,7 +33,7 @@ export default function PaymentPage() {
       return
     }
 
-    setFormData(JSON.parse(storedFormData))
+    setFormData(safeParse(storedFormData, null))
     setShowOpayWarning(true) // Show warning when page loads
     
     // Modified: Schedule next popup appearance after 10 seconds

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
+import { safeParse } from "@/lib/safe-storage";
 
 interface Task {
   id: string
@@ -604,10 +605,10 @@ function MtTaskPageInner() {
     setBalance(user.balance || 0)
     setUserId(user.id || user.userId || user.user_id || "")
 
-    const completed = JSON.parse(localStorage.getItem(taskStorageKey) || "[]")
+    const completed = safeParse(localStorage.getItem(taskStorageKey), [])
     setCompletedTasks(Array.isArray(completed) ? completed : [])
 
-    const savedCooldowns = JSON.parse(localStorage.getItem(cooldownStorageKey) || "{}")
+    const savedCooldowns = safeParse(localStorage.getItem(cooldownStorageKey), {})
     setCooldowns(savedCooldowns)
   }, [router, taskStorageKey, cooldownStorageKey])
 
@@ -755,7 +756,7 @@ function MtTaskPageInner() {
     if (!task) return
 
     const storedUserRaw = localStorage.getItem("tivexx-user")
-    const parsedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null
+    const parsedUser = safeParse(storedUserRaw, null)
     const claimUserId = parsedUser?.id || parsedUser?.user_id || parsedUser?.userId || ""
     if (!claimUserId) return
     let serverOk = false

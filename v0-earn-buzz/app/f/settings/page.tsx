@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Settings, ArrowLeft, Save, BarChart3, Bell, Lock, Zap, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { safeParse } from "@/lib/safe-storage";
 
 interface SystemSettings {
   platformName: string
@@ -29,7 +30,7 @@ export default function AdminSettings() {
     // Load settings from localStorage
     const saved = localStorage.getItem("admin-settings")
     if (saved) {
-      setSettings(JSON.parse(saved))
+      setSettings(safeParse(saved, null))
     }
   }, [])
 

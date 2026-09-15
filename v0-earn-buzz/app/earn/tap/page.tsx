@@ -2,10 +2,13 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { safeParse } from "@/lib/safe-storage";
+import { loadMeta, saveMeta, computeScore, getEarnPerTap } from "@/lib/trust-score";
 import {
   ArrowLeft,
   Zap,
   HandCoins,
+  Flame,
   Sparkles,
   TrendingUp,
   Crown,
@@ -38,7 +41,7 @@ const AUTO_PLAN_COOLDOWN_KEY = "auto_tap_plan_cooldowns";
 const AUTO_PLAN_COOLDOWN_MS = 7*24*60*60*1000;
 
 const MAX_ENERGY = 100;
-const EARN_PER_TAP = 100;
+const EARN_PER_TAP = 100; // base rate (Free level); actual rate = getEarnPerTap(trustScore)
 const ENERGY_REGEN_MS = 6000; // kept for reference but gradual regen is disabled per requirement
 const TAP_EXHAUST_COOLDOWN_MS = 10 * 60 * 1000;
 const TAP_EXHAUST_KEY = "tap_exhaust_until";
@@ -67,7 +70,7 @@ const loadState = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     const storedUser = localStorage.getItem("tivexx-user");
     const currentBalance = storedUser
-      ? JSON.parse(storedUser)?.balance || 0
+      ? safeParse(storedUser, null)?.balance || 0
       : 0;
 
     if (!raw) {
@@ -92,7 +95,7 @@ const loadState = () => {
   } catch {
     const storedUser = localStorage.getItem("tivexx-user");
     const currentBalance = storedUser
-      ? JSON.parse(storedUser)?.balance || 0
+      ? safeParse(storedUser, null)?.balance || 0
       : 0;
     return {
       energy: MAX_ENERGY,
@@ -129,6 +132,11 @@ export default function TapAndEarnPage() {
   const rapidTapWarningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tapExhaustUntil, setTapExhaustUntil] = useState<number | null>(null);
   const [tapExhaustLeft, setTapExhaustLeft] = useState(0);
+  // ── Trust-based per-tap rate: Free ₦100, Beginner ₦110, +₦10 per level ──
+  const [trustScore, setTrustScore] = useState(0);
+  const earnPerTap = getEarnPerTap(trustScore);
+  const [autoFx, setAutoFx] = useState<{ id: number; text: string; emoji: string; x: number }[]>([]);
+  const autoFxId = useRef(0);
 
   // ── Auto Tap state ──
   const [autoActive, setAutoActive] = useState(false);
@@ -170,7 +178,7 @@ export default function TapAndEarnPage() {
 
   //   // Check task completion status
   //   const checkTaskCompletion = () => {
-  //     const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+  //     const completedTasks = safeParse(localStorage.getItem("tivexx-completed-tasks"), []);
   //     setCompletedTasksCount(completedTasks.length);
   //   };
 
@@ -201,7 +209,7 @@ export default function TapAndEarnPage() {
   // ─── Watch for task completion changes ──────────────
   useEffect(() => {
     const handleStorageChange = () => {
-      const completedTasks = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]");
+      const completedTasks = safeParse(localStorage.getItem("tivexx-completed-tasks"), []);
       setCompletedTasksCount(completedTasks.length);
     };
 
@@ -275,8 +283,22 @@ export default function TapAndEarnPage() {
       return false;
     } catch { return false; }
   }, []);
+  // Keep a ref of the live per-tap rate so background accrual uses the
+  // current trust level even inside long-lived callbacks.
+  const earnPerTapRef = useRef(earnPerTap);
+  earnPerTapRef.current = earnPerTap;
   useEffect(() => {
     setMounted(true);
+    try {
+      const m = loadMeta();
+      setTrustScore(computeScore(m));
+    } catch {}
+    const onTrustUpdate = () => {
+      try { setTrustScore(computeScore(loadMeta())); } catch {}
+    };
+    window.addEventListener("focus", onTrustUpdate);
+    document.addEventListener("visibilitychange", onTrustUpdate);
+    const trustPoll = setInterval(onTrustUpdate, 5000);
     const loaded = loadState();
     // Load exhaust state — wall-clock: active cooldown stays at 0, expired
     // cooldown refills to full even if it finished while the app was closed.
@@ -322,7 +344,34 @@ export default function TapAndEarnPage() {
       if (cd && typeof cd==="object") setAutoPlanCooldowns(cd);
     } catch {}
     tapHydratedRef.current = true;
+    return () => {
+      window.removeEventListener("focus", onTrustUpdate);
+      document.removeEventListener("visibilitychange", onTrustUpdate);
+      clearInterval(trustPoll);
+    };
   }, [resyncExhaustFromStorage]);
+
+  // Auto-tap orb FX: fast, highly visible floating rewards (user's own
+  // ₦ rate + fire/money emojis) while auto is ON so users SEE it working.
+  useEffect(() => {
+    if (!autoActive) { setAutoFx([]); return; }
+    const emojis = ["🔥", "💰", "⚡", "💎"];
+    const id = setInterval(() => {
+      const n = autoFxId.current++;
+      const rate = earnPerTapRef.current;
+      setAutoFx((prev) => [
+        ...prev.slice(-14),
+        {
+          id: n,
+          text: `+₦${rate.toLocaleString()}`,
+          emoji: emojis[n % emojis.length],
+          x: 8 + Math.random() * 84,
+        },
+      ]);
+      setTimeout(() => setAutoFx((prev) => prev.filter((p) => p.id !== n)), 1400);
+    }, 320);
+    return () => clearInterval(id);
+  }, [autoActive]);
 
   // persist auto tap
   useEffect(() => {
@@ -375,7 +424,7 @@ export default function TapAndEarnPage() {
     const delta = earnedTotal - s.tapsDone;
     try {
       const raw = localStorage.getItem("tivexx-user");
-      const u = raw ? JSON.parse(raw) : null;
+      const u = safeParse(raw, null);
       const uid = u?.id || u?.userId || u?.user_id || "";
       if (!uid) return;
       const res = await fetch("/api/tap/accrue", {
@@ -386,7 +435,11 @@ export default function TapAndEarnPage() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.success) throw new Error(j?.error || "accrue failed");
       setAutoTapsDone(earnedTotal);
-      setState((prev) => ({ ...prev, earned: prev.earned + delta * EARN_PER_TAP }));
+      // Display uses the trust-based rate; server credits authoritatively.
+      const credited = typeof j?.creditedAmount === "number"
+        ? j.creditedAmount
+        : delta * earnPerTapRef.current;
+      setState((prev) => ({ ...prev, earned: prev.earned + credited }));
       try {
         const raw2 = localStorage.getItem("tivexx-user");
         if (raw2) {
@@ -562,7 +615,8 @@ export default function TapAndEarnPage() {
       const currentUser = JSON.parse(storedUser);
       const uid = currentUser.id || currentUser.userId;
       if (!uid) { accumulatedEarned.current += totalEarned; return false; }
-      const taps = Math.max(1, Math.round(totalEarned / EARN_PER_TAP));
+      const rate = earnPerTapRef.current || EARN_PER_TAP;
+      const taps = Math.max(1, Math.round(totalEarned / rate));
       const res = await fetch("/api/tap/accrue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -596,10 +650,11 @@ export default function TapAndEarnPage() {
         const totalEarned = accumulatedEarned.current;
         if (totalEarned > 0) {
           const raw = localStorage.getItem("tivexx-user");
-          const u = raw ? JSON.parse(raw) : null;
+          const u = safeParse(raw, null);
           const uid = u?.id || u?.userId || "";
           if (uid) {
-            const taps = Math.max(1, Math.round(totalEarned / EARN_PER_TAP));
+            const rate = earnPerTapRef.current || EARN_PER_TAP;
+            const taps = Math.max(1, Math.round(totalEarned / rate));
             const payload = JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps });
             try { navigator.sendBeacon("/api/tap/accrue", new Blob([payload], { type: "application/json" })); } catch {}
           }
@@ -682,12 +737,19 @@ export default function TapAndEarnPage() {
       setTapping(true);
       setTapCount((prev) => prev + 1);
       setTimeout(() => setTapping(false), 120);
+      const rate = earnPerTapRef.current;
       setState((prev) => ({
         ...prev,
         energy: prev.energy - 1,
-        earned: prev.earned + EARN_PER_TAP,
+        earned: prev.earned + rate,
       }));
-      syncToDb(EARN_PER_TAP);
+      syncToDb(rate);
+      try {
+        const m = loadMeta();
+        m.tapCount = (m.tapCount || 0) + 1;
+        saveMeta(m);
+        setTrustScore(computeScore(m));
+      } catch {}
     },
     [state.energy, syncToDb, autoActive, tapExhaustUntil, tapTimestamps, showRapidTapWarning],
   );
@@ -707,7 +769,7 @@ export default function TapAndEarnPage() {
       setReqPlan(id); setReqChoice(null); setShowAutoPlans(false); setShowAutoReq(true);
       try {
         const stored = localStorage.getItem(AUTO_REF_LINK_KEY);
-        const map = stored ? JSON.parse(stored) : {};
+        const map = safeParse(stored, {});
         if (!map[id]) {
           const code = `${(localStorage.getItem("tivexx-user")||"").toString().slice(-4)}-AUTO-${id}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
           map[id]=code; localStorage.setItem(AUTO_REF_LINK_KEY, JSON.stringify(map));
@@ -724,7 +786,7 @@ export default function TapAndEarnPage() {
     // Expiry comes from PLAN duration (timer/start returns a 60s claim timer).
     try {
       const raw = localStorage.getItem("tivexx-user");
-      const u = raw ? JSON.parse(raw) : null;
+      const u = safeParse(raw, null);
       const uid = u?.id || u?.userId || u?.user_id || "";
       if (!uid) return;
       const res = await fetch("/api/timer/start", {
@@ -751,7 +813,7 @@ export default function TapAndEarnPage() {
   const fulfillRequirement = useCallback(async () => {
     if (!reqPlan || !reqChoice) return;
     const plan = AUTO_PLANS.find(p=>p.id===reqPlan)!;
-    const getUid = () => { try { const r = localStorage.getItem("tivexx-user"); const u = r ? JSON.parse(r) : null; return u?.id || u?.userId || u?.user_id || ""; } catch { return ""; } };
+    const getUid = () => { try { const r = localStorage.getItem("tivexx-user"); const u = safeParse(r, null); return u?.id || u?.userId || u?.user_id || ""; } catch { return ""; } };
     const getServerTaskCount = async (prefix: string) => {
       try {
         const uid = getUid();
@@ -843,7 +905,7 @@ export default function TapAndEarnPage() {
             <div className="flex-1">
               <h1 className="hh-title">Tap & Earn</h1>
               <p className="hh-subtitle flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />₦{EARN_PER_TAP.toLocaleString()}{" "}
+                <Sparkles className="w-3 h-3" />₦{earnPerTap.toLocaleString()}{" "}
                 per tap
               </p>
             </div>
@@ -885,7 +947,7 @@ export default function TapAndEarnPage() {
             <div className="te-stat-icon-wrap te-icon-violet">
               <Crown className="w-4 h-4 text-violet-400" />
             </div>
-            <p className="te-stat-value te-violet-text">₦{EARN_PER_TAP}</p>
+            <p className="te-stat-value te-violet-text">₦{earnPerTap}</p>
             <p className="te-stat-label">Per Tap</p>
           </div>
         </div>
@@ -895,20 +957,24 @@ export default function TapAndEarnPage() {
           <div className="flex items-center gap-2 mb-1">
             <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
             <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
-            <span className="hh-tap-badge">₦{EARN_PER_TAP}/tap</span>
+            <span className="hh-tap-badge">₦{earnPerTap}/tap</span>
+            {autoActive && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-500/25 text-orange-300 border border-orange-400/40 animate-pulse">
+                🔥 AUTO +₦{earnPerTap}/tap
+              </span>
+            )}
           </div>
           <div className="hh-orb-stage-sm">
             <div
-              className={`te-halo ${state.energy > 0 && !autoActive && !showRapidTapWarning ? "te-halo-active" : "te-halo-inactive"}`}
-              style={autoActive ? { animationPlayState: "paused" } : undefined}
+              className={`te-halo ${autoActive ? "te-halo-auto" : state.energy > 0 && !showRapidTapWarning ? "te-halo-active" : "te-halo-inactive"}`}
             ></div>
-            <div className="te-ring te-ring-outer" style={autoActive ? { animationPlayState: "paused" } : undefined}></div>
-            <div className="te-ring te-ring-inner" style={autoActive ? { animationPlayState: "paused" } : undefined}></div>
+            <div className={`te-ring te-ring-outer ${autoActive ? "te-ring-auto" : ""}`}></div>
+            <div className={`te-ring te-ring-inner ${autoActive ? "te-ring-auto" : ""}`}></div>
             <button
               onClick={handleTap}
               disabled={autoActive || (tapExhaustUntil !== null && tapExhaustLeft > 0) || showRapidTapWarning || state.energy <= 0}
               style={{ overflow: "hidden" }}
-              className={`te-orb hh-orb-sm ${state.energy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`}
+              className={`te-orb hh-orb-sm ${autoActive ? "te-orb-auto" : state.energy > 0 && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${showRapidTapWarning ? "te-orb-locked" : ""}`}
               title="Tap to earn coins"
             >
               {/* ── Water refill: bottom→up, time-based (5min left = half) ── */}
@@ -927,14 +993,29 @@ export default function TapAndEarnPage() {
 
               {/* Center icon */}
               <div className="te-orb-center">
-                <div className="te-orb-icon-bounce">
-                  <HandCoins
-                    className="w-14 h-14 text-white"
-                    strokeWidth={1.5}
-                  />
+                <div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}>
+                  {autoActive ? (
+                    <Flame className="w-14 h-14 text-orange-300" strokeWidth={1.5} />
+                  ) : (
+                    <HandCoins
+                      className="w-14 h-14 text-white"
+                      strokeWidth={1.5}
+                    />
+                  )}
                 </div>
-                <span className="te-tap-label">{tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP"}</span>
+                <span className="te-tap-label">{autoActive ? `+₦${earnPerTap}` : tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP"}</span>
               </div>
+              {/* Auto-tap FX: fast, visible floating rewards + fire, proves it is working */}
+              {autoActive && autoFx.map((f) => (
+                <div
+                  key={f.id}
+                  className="te-auto-fx"
+                  style={{ left: `${f.x}%` }}
+                >
+                  <span className="te-auto-fx-reward">{f.text}</span>
+                  <span className="te-auto-fx-emoji">{f.emoji}</span>
+                </div>
+              ))}
 
               {/* Orbiting stars */}
               {[0, 120, 240].map((deg) => (
@@ -957,7 +1038,7 @@ export default function TapAndEarnPage() {
                   className="te-particle"
                   style={{ left: `${p.x}px`, top: `${p.y}px` }}
                 >
-                  <span className="te-particle-reward">+₦{EARN_PER_TAP}</span>
+                  <span className="te-particle-reward">+₦{earnPerTap}</span>
                   <span className="te-particle-emoji">{p.emoji}</span>
                 </div>
               ))}
@@ -2004,6 +2085,59 @@ export default function TapAndEarnPage() {
             opacity: 0;
             transform: translateY(-65px) scale(1.3);
           }
+        }
+
+        /* ── AUTO-TAP MODE: fast, highly visible fire/orb animation ── */
+        .te-halo-auto {
+          background: radial-gradient(circle, rgba(249,115,22,0.35) 0%, rgba(245,158,11,0.15) 50%, transparent 70%);
+          animation: te-halo-pulse 0.9s ease-in-out infinite;
+        }
+        .te-ring-auto {
+          border-color: rgba(249,115,22,0.55) !important;
+          animation-duration: 3s !important;
+        }
+        .te-orb-auto {
+          background: radial-gradient(circle at 38% 32%, rgba(253,186,116,0.95), #f97316 48%, rgba(124,45,18,0.95) 100%);
+          box-shadow: inset 0 -12px 28px rgba(124,45,18,0.7), inset 0 6px 22px rgba(253,186,116,0.4), 0 0 60px rgba(249,115,22,0.65), 0 0 120px rgba(249,115,22,0.3);
+          animation: te-auto-pulse 0.9s ease-in-out infinite;
+        }
+        @keyframes te-auto-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.045); }
+        }
+        .te-orb-auto-bounce {
+          animation: te-auto-bounce 0.55s ease-in-out infinite;
+        }
+        @keyframes te-auto-bounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-8px) scale(1.08); }
+        }
+        .te-auto-fx {
+          position: absolute;
+          bottom: 12%;
+          pointer-events: none;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          z-index: 4;
+          animation: te-auto-rise 1.3s ease-out forwards;
+        }
+        .te-auto-fx-reward {
+          font-family: "JetBrains Mono", monospace;
+          font-size: 17px;
+          font-weight: 800;
+          color: #fdba74;
+          text-shadow: 0 0 12px rgba(249,115,22,0.9), 0 0 30px rgba(249,115,22,0.5);
+          white-space: nowrap;
+        }
+        .te-auto-fx-emoji {
+          font-size: 20px;
+          filter: drop-shadow(0 0 8px rgba(249,115,22,0.8));
+        }
+        @keyframes te-auto-rise {
+          0% { opacity: 0; transform: translateY(20px) scale(0.6); }
+          15% { opacity: 1; transform: translateY(0) scale(1.15); }
+          100% { opacity: 0; transform: translateY(-110px) scale(1.3); }
         }
 
         /* Tap hint */

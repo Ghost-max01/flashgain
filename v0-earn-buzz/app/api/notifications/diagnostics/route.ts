@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { safeParse } from "@/lib/safe-storage";
 
 export const runtime = "nodejs"
 
@@ -17,7 +18,7 @@ async function checkSupabaseTable(tableName: string, url: string, serviceRoleKey
     const text = await response.text()
     let parsed: any = null
     try {
-      parsed = text ? JSON.parse(text) : null
+      parsed = safeParse(text, null)
     } catch {
       parsed = text
     }

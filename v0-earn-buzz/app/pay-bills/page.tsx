@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Smartphone, Wifi } from "lucide-react"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function PayBillsPage() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export default function PayBillsPage() {
       return
     }
 
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   if (!userData) {

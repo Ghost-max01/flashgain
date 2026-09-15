@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import { safeParse } from "@/lib/safe-storage";
 
 // Minimum visit duration (seconds) a task link must stay open before credit.
 // Single source of truth — callers must use this for toast/progress copy.
@@ -10,7 +11,7 @@ export function useTaskTimer() {
 
   const startTaskTimer = (taskId: string) => {
     try {
-      const timers = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}")
+      const timers = safeParse(sessionStorage.getItem(STORAGE_KEY), {})
       timers[taskId] = Date.now()
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(timers))
     } catch (e) {
@@ -34,7 +35,7 @@ export function useTaskTimer() {
       pageWasHidden = false
 
       try {
-        const timers = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}")
+        const timers = safeParse(sessionStorage.getItem(STORAGE_KEY), {})
         if (!timers || Object.keys(timers).length === 0) return
 
         const now = Date.now()

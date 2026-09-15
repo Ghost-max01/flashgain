@@ -6,6 +6,7 @@ import Link from "next/link"
 import { CheckCircle, Loader2, Home } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { persistUserSession } from "@/lib/session-client"
+import { safeParse } from "@/lib/safe-storage";
 
 function CallbackInner() {
   const searchParams = useSearchParams()
@@ -68,7 +69,7 @@ function CallbackInner() {
         if (type === "auto_tap" && metadata.planId) {
           try {
             const pendingRaw = localStorage.getItem("pending_auto_tap_payment")
-            const pending = pendingRaw ? JSON.parse(pendingRaw) : null
+            const pending = safeParse(pendingRaw, null)
             if (pending && String(pending.planId) === String(metadata.planId)) {
               const planId = metadata.planId
               const durationMap: Record<string, number> = { "24h": 86400000, "2d": 172800000, "3d": 259200000, "1w": 604800000, free1h: 20*60*1000 }
@@ -82,7 +83,7 @@ function CallbackInner() {
               }))
               // 1-week lock per paid plan
               if (planId !== "free1h") {
-                const cdRaw = JSON.parse(localStorage.getItem("auto_tap_plan_cooldowns") || "{}")
+                const cdRaw = safeParse(localStorage.getItem("auto_tap_plan_cooldowns"), {})
                 cdRaw[planId] = Date.now() + 7*24*60*60*1000
                 localStorage.setItem("auto_tap_plan_cooldowns", JSON.stringify(cdRaw))
               }
@@ -98,7 +99,7 @@ function CallbackInner() {
           try {
             const seenHist = `paystack_ref_${reference}_inv`
             if (!localStorage.getItem(seenHist)) {
-              const existing = JSON.parse(localStorage.getItem("investment_history") || "[]")
+              const existing = safeParse(localStorage.getItem("investment_history"), [])
               existing.unshift({ reference, amount, plan: metadata.plan, at: Date.now() })
               localStorage.setItem("investment_history", JSON.stringify(existing))
               localStorage.setItem(seenHist, "1")

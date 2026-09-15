@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, Home, Gamepad2, User, Sparkles, Shield, Users, Award, TrendingUp, Clock, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function AboutPage() {
   const router = useRouter()
@@ -21,7 +22,7 @@ export default function AboutPage() {
         localStorage.getItem("tivexx-user-old")
 
       if (stored) {
-        setUserData(JSON.parse(stored))
+        setUserData(safeParse(stored, null))
       } else {
         setUserData(null)
       }

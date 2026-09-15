@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { OpayWarningPopup } from "@/components/opay-warning-popup"
 import { useRef } from "react"
 import Link from "next/link"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function VerifyMePage() {
   const router = useRouter()
@@ -32,7 +33,7 @@ export default function VerifyMePage() {
     const t = window.setTimeout(async () => {
       try {
         const raw = typeof window !== "undefined" ? localStorage.getItem("tivexx-user") : null
-        const u = raw ? JSON.parse(raw) : null
+        const u = safeParse(raw, null)
         const email = u?.email || ""
         const userId = u?.id || u?.userId || ""
         if (!email || !userId) {
@@ -78,7 +79,7 @@ export default function VerifyMePage() {
         // If not in localStorage, try API
         if (typeof window !== "undefined") {
           const stored = localStorage.getItem("tivexx-user")
-          const user = stored ? JSON.parse(stored) : null
+          const user = safeParse(stored, null)
           if (user && (user.id || user.userId)) {
             const uid = user.id || user.userId
             const res = await fetch(`/api/referral-stats?userId=${uid}&t=${Date.now()}`)

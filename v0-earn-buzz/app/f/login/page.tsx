@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Mail, Lock, Eye, EyeOff, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { safeParse } from "@/lib/safe-storage";
 
 const TOKEN_KEY = "admin-session-token"
 
@@ -65,7 +66,7 @@ export default function AdminLogin() {
 
       // Log admin login
       try {
-        const logs = JSON.parse(localStorage.getItem("admin-logs") || "[]")
+        const logs = safeParse(localStorage.getItem("admin-logs"), [])
         logs.push({
           type: "admin_login",
           email,

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Copy, Share2, Gift, Users, Wallet, Send, Check, Sparkles, TrendingUp, Award, Clock } from "lucide-react";
+import { safeParse } from "@/lib/safe-storage";
 
 function AutoTapReferContent() {
   const router = useRouter();
@@ -90,7 +91,7 @@ function AutoTapReferContent() {
     if (!userData) return;
     try {
       const mapRaw = localStorage.getItem("auto_tap_ref_code");
-      const map = mapRaw ? JSON.parse(mapRaw) : {};
+      const map = safeParse(mapRaw, {});
       let code = map[planId];
       if (!code) { const base=(userData.referral_code||userData.id||"USER").toString().slice(-4); code=`${base}-AUTO-${planId}-${Math.random().toString(36).slice(2,6).toUpperCase()}`; map[planId]=code; localStorage.setItem("auto_tap_ref_code", JSON.stringify(map)); }
       setAutoRefCode(code);

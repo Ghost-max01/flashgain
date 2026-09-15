@@ -19,11 +19,27 @@ export const TRUST_TIME_KEY = "tivexx-trust-time-ms";
 
 export const TRUST_LEVELS = [
   { label: "Free", min: 0, max: 29, color: "#2563eb", next: 30 },
-  { label: "Beginner", min: 30, max: 49, color: "#10b981", next: 50 },
-  { label: "Trusted", min: 50, max: 99, color: "#059669", next: 100 },
-  { label: "Verified", min: 100, max: 199, color: "#7c3aed", next: 200 },
-  { label: "Elite", min: 200, max: 9999, color: "#f59e0b", next: null as number | null },
+  { label: "Beginner", min: 30, max: 59, color: "#10b981", next: 60 },
+  { label: "Trusted", min: 60, max: 89, color: "#059669", next: 90 },
+  { label: "Verified", min: 90, max: 119, color: "#7c3aed", next: 120 },
+  { label: "Elite", min: 120, max: 9999, color: "#f59e0b", next: null as number | null },
 ] as const;
+
+// ── Per-tap earnings by trust level ──
+// Free = ₦100/tap, Beginner = ₦110, Trusted = ₦120, Verified = ₦130, Elite = ₦140.
+// Each upgrade earns ₦10 more per tap.
+export const EARN_PER_TAP_BASE = 100;
+export const EARN_PER_TAP_STEP = 10;
+
+export function getLevelIndex(score: number): number {
+  const idx = TRUST_LEVELS.findIndex((l) => score >= l.min && score <= l.max);
+  if (idx !== -1) return idx;
+  return score < 0 ? 0 : TRUST_LEVELS.length - 1;
+}
+
+export function getEarnPerTap(score: number): number {
+  return EARN_PER_TAP_BASE + getLevelIndex(score) * EARN_PER_TAP_STEP;
+}
 
 export interface TrustMeta {
   timeMs: number;       // total ms spent
@@ -75,16 +91,25 @@ export function saveMeta(m: TrustMeta) {
 }
 
 export function computeScore(m: TrustMeta): number {
-  const timePoints = Math.floor(m.timeMs / (5 * 60 * 1000)) * 2; // 5 mins = 2
-  const refPoints = Math.floor(m.referralCount / 5) * 2;         // 5 refs = 2
-  const navPoints = Math.floor(m.navCount / 5);                      // 5 navs = 1 point
-  const payPoints = m.payCount * 5;                              // 5 per pay
-  const taskPoints = Math.floor((m.taskCount || 0) / 10) * 2;     // 10 tasks = 2
-  const tapPoints = Math.floor((m.tapCount || 0) / 50) * 1;       // 50 taps = 1
-  // 5 navs = 1 point
-  // bonus is client display-only, capped at +5 (server authoritative)
-  const safeBonus = Math.min(5, Math.max(0, Number(m.bonus) || 0));
-  return timePoints + refPoints + navPoints + payPoints + taskPoints + tapPoints + safeBonus;
+  // Cap meta values to prevent inflation from tampered localStorage
+  const safeReferralCount = Math.min(Math.max(0, Math.floor(m.referralCount || 0)), 500)
+  const safePayCount = Math.min(Math.max(0, Math.floor(m.payCount || 0)), 10000)
+  const safeTaskCount = Math.min(Math.max(0, Math.floor(m.taskCount || 0)), 10000)
+  const safeNavCount = Math.min(Math.max(0, Math.floor(m.navCount || 0)), 10000)
+  const safeTapCount = Math.min(Math.max(0, Math.floor(m.tapCount || 0)), 10000)
+  const safeTimeMs = Math.min(Math.max(0, Math.floor(m.timeMs || 0)), 30 * 24 * 60 * 60 * 1000) // 30 days cap
+
+  // Caps keep growth in the normal range: a fresh account cannot jump to
+  // 200 in minutes. Time/nav/tap are capped at +20 each so every stage
+  // genuinely takes ~30 points of mixed activity to cross.
+  const timePoints = Math.min(Math.floor(safeTimeMs / (5 * 60 * 1000)) * 2, 20)
+  const refPoints = Math.min(Math.floor(safeReferralCount / 5) * 2, 20)
+  const navPoints = Math.min(Math.floor(safeNavCount / 5), 20)
+  const payPoints = Math.min(safePayCount * 5, 50)
+  const taskPoints = Math.min(Math.floor((safeTaskCount || 0) / 10) * 2, 20)
+  const tapPoints = Math.min(Math.floor((safeTapCount || 0) / 50) * 1, 20)
+  const safeBonus = Math.min(5, Math.max(0, Number(m.bonus) || 0))
+  return timePoints + refPoints + navPoints + payPoints + taskPoints + tapPoints + safeBonus
 }
 
 export function getLevel(score: number) {

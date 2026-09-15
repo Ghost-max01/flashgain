@@ -1,24 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-// Server-side trust recompute. Mirrors lib/trust-score thresholds without
-// importing the "use client" module:
-//   timePoints = floor(timeMs / 5min) * 2  (unknown server-side -> 0)
-//   refPoints  = floor(referralCount / 5) * 2 (capped)
-//   navPoints  = floor(navCount / 5)         (unknown server-side -> 0)
-//   payPoints  = payCount * 5                (capped)
-//   taskPoints = floor(taskCount / 10) * 2   (capped)
-//   tapPoints  = floor(tapCount / 50)        (unknown server-side -> 0)
-// Beginner threshold: score >= 30.
+// Server-side trust recompute. Mirrors lib/trust-score (30-point tiers:
+// Free 0-29, Beginner 30-59, Trusted 60-89, Verified 90-119, Elite 120+).
+// Client reports its activity meta (timeMs/navCount/tapCount); the server
+// combines them with server-counted referrals/payments/tasks using the SAME
+// caps as the client, so a referred user who genuinely reaches Beginner (30)
+// on the client also reaches it here — which is what credits the referrer.
+// Anti-cheat: client time is capped by account age, nav/tap are sanity-capped.
 const REF_POINTS_CAP = 20;
 const PAY_POINTS_CAP = 50;
 const TASK_POINTS_CAP = 20;
+const TIME_POINTS_CAP = 20;
+const NAV_POINTS_CAP = 20;
+const TAP_POINTS_CAP = 20;
 
-function computeServerScore(referralCount: number, payCount: number, taskCount: number): number {
+function computeServerScore(
+  referralCount: number,
+  payCount: number,
+  taskCount: number,
+  timeMs: number,
+  navCount: number,
+  tapCount: number,
+): number {
   const refPoints = Math.min(Math.floor(Math.max(0, referralCount) / 5) * 2, REF_POINTS_CAP);
   const payPoints = Math.min(Math.max(0, payCount) * 5, PAY_POINTS_CAP);
   const taskPoints = Math.min(Math.floor(Math.max(0, taskCount) / 10) * 2, TASK_POINTS_CAP);
-  return refPoints + payPoints + taskPoints;
+  const timePoints = Math.min(Math.floor(Math.max(0, timeMs) / (5 * 60 * 1000)) * 2, TIME_POINTS_CAP);
+  const navPoints = Math.min(Math.floor(Math.max(0, navCount) / 5), NAV_POINTS_CAP);
+  const tapPoints = Math.min(Math.floor(Math.max(0, tapCount) / 50), TAP_POINTS_CAP);
+  return refPoints + payPoints + taskPoints + timePoints + navPoints + tapPoints;
 }
 
 async function getOwnedUid(req: NextRequest, claimedUserId: string | null): Promise<string | null> {
@@ -47,7 +58,11 @@ async function getOwnedUid(req: NextRequest, claimedUserId: string | null): Prom
   return null;
 }
 
-async function recomputeScore(supabase: any, userId: string): Promise<{ score: number; referralCount: number; payCount: number; taskCount: number }> {
+async function recomputeScore(
+  supabase: any,
+  userId: string,
+  clientMeta?: { timeMs?: number; navCount?: number; tapCount?: number },
+): Promise<{ score: number; referralCount: number; payCount: number; taskCount: number }> {
   // Referrals: approved count uses trust>=30 truth for others; referralCount
   // for scoring uses total referrals by this user.
   let referralCount = 0;
@@ -79,7 +94,21 @@ async function recomputeScore(supabase: any, userId: string): Promise<{ score: n
     } catch {}
   }
 
-  return { score: computeServerScore(referralCount, payCount, taskCount), referralCount, payCount, taskCount };
+  // Client activity (time/nav/taps) with sanity caps. Time can never exceed
+  // the account's age; nav/tap counts are capped to block forged jumps.
+  let timeMs = Math.min(Math.max(0, Math.floor(Number(clientMeta?.timeMs) || 0)), 30 * 24 * 60 * 60 * 1000);
+  let navCount = Math.min(Math.max(0, Math.floor(Number(clientMeta?.navCount) || 0)), 10000);
+  let tapCount = Math.min(Math.max(0, Math.floor(Number(clientMeta?.tapCount) || 0)), 10000);
+  try {
+    const { data: u } = await supabase.from("users").select("created_at").eq("id", userId).maybeSingle();
+    const created = (u as any)?.created_at ? new Date((u as any).created_at).getTime() : 0;
+    if (created > 0) {
+      const ageMs = Math.max(0, Date.now() - created);
+      timeMs = Math.min(timeMs, ageMs);
+    }
+  } catch {}
+
+  return { score: computeServerScore(referralCount, payCount, taskCount, timeMs, navCount, tapCount), referralCount, payCount, taskCount };
 }
 
 export async function POST(req: NextRequest){
@@ -93,7 +122,12 @@ export async function POST(req: NextRequest){
     try{
       const supabase: any = getSupabaseAdmin();
       if(supabase){
-        const { score } = await recomputeScore(supabase, userId);
+        const clientMeta = {
+          timeMs: Number((body as any)?.timeMs ?? (body as any)?.trustMeta?.timeMs ?? 0),
+          navCount: Number((body as any)?.navCount ?? (body as any)?.trustMeta?.navCount ?? 0),
+          tapCount: Number((body as any)?.tapCount ?? (body as any)?.trustMeta?.tapCount ?? 0),
+        };
+        const { score } = await recomputeScore(supabase, userId, clientMeta);
         // fetch old score to detect 30 crossing
         let oldScore = 0;
         try{

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function VersionPage() {
   const router = useRouter()
@@ -17,7 +18,7 @@ export default function VersionPage() {
       router.push("/login")
       return
     }
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   if (!userData) {

@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { safeParse } from "@/lib/safe-storage";
 import {
   ArrowLeft,
   Copy,
@@ -2137,7 +2138,7 @@ function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }:
     if (!autoTapPlan) return;
     try {
       const mapRaw = localStorage.getItem("auto_tap_ref_code");
-      const map = mapRaw ? JSON.parse(mapRaw) : {};
+      const map = safeParse(mapRaw, {});
       let code = map[autoTapPlan];
       if (!code) {
         const base = (userData?.referral_code || userData?.id || "USER").toString().slice(-4);

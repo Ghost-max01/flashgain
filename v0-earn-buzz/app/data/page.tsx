@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PaykeyError } from "@/components/paykey-error"
+import { safeParse } from "@/lib/safe-storage";
 
 interface DataPlan {
   size: string
@@ -33,7 +34,7 @@ export default function DataPage() {
       return
     }
 
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   const networks = ["Airtel", "MTN", "Glo", "9mobile"]
@@ -64,7 +65,7 @@ export default function DataPage() {
     }
 
     const existing = localStorage.getItem("momo-credit-notifications")
-    const notifications = existing ? JSON.parse(existing) : []
+    const notifications = safeParse(existing, [])
     notifications.unshift(notification)
     localStorage.setItem("momo-credit-notifications", JSON.stringify(notifications))
   }
@@ -81,7 +82,7 @@ export default function DataPage() {
     }
 
     const storedTransactions = localStorage.getItem("momo-credit-transactions")
-    const transactions = storedTransactions ? JSON.parse(storedTransactions) : []
+    const transactions = safeParse(storedTransactions, [])
 
     const newTransaction = {
       id: Date.now(),

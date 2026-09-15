@@ -9,7 +9,7 @@ export function ServiceWorkerUpdater() {
     // ── Nuke stale SW/caches that are serving the old broken layout/dashboard chunks ──
     // Do this once per session, fire-and-forget.
     try {
-      const NUKED_KEY = 'sw-nuked-20260318';
+      const NUKED_KEY = 'sw-nuked-v5';
       if (!sessionStorage.getItem(NUKED_KEY)) {
         sessionStorage.setItem(NUKED_KEY, '1');
         // unregister any old /notification-sw.js registration (404) and old /sw.js if corrupted
@@ -26,7 +26,7 @@ export function ServiceWorkerUpdater() {
         // clear old Next chunk caches that may hold the broken layout-ef862 / page-5f716
         if ('caches' in window) {
           void caches.keys().then(keys => keys.forEach(k => {
-            if (k.includes('next') || k.includes('workbox') || k.includes('flashgain') || k === 'earn-buzz-v3' || k === 'earn-buzz-v4') void caches.delete(k);
+            if (k.includes('next') || k.includes('workbox') || k.includes('flashgain') || k === 'earn-buzz-v3' || k === 'earn-buzz-v4' || k === 'earn-buzz-v5') void caches.delete(k);
           }));
         }
       }

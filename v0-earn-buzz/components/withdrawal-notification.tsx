@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle, Sparkles, MapPin, User, TrendingUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle, Sparkles, MapPin, User, TrendingUp, X } from "lucide-react";
 
 interface WithdrawalNotificationProps {
   onClose: () => void;
@@ -349,6 +349,21 @@ export function WithdrawalNotification({
     return { name: selectedName, state: selectedState };
   };
 
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const handleClose = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setIsVisible(false);
+    try {
+      localStorage.setItem("last_withdrawal_popup", Date.now().toString());
+    } catch {}
+    setTimeout(() => onCloseRef.current(), 200);
+  };
+
   useEffect(() => {
     const showNotification = () => {
       const { name, state } = getUniqueTribeState();
@@ -357,12 +372,14 @@ export function WithdrawalNotification({
       setNotificationData({ name, amount: randomAmount, state });
       setIsVisible(true);
 
-      setTimeout(() => {
+      hideTimer.current = setTimeout(() => {
         setIsVisible(false);
-        setTimeout(onClose, 300);
+        closeTimer.current = setTimeout(() => onCloseRef.current(), 300);
       }, 10000);
 
-      localStorage.setItem("last_withdrawal_popup", Date.now().toString());
+      try {
+        localStorage.setItem("last_withdrawal_popup", Date.now().toString());
+      } catch {}
     };
 
     const checkAndShow = () => {
@@ -388,6 +405,14 @@ export function WithdrawalNotification({
       }`}
     >
       <div className="hh-notification">
+        {/* Close (X) — dismiss before the timer finishes */}
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="hh-notif-close"
+        >
+          <X size={16} />
+        </button>
         {/* Animated bubbles */}
         <div className="hh-notif-bubbles">
           {[...Array(6)].map((_, i) => (
@@ -480,6 +505,29 @@ export function WithdrawalNotification({
             0 20px 40px rgba(0, 0, 0, 0.4),
             0 0 30px rgba(16, 185, 129, 0.2);
           backdrop-filter: blur(12px);
+        }
+
+        .hh-notif-close {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 20;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: rgba(255, 255, 255, 0.7);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .hh-notif-close:hover {
+          background: rgba(255, 255, 255, 0.18);
+          color: #fff;
+          transform: scale(1.08);
         }
 
         /* Animated bubbles inside notification */

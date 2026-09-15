@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, MessageSquare, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function SupportPage() {
   const router = useRouter()
@@ -20,7 +21,7 @@ export default function SupportPage() {
       return
     }
 
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   const handleTelegramSupport = () => {

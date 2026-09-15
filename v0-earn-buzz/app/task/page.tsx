@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useTaskTimer, TASK_VISIT_SECONDS } from "@/hooks/useTaskTimer"
+import { safeParse } from "@/lib/safe-storage";
 
 interface Task {
   id: string
@@ -113,11 +114,15 @@ const AVAILABLE_TASKS: Task[] = [
   // Duplicate tasks linking to original tasks — REMOVED (dedupe by link).
   // Deduped to one entry per unique link below.
 ];
+// Daily tasks = 10 (matches the withdrawal requirement). Dedupe by task id
+// (not by link) so all 10 tasks stay available — deduping by link collapsed
+// the list to 4 and made the requirement unreachable.
+const DAILY_TASKS_COUNT = 10;
 const AVAILABLE_TASKS_DEDUPED: Task[] = (() => {
   const seen = new Set<string>();
   return AVAILABLE_TASKS.filter((t) => {
-    if (seen.has(t.link)) return false;
-    seen.add(t.link);
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
     return true;
   });
 })();
@@ -146,10 +151,10 @@ export default function TaskPage() {
     setBalance(user.balance || 0)
     setUserId(user.id || user.userId || user.user_id || "")
 
-    const completed = JSON.parse(localStorage.getItem("tivexx-completed-tasks") || "[]")
+    const completed = safeParse(localStorage.getItem("tivexx-completed-tasks"), [])
     setCompletedTasks(Array.isArray(completed) ? completed : [])
 
-    const savedCooldowns = JSON.parse(localStorage.getItem("tivexx-task-cooldowns") || "{}")
+    const savedCooldowns = safeParse(localStorage.getItem("tivexx-task-cooldowns"), {})
     setCooldowns(savedCooldowns)
   }, [router])
 
@@ -298,7 +303,7 @@ export default function TaskPage() {
 
     // Server is the ledger: claim first, abort local credit on duplicate/failure.
     const storedUserRaw = localStorage.getItem("tivexx-user")
-    const parsedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null
+    const parsedUser = safeParse(storedUserRaw, null)
     const claimUserId = parsedUser?.id || parsedUser?.user_id || parsedUser?.userId || ""
     if (!claimUserId) return
     let serverOk = false

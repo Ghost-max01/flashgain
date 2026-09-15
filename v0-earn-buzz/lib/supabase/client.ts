@@ -8,8 +8,13 @@ function makeClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!url || !key) {
-    // Throwing here would crash the browser at runtime; prefer a clear error.
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in the runtime environment")
+    // NEVER throw at module import: that would crash every page that imports
+    // this module with an unrecoverable client-side exception. Pages already
+    // null-check `supabase` (e.g. landing shows the homepage when null).
+    if (typeof window !== "undefined") {
+      console.error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in the runtime environment");
+    }
+    return null
   }
 
   return createBrowserClient(url, key)

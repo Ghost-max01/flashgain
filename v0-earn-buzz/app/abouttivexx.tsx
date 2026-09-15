@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 // If you have a Logo component, it will show. If not, it will just render nothing — harmless.
 import { Logo } from "@/components/logo"
+import { safeParse } from "@/lib/safe-storage";
 
 export default function AboutPage() {
   const router = useRouter()
@@ -20,7 +21,7 @@ export default function AboutPage() {
       router.push("/login")
       return
     }
-    setUserData(JSON.parse(storedUser))
+    setUserData(safeParse(storedUser, null))
   }, [router])
 
   if (!userData) {
@@ -201,6 +202,7 @@ export default function AboutPage() {
                 <li>
                   Pay the one-time verification fee (displayed on the
                   verification page).
+                </li>
                 <li>
                 <strong>Refer & Earn:</strong> Refer 5 or more friends for
                 instant withdrawals and higher bonuses. Top referrers get

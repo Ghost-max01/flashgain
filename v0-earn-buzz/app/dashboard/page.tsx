@@ -36,7 +36,7 @@ import { LiveChat } from "@/components/live-chat";
 import dynamic from "next/dynamic";
 const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").then(m => m.GuidedOnboarding), { ssr: false }) as any;
 import { getBankDetails } from "@/lib/bank-details";
-import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, TRUST_TIME_KEY } from "@/lib/trust-score";
+import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, getEarnPerTap, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
 import {
   ensurePushRegistrationIntegrity,
@@ -236,6 +236,13 @@ export default function DashboardPage() {
   // ── Trust Score (compounding) ──
   const [trustScore, setTrustScore] = useState(0);
   const [trustMeta, setTrustMeta] = useState<any>(null);
+  // Per-tap rate grows with trust: Free ₦100, Beginner ₦110, +₦10/level.
+  const earnPerTap = getEarnPerTap(trustScore);
+  const earnPerTapRef = useRef(earnPerTap);
+  earnPerTapRef.current = earnPerTap;
+  // Auto-tap orb FX particles (visible fast rewards while auto is ON).
+  const [autoFx, setAutoFx] = useState<{ id: number; text: string; emoji: string; x: number }[]>([]);
+  const autoFxId = useRef(0);
   const [showTrustInfo, setShowTrustInfo] = useState(false);
   const [showGuided, setShowGuided] = useState(false);
   // Notification prompt — only shown after successful login/signup (gated behind auth, not for guests)
@@ -606,11 +613,12 @@ export default function DashboardPage() {
       try {
         const m = loadMeta();
         const prev = Number(localStorage.getItem(TRUST_TIME_KEY) || "0");
-        // Wall-clock: the whole elapsed window counts, so time also accrues
-        // while the tab is hidden/closed and is credited on the next tick.
+        // Active-time only: cap each tick so closing the app for hours/days
+        // does NOT credit trust time. Max ~45s per 30s tick (timer slack).
         const now = Date.now();
-        const delta = now - lastSave;
+        const rawDelta = now - lastSave;
         lastSave = now;
+        const delta = Math.min(Math.max(0, rawDelta), 45000);
         const total = prev + delta;
         localStorage.setItem(TRUST_TIME_KEY, String(total));
         m.timeMs = total;
@@ -664,10 +672,30 @@ export default function DashboardPage() {
         saveMeta(m);
         setTrustScore(computeScore(m));
         setTrustMeta({ ...m });
-        try{ const uid = (userData as any)?.id || (userData as any)?.userId; if(uid) void fetch("/api/user-trust",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, trustScore: computeScore(m) })}).catch(()=>{});}catch{}
+        try{ const uid = (userData as any)?.id || (userData as any)?.userId; if(uid) void fetch("/api/user-trust",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, trustScore: computeScore(m), timeMs: m.timeMs, navCount: m.navCount, tapCount: m.tapCount, trustMeta: m })}).catch(()=>{});}catch{}
       }
     } catch {}
   }, [userData, autoRefCount]);
+  // Periodically push trust activity to the server so users.trust_score
+  // (which gates the ₦500 referral credit at Beginner 30) tracks the real
+  // client score. Throttled to at most once per 60s.
+  const lastTrustPush = useRef(0);
+  useEffect(() => {
+    if (!userData) return;
+    const now = Date.now();
+    if (now - lastTrustPush.current < 60000) return;
+    lastTrustPush.current = now;
+    try {
+      const m = loadMeta();
+      const uid = (userData as any)?.id || (userData as any)?.userId;
+      if (!uid) return;
+      void fetch("/api/user-trust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, timeMs: m.timeMs, navCount: m.navCount, tapCount: m.tapCount, trustMeta: m }),
+      }).catch(() => {});
+    } catch {}
+  }, [trustScore, userData]);
   // sync completed tasks → +1 each (compounding)
   useEffect(() => {
     try {
@@ -778,7 +806,10 @@ export default function DashboardPage() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.success) throw new Error(j?.error || "accrue failed");
       setAutoTapsDone(earnedTotal);
-      setTapEarned((p) => p + delta * TAP_EARN_PER);
+      const creditedAuto = typeof j?.creditedAmount === "number"
+        ? j.creditedAmount
+        : delta * (earnPerTapRef.current || TAP_EARN_PER);
+      setTapEarned((p) => p + creditedAuto);
       setBalance(j.newBalance);
       setAnimatedBalance(j.newBalance);
       try {
@@ -791,7 +822,9 @@ export default function DashboardPage() {
           setUserData(u2);
         }
       } catch {}
-      try { const m = loadMeta(); m.tapCount = (m.tapCount || 0) + delta; saveMeta(m); setTrustScore(computeScore(m)); setTrustMeta({ ...m }); } catch {}
+      // Auto taps build trust MUCH slower than manual taps (1/10 rate),
+      // otherwise a single 1-week plan would catapult a new account to Elite.
+      try { const m = loadMeta(); m.tapCount = (m.tapCount || 0) + Math.max(1, Math.floor(delta / 10)); saveMeta(m); setTrustScore(computeScore(m)); setTrustMeta({ ...m }); } catch {}
       if (now >= s.expiresAt || earnedTotal >= plan.maxTaps) { finish(); toast({ title: "Auto tap finished" }); }
     } catch {
       // Keep tapsDone unchanged so nothing is lost — next tick retries.
@@ -807,6 +840,23 @@ export default function DashboardPage() {
     document.addEventListener("visibilitychange", onReturn);
     return () => { clearInterval(id); window.removeEventListener("focus", onReturn); document.removeEventListener("visibilitychange", onReturn); };
   }, [accrueAuto]);
+  // Auto-tap orb FX: fast floating rewards at the user's own ₦ rate + fire,
+  // so users can SEE auto-tap working. Runs while auto is ON (incl. background
+  // plans resumed from wall-clock state).
+  useEffect(() => {
+    if (!autoActive) { setAutoFx([]); return; }
+    const emojis = ["🔥", "💰", "⚡", "💎", "📖"];
+    const id = setInterval(() => {
+      const n = autoFxId.current++;
+      const rate = earnPerTapRef.current || TAP_EARN_PER;
+      setAutoFx((prev) => [
+        ...prev.slice(-14),
+        { id: n, text: `+₦${rate.toLocaleString()}`, emoji: emojis[n % emojis.length], x: 8 + Math.random() * 84 },
+      ]);
+      setTimeout(() => setAutoFx((prev) => prev.filter((p) => p.id !== n)), 1400);
+    }, 320);
+    return () => clearInterval(id);
+  }, [autoActive]);
   // Manual tap earnings flush: taps are worthless until THIS succeeds.
   // Sends tap counts (not naira) to /api/tap/accrue, which enforces per-call
   // and daily caps server-side, then adopts the server's balance as truth.
@@ -821,7 +871,7 @@ export default function DashboardPage() {
       const u = JSON.parse(raw);
       const uid = u.id || u.userId;
       if (!uid) { tapAccum.current += total; return; }
-      const taps = Math.max(1, Math.round(total / TAP_EARN_PER));
+      const taps = Math.max(1, Math.round(total / (earnPerTapRef.current || TAP_EARN_PER)));
       const res = await fetch("/api/tap/accrue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -863,7 +913,7 @@ export default function DashboardPage() {
           const u = raw ? JSON.parse(raw) : null;
           const uid = u?.id || u?.userId || "";
           if (uid) {
-            const taps = Math.max(1, Math.round(total / TAP_EARN_PER));
+            const taps = Math.max(1, Math.round(total / (earnPerTapRef.current || TAP_EARN_PER)));
             const payload = JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps });
             try { navigator.sendBeacon("/api/tap/accrue", new Blob([payload], { type: "application/json" })); } catch {}
           }
@@ -911,11 +961,12 @@ export default function DashboardPage() {
     setTapParticles((prev) => [...prev, { id, x: cx - rect.left, y: cy - rect.top }]);
     setTimeout(() => setTapParticles((prev) => prev.filter((p) => p.id !== id)), 700);
     setTapTapping(true); setTimeout(() => setTapTapping(false), 140);
+    const rate = earnPerTapRef.current || TAP_EARN_PER;
     setTapEnergy((p) => p - 1);
-    setTapEarned((p) => p + TAP_EARN_PER);
-    setBalance((p) => p + TAP_EARN_PER);
+    setTapEarned((p) => p + rate);
+    setBalance((p) => p + rate);
     setTapCount((p) => p + 1);
-    syncTapToBalance(TAP_EARN_PER);
+    syncTapToBalance(rate);
     // trust: 50 taps = +1
     try { const m = loadMeta(); m.tapCount = (m.tapCount || 0) + 1; saveMeta(m); setTrustScore(computeScore(m)); setTrustMeta({ ...m }); } catch {}
   }, [tapEnergy, toast, syncTapToBalance, autoActive, tapExhaustUntil, tapExhaustLeft, tapTimestamps, showRapidTapWarning]);
@@ -2258,9 +2309,9 @@ export default function DashboardPage() {
             {/* Balance header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="hh-live-dot"></span>
+                <span className={autoActive ? "hh-live-dot hh-live-dot-auto" : "hh-live-dot"} title={autoActive ? "Auto tap ON" : "Live"}></span>
                 <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
-                  Available Balance
+                  Available Balance{autoActive ? " • Auto ON" : ""}
                 </span>
               </div>
               <button
@@ -2285,17 +2336,17 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
                   <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
-                  <span className="hh-tap-badge">₦{TAP_EARN_PER}/tap</span>
-                  {autoActive && <span className="hh-auto-on-badge">AUTO ON • {formatAutoLeft(autoLeftMs)}</span>}
+                  <span className="hh-tap-badge">₦{earnPerTap}/tap</span>
+                  {autoActive && <span className="hh-auto-on-badge">🔥 AUTO ON • {formatAutoLeft(autoLeftMs)} • +₦{earnPerTap}/tap</span>}
                 </div>
                 <span className="text-[11px] font-mono font-bold text-emerald-300 flex items-center gap-1"><Sparkles className="h-3 w-3"/> +₦{tapEarned.toLocaleString()}</span>
               </div>
               <div className="flex flex-col items-center py-1">
                 <div className="hh-orb-stage-sm">
-                  <div className={`te-halo ${tapEnergy > 0 && !autoActive ? "te-halo-active" : "te-halo-inactive"}`}></div>
-                  <div className="te-ring te-ring-outer" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
-                  <div className="te-ring te-ring-inner" style={autoActive?{animationPlayState:'paused'}:undefined}></div>
-                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0) || showRapidTapWarning} style={{ overflow: "hidden" }} className={`te-orb hh-orb-sm ${tapEnergy > 0 && !autoActive && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${autoActive || showRapidTapWarning ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
+                  <div className={`te-halo ${autoActive ? "te-halo-auto" : tapEnergy > 0 ? "te-halo-active" : "te-halo-inactive"}`}></div>
+                  <div className={`te-ring te-ring-outer ${autoActive ? "te-ring-auto" : ""}`}></div>
+                  <div className={`te-ring te-ring-inner ${autoActive ? "te-ring-auto" : ""}`}></div>
+                  <button data-tour="tap-orb" onClick={handleTapEarn} disabled={autoActive || (tapExhaustUntil!==null && tapExhaustLeft>0) || showRapidTapWarning} style={{ overflow: "hidden" }} className={`te-orb hh-orb-sm ${autoActive ? "te-orb-auto" : tapEnergy > 0 && !showRapidTapWarning ? "te-orb-active" : "te-orb-depleted"} ${tapTapping && !autoActive && !showRapidTapWarning ? "te-orb-tap" : ""} ${showRapidTapWarning ? "te-orb-locked" : ""}`} aria-label="Tap to earn">
                     {/* ── Water refill: fills bottom→up based on exhaust cooldown ──
                         fill% = 100 - (left / 10min * 100). At 5min left → 50%.
                         Starts the moment taps are used up (tapEnergy 0 → exhaust). */}
@@ -2310,9 +2361,15 @@ export default function DashboardPage() {
                       );
                     })()}
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
-                    <div className="te-orb-center"><div className={autoActive ? "" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? "AUTO" : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
+                    <div className="te-orb-center"><div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? `🔥 +₦${earnPerTap}` : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
+                    {autoActive && autoFx.map((f) => (
+                      <span key={f.id} className="te-auto-fx" style={{ left: `${f.x}%` }}>
+                        <span className="te-auto-fx-reward">{f.text}</span>
+                        <span className="te-auto-fx-emoji">{f.emoji}</span>
+                      </span>
+                    ))}
                   </button>
-                  {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{TAP_EARN_PER}</span>))}
+                  {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{earnPerTap}</span>))}
                   {/* Rapid tap warning — same design as "100" popup but red, slower. Blocks tapping until it clears. */}
                   {showRapidTapWarning && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10 rounded-full" aria-hidden="false">
@@ -2349,7 +2406,7 @@ export default function DashboardPage() {
                   <span className={`text-[11px] font-mono font-bold whitespace-nowrap ${tapEnergy<20 ? 'text-amber-300' : 'text-white/80'}`}><Zap className="inline h-3 w-3 -mt-0.5"/>{tapEnergy}/{TAP_MAX_ENERGY}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between mt-2"><span className="text-[11px] text-white/50">{autoActive ? "Auto tapping — balance rising" : "Tap the round orb • balance +₦100 instantly"}</span><Link href="/earn/tap" className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200">Full game →</Link></div>
+              <div className="flex items-center justify-between mt-2"><span className="text-[11px] text-white/50">{autoActive ? `🔥 Auto tapping +₦${earnPerTap}/tap — balance rising even while away` : `Tap the round orb • balance +₦${earnPerTap} instantly`}</span><Link href="/earn/tap" className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200">Full game →</Link></div>
             </div>
           </div>
         </div>
@@ -3065,6 +3122,63 @@ export default function DashboardPage() {
               0 0 20px rgba(16, 185, 129, 0.4);
             transform: scale(1.15);
           }
+        }
+        /* Auto-tap ON: green dot turns orange */
+        .hh-live-dot-auto {
+          background: #f97316 !important;
+          box-shadow: 0 0 6px #f97316 !important;
+          animation: hh-live-pulse-orange 0.9s ease-in-out infinite !important;
+        }
+        @keyframes hh-live-pulse-orange {
+          0%, 100% { box-shadow: 0 0 4px #f97316; transform: scale(1); }
+          50% { box-shadow: 0 0 12px #f97316, 0 0 24px rgba(249,115,22,0.5); transform: scale(1.25); }
+        }
+        /* Auto-tap orb: fast fire mode */
+        .te-halo-auto {
+          background: radial-gradient(circle, rgba(249,115,22,0.35) 0%, rgba(245,158,11,0.15) 50%, transparent 70%) !important;
+          animation: te-halo-pulse 0.9s ease-in-out infinite !important;
+        }
+        .te-ring-auto {
+          border-color: rgba(249,115,22,0.55) !important;
+          animation-duration: 3s !important;
+        }
+        .te-orb-auto {
+          background: radial-gradient(circle at 38% 32%, rgba(253,186,116,0.95), #f97316 48%, rgba(124,45,18,0.95) 100%) !important;
+          box-shadow: inset 0 -12px 28px rgba(124,45,18,0.7), inset 0 6px 22px rgba(253,186,116,0.4), 0 0 60px rgba(249,115,22,0.65), 0 0 120px rgba(249,115,22,0.3) !important;
+          animation: te-auto-pulse 0.9s ease-in-out infinite;
+        }
+        @keyframes te-auto-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.045); }
+        }
+        .te-orb-auto-bounce { animation: te-auto-bounce 0.55s ease-in-out infinite; }
+        @keyframes te-auto-bounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-8px) scale(1.08); }
+        }
+        .te-auto-fx {
+          position: absolute;
+          bottom: 12%;
+          pointer-events: none;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          z-index: 4;
+          animation: te-auto-rise 1.3s ease-out forwards;
+        }
+        .te-auto-fx-reward {
+          font-family: "JetBrains Mono", monospace;
+          font-size: 15px;
+          font-weight: 800;
+          color: #fdba74;
+          text-shadow: 0 0 12px rgba(249,115,22,0.9);
+          white-space: nowrap;
+        }
+        .te-auto-fx-emoji { font-size: 18px; filter: drop-shadow(0 0 8px rgba(249,115,22,0.8)); }
+        @keyframes te-auto-rise {
+          0% { opacity: 0; transform: translateY(20px) scale(0.6); }
+          15% { opacity: 1; transform: translateY(0) scale(1.15); }
+          100% { opacity: 0; transform: translateY(-110px) scale(1.3); }
         }
 
         /* ─── EYE BTN ─── */

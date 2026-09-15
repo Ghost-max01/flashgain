@@ -3,9 +3,18 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 
-const TAP_EARN_PER = 100
+const TAP_EARN_BASE = 100
+const TAP_EARN_STEP = 10
 const MANUAL_MAX_PER_CALL = 200
 const MANUAL_MAX_PER_DAY = 15000
+
+// Trust tiers are 30 points each: Free 0-29, Beginner 30-59, Trusted 60-89,
+// Verified 90-119, Elite 120+. Per-tap: 100 / 110 / 120 / 130 / 140.
+function earnPerTapForScore(score: number): number {
+  const s = Math.max(0, Math.floor(Number(score) || 0))
+  const idx = s < 30 ? 0 : s < 60 ? 1 : s < 90 ? 2 : s < 120 ? 3 : 4
+  return TAP_EARN_BASE + idx * TAP_EARN_STEP
+}
 
 const AUTO_PLANS: Record<string, { durationMs: number; maxTaps: number }> = {
   free1h: { durationMs: 20 * 60 * 1000, maxTaps: 200 },
@@ -36,9 +45,10 @@ async function creditBalance(supabase: any, userId: string, amount: number) {
 //
 // Body:
 //   { userId, accrualId, kind: "manual"|"auto", taps, planId?, startedAt? }
-// - manual: taps 1..200 per call, 15,000/day cap. amount = taps × ₦100.
+// - manual: taps 1..200 per call, 15,000/day cap. amount = taps × trust rate
+//   (Free ₦100, Beginner ₦110, +₦10 per tier from users.trust_score).
 // - auto: taps are validated against the plan schedule derived from
-//   startedAt (wall-clock, so background time counts). Credit is capped at
+//   startedAt (wall-clock, so background/offline time counts). Credit is capped at
 //   what the schedule allows minus what this run already paid (tracked in
 //   transactions), so forged claims gain nothing beyond a normal plan run.
 // accrualId makes each flush idempotent (replays return current balance).
@@ -82,11 +92,19 @@ export async function POST(req: NextRequest) {
     let creditTaps = 0
     let type = "tap_manual"
 
+    // Trust-based rate (authoritative): read the user's stored trust_score.
+    let earnPerTap = TAP_EARN_BASE
+    try {
+      const { data: tu } = await supabase.from("users").select("trust_score").eq("id", userId).maybeSingle()
+      earnPerTap = earnPerTapForScore(Number((tu as any)?.trust_score || 0))
+    } catch {}
+
     if (kind === "manual") {
       if (taps > MANUAL_MAX_PER_CALL) {
         return NextResponse.json({ success: false, error: "Too many taps per flush" }, { status: 400 })
       }
-      // Daily cap (best-effort; missing table = skip cap).
+      // Daily cap (best-effort; missing table = skip cap). Counts taps, so
+      // divide stored amounts by the current rate (best effort).
       try {
         const { data: rows } = await supabase
           .from("transactions")
@@ -95,7 +113,7 @@ export async function POST(req: NextRequest) {
           .eq("type", "tap_manual")
           .gte("created_at", `${day}T00:00:00.000Z`)
           .limit(20000)
-        const used = (rows || []).reduce((s: number, r: any) => s + Math.floor(Number(r.amount || 0) / TAP_EARN_PER), 0)
+        const used = (rows || []).reduce((s: number, r: any) => s + Math.floor(Number(r.amount || 0) / earnPerTap), 0)
         if (used >= MANUAL_MAX_PER_DAY) {
           return NextResponse.json({ success: false, error: "Daily tap limit reached" }, { status: 429 })
         }
@@ -130,7 +148,7 @@ export async function POST(req: NextRequest) {
           .eq("type", "tap_auto")
           .like("reference", `tapacc-${userId}-auto-${planId}-${startedAt}-%`)
           .limit(5000)
-        already = (rows || []).reduce((s: number, r: any) => s + Math.floor(Number(r.amount || 0) / TAP_EARN_PER), 0)
+        already = (rows || []).reduce((s: number, r: any) => s + Math.floor(Number(r.amount || 0) / earnPerTap), 0)
       } catch {}
       creditTaps = Math.max(0, Math.min(taps, earnedTotal - already))
       if (creditTaps <= 0) {
@@ -140,7 +158,7 @@ export async function POST(req: NextRequest) {
       type = "tap_auto"
     }
 
-    const amount = creditTaps * TAP_EARN_PER
+    const amount = creditTaps * earnPerTap
     const finalRef = kind === "auto"
       ? `tapacc-${userId}-auto-${String(body?.planId)}-${Number(body?.startedAt)}-${accrualId}`.slice(0, 120)
       : reference
@@ -167,7 +185,7 @@ export async function POST(req: NextRequest) {
     if (newBalance === null) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
     }
-    return NextResponse.json({ success: true, newBalance, creditedTaps: creditTaps })
+    return NextResponse.json({ success: true, newBalance, creditedTaps: creditTaps, creditedAmount: amount, earnPerTap })
   } catch (e: any) {
     console.error("tap accrue error:", e)
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 })
