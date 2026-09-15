@@ -782,12 +782,22 @@ export default function WithdrawPage() {
           </div>
         )}
 
-        {/* Withdrawal Info Modal */}
+        {/* Withdrawal Info Modal — eligibility uses the same full 4-gate check
+            as the withdraw button (balance + tasks + referrals + spin). */}
         <WithdrawalInfoModal
           isOpen={showWithdrawalInfoModal}
-                isEligible={reviewMode || ((serverBalance ?? balance) >= 200000 && referralCount >= REQUIRED_REFERRALS)}
+          isEligible={reviewMode || (() => {
+            const effBalance = serverBalance ?? balance
+            if (effBalance < 200000) return false
+            if (completedTasksCount < TOTAL_DAILY_TASKS) return false
+            if (!spinPlayedToday) return false
+            if (!toggleActive && referralCount < REQUIRED_REFERRALS) return false
+            return true
+          })()}
           completedTasksCount={completedTasksCount}
           referralCount={referralCount}
+          balance={serverBalance ?? balance}
+          spinPlayedToday={spinPlayedToday}
           onClose={() => setShowWithdrawalInfoModal(false)}
           onProceed={handleProceedToWithdrawal}
         />
@@ -869,9 +879,9 @@ export default function WithdrawPage() {
               <h4 className="font-bold text-white mb-1">Quick Tip</h4>
               <p className="text-sm text-emerald-200/80">
                 {toggleActive ? (
-                  <>Complete all {TOTAL_DAILY_TASKS} daily tasks and no referral required to unlock withdrawals.</>
+                  <>Reach ₦200,000, complete all {TOTAL_DAILY_TASKS} daily tasks, play Spin & Win today — no referral required to unlock withdrawals.</>
                 ) : (
-                  <>Complete all {TOTAL_DAILY_TASKS} daily tasks and get {REQUIRED_REFERRALS} referrals to unlock withdrawals.</>
+                  <>Reach ₦200,000, complete all {TOTAL_DAILY_TASKS} daily tasks, get {REQUIRED_REFERRALS} referrals and play Spin & Win today to unlock withdrawals.</>
                 )}
               </p>
             </div>

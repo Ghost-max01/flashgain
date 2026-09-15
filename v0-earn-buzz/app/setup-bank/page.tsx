@@ -157,10 +157,17 @@ export default function SetupBankAfterSignupPage() {
   }, [accountNumber, bankCode, isLocked])
 
   const handleProceed = () => {
+    // NOTE (per request): the post-signup splash is COMMENTED OUT, not deleted.
+    // The "/welcome" page (FlashGain 9ja • Financial Services typing + dots,
+    // app/welcome/page.tsx) is kept in the repo but skipped, so after signup
+    // the flow is: spinner → welcome modal (TutorialModal) → onboarding
+    // (GuidedOnboarding) on /dashboard. To restore the splash, uncomment the
+    // router.push("/welcome") lines below and remove the /dashboard pushes.
     if (isLocked) {
       setTransitioning(true)
       setTimeout(() => {
-        router.push("/welcome")
+        // router.push("/welcome") // ← splash page (commented out, kept for later)
+        router.push("/dashboard")
       }, 1200)
       return
     }
@@ -169,7 +176,8 @@ export default function SetupBankAfterSignupPage() {
     saveBankDetails({ bank, bankCode, accountNumber: accountNumber.replace(/\D/g, ""), accountName })
     setTransitioning(true)
     setTimeout(() => {
-      router.push("/welcome")
+      // router.push("/welcome") // ← splash page (commented out, kept for later)
+      router.push("/dashboard")
     }, 1500)
   }
 
@@ -253,7 +261,8 @@ export default function SetupBankAfterSignupPage() {
       <div className="sticky top-0 z-10 hh-header">
         <div className="max-w-md mx-auto px-6 pt-8 pb-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.push("/welcome")} className="hh-back-btn">
+            {/* Back no longer goes to the (commented-out) /welcome splash — standard back instead */}
+            <button onClick={() => router.back()} className="hh-back-btn">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>

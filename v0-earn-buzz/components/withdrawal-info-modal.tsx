@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, X, AlertCircle, Gift, Users } from "lucide-react"
+import { CheckCircle2, X, AlertCircle, Gift, Users, Wallet, Trophy } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface WithdrawalInfoModalProps {
@@ -8,6 +8,8 @@ interface WithdrawalInfoModalProps {
   isEligible: boolean
   completedTasksCount: number
   referralCount: number
+  balance: number
+  spinPlayedToday: boolean
   onClose: () => void
   onProceed: () => void
 }
@@ -17,12 +19,17 @@ export function WithdrawalInfoModal({
   isEligible,
   completedTasksCount,
   referralCount,
+  balance,
+  spinPlayedToday,
   onClose,
   onProceed,
 }: WithdrawalInfoModalProps) {
   const router = useRouter()
-  const TOTAL_TASKS = 20
+  // All 4 withdrawal requirements: (1) ₦200,000 balance (2) 10 daily tasks
+  // (3) 5 referrals (4) Spin & Win played today.
+  const TOTAL_TASKS = 10
   const REQUIRED_REFERRALS = 5
+  const MIN_BALANCE = 200000
 
   if (!isOpen) return null
 
@@ -48,10 +55,17 @@ export function WithdrawalInfoModal({
 
               <div className="requirements-summary">
                 <div className="summary-item completed">
+                  <Wallet className="h-5 w-5" />
+                  <div>
+                    <span className="summary-label">Minimum Balance</span>
+                    <span className="summary-value">₦{MIN_BALANCE.toLocaleString()} Reached</span>
+                  </div>
+                </div>
+                <div className="summary-item completed">
                   <Gift className="h-5 w-5" />
                   <div>
                     <span className="summary-label">Daily Tasks</span>
-                    <span className="summary-value">{completedTasksCount}/20 Complete</span>
+                    <span className="summary-value">{completedTasksCount}/{TOTAL_TASKS} Complete</span>
                   </div>
                 </div>
                 <div className="summary-item completed">
@@ -59,6 +73,13 @@ export function WithdrawalInfoModal({
                   <div>
                     <span className="summary-label">Referrals</span>
                     <span className="summary-value">{referralCount}/{REQUIRED_REFERRALS} Active</span>
+                  </div>
+                </div>
+                <div className="summary-item completed">
+                  <Trophy className="h-5 w-5" />
+                  <div>
+                    <span className="summary-label">Spin & Win Today</span>
+                    <span className="summary-value">1/1 Played</span>
                   </div>
                 </div>
               </div>
@@ -83,6 +104,21 @@ export function WithdrawalInfoModal({
               <p className="modal-subtitle">Complete all requirements to withdraw</p>
 
               <div className="requirements-list">
+                <div className={`requirement-item ${balance >= MIN_BALANCE ? 'completed' : 'pending'}`}>
+                  <div className="requirement-icon">
+                    <Wallet className="h-5 w-5" />
+                  </div>
+                  <div className="requirement-content">
+                    <span className="requirement-title">Minimum Balance ₦{MIN_BALANCE.toLocaleString()}</span>
+                    <span className="requirement-progress">₦{Math.floor(balance).toLocaleString()} saved</span>
+                  </div>
+                  {balance >= MIN_BALANCE ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  ) : (
+                    <span className="requirement-missing">₦{Math.max(0, MIN_BALANCE - Math.floor(balance)).toLocaleString()} left</span>
+                  )}
+                </div>
+
                 <div className={`requirement-item ${completedTasksCount >= TOTAL_TASKS ? 'completed' : 'pending'} cursor-pointer`} onClick={() => router.push('/task')}>
                   <div className="requirement-icon">
                     <Gift className="h-5 w-5" />
@@ -110,6 +146,21 @@ export function WithdrawalInfoModal({
                     <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                   ) : (
                     <span className="requirement-missing">{REQUIRED_REFERRALS - referralCount} left</span>
+                  )}
+                </div>
+
+                <div className={`requirement-item ${spinPlayedToday ? 'completed' : 'pending'} cursor-pointer`} onClick={() => router.push('/stake')}>
+                  <div className="requirement-icon">
+                    <Trophy className="h-5 w-5" />
+                  </div>
+                  <div className="requirement-content">
+                    <span className="requirement-title">Spin & Win Today</span>
+                    <span className="requirement-progress">{spinPlayedToday ? '1/1' : '0/1'}</span>
+                  </div>
+                  {spinPlayedToday ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  ) : (
+                    <span className="requirement-missing">Play once today</span>
                   )}
                 </div>
               </div>
@@ -146,6 +197,8 @@ export function WithdrawalInfoModal({
           transform: translate(-50%, -50%);
           width: 90%;
           max-width: 480px;
+          max-height: 85vh;
+          overflow-y: auto;
           background: linear-gradient(135deg, rgba(5, 13, 20, 0.95) 0%, rgba(5, 13, 20, 0.9) 100%);
           border: 1px solid rgba(16, 185, 129, 0.2);
           border-radius: 24px;

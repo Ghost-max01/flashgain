@@ -187,7 +187,7 @@ export default function TieredTaskPage() {
         if (!prev[taskId]) return prev
         
         const elapsed = (Date.now() - prev[taskId].startTime) / 1000
-        const newProgress = Math.min((elapsed / 20) * 100, 100)
+        const newProgress = Math.min((elapsed / TASK_VISIT_SECONDS) * 100, 100)
         
         if (newProgress >= 100) {
           clearInterval(progressIntervals.current[taskId])
@@ -690,7 +690,7 @@ export default function TieredTaskPage() {
                 {task.link && (
                   <div className="hh-task-warning">
                     <span className="text-amber-400 font-bold mr-1">⚠️</span>
-                    <span>Interact with the task for at least 20 seconds before you can claim the reward.</span>
+                    <span>Interact with the task for at least {TASK_VISIT_SECONDS} seconds before you can claim the reward.</span>
                   </div>
                 )}
               </div>

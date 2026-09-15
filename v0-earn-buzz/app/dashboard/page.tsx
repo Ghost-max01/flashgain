@@ -724,7 +724,8 @@ export default function DashboardPage() {
     return () => { window.removeEventListener("storage", onStorage); window.removeEventListener("focus", onStorage); };
   }, []);
   // Guided onboarding must come AFTER TutorialModal (Welcome → Refer & Earn → Withdraw Anytime → Proceed to Dashboard)
-  // Order: setup-bank → /welcome (6s) → dashboard → TutorialModal → GuidedOnboarding (7 steps)
+  // Order: setup-bank → dashboard → TutorialModal (welcome modal) → GuidedOnboarding (7 steps).
+  // (The /welcome splash page is commented out per request — see setup-bank handleProceed.)
   // This effect only auto-shows Guided if Tutorial has already been completed (so sequence is preserved)
   useEffect(() => {
     try {
@@ -2021,9 +2022,9 @@ export default function DashboardPage() {
         />
       )}
       <GuidedOnboarding open={showGuided} onClose={() => { setShowGuided(false); localStorage.setItem("tivexx-guided-shown", "true"); localStorage.setItem("tivexx-guided-v2-shown", "true"); localStorage.setItem("tivexx-tutorial-shown", "true"); }} />
-      {/* Trust Score breakdown */}
+      {/* Trust Score breakdown — scrollable with an always-visible Close so it never traps the screen */}
       <Dialog open={showTrustInfo} onOpenChange={setShowTrustInfo}>
-        <DialogContent className="hh-dialog max-w-sm">
+        <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-white flex items-center gap-2"><Award className="h-5 w-5 text-emerald-400"/> Trust Score — how it compounds</DialogTitle><DialogDescription className="text-white/60 text-xs">Everything compounds. Your score = sum of all actions.</DialogDescription></DialogHeader>
           <div className="space-y-3 mt-2">
             <div className="rounded-2xl bg-gradient-to-br from-emerald-500/15 to-blue-500/15 border border-emerald-500/20 p-4 flex items-center justify-between">
@@ -2043,6 +2044,7 @@ export default function DashboardPage() {
               <Button variant="outline" onClick={()=>{ setShowTrustInfo(false); localStorage.removeItem("tivexx-guided-v2-shown"); localStorage.removeItem("tivexx-guided-shown"); setTimeout(()=> setShowGuided(true), 300); }} className="rounded-full border-white/15 text-white">Replay tour</Button>
               <Button onClick={()=>{ setShowTrustInfo(false); setShowGuided(true); }} className="rounded-full bg-white text-[#050d14] font-black">Take guided tour →</Button>
             </div>
+            <Button variant="outline" onClick={()=> setShowTrustInfo(false)} className="w-full rounded-full border-emerald-500/40 text-emerald-300 font-black">← Close — back to dashboard</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -2579,7 +2581,7 @@ export default function DashboardPage() {
                 <Trophy className="h-6 w-6 text-white" />
               </div>
               <div>
-                <div className="font-black text-white text-base flex items-center gap-2">Spin & Win <span className="px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-black">×2.2</span></div>
+                <div className="font-black text-white text-base flex items-center gap-2">Spin & Win <span className="px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-black">×2</span></div>
                 <div className="text-xs font-bold text-white/80">Stake to win — instant payout</div>
               </div>
             </div>

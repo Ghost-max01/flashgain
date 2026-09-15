@@ -12,19 +12,19 @@ const STAKE_TIERS = [
   { pct: 30, label: "30%", desc: "Balanced" },
   { pct: 40, label: "40%", desc: "Aggressive" },
 ]
-const MULTIPLIER = 2.2
+const MULTIPLIER = 2 // every win is ×2 — nothing more or less
 const STAKE_TIERS_MAP: Record<number, (typeof STAKE_TIERS)[number]> = {}
 STAKE_TIERS.forEach(t => { STAKE_TIERS_MAP[t.pct] = t })
 
-// Spin & Win — 30% win = 3 wins / 10 segments (additive inside /stake)
+// Spin & Win — 30% win = 3 wins / 10 segments. ALL wins pay ×2 (nothing more or less).
 const SPIN_SEGMENTS = [
   { label: "WIN ×2", win: true, amount: 2, color: "#10b981" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
-  { label: "WIN ×5", win: true, amount: 5, color: "#f59e0b" },
+  { label: "WIN ×2", win: true, amount: 2, color: "#f59e0b" },
   { label: "LOSE", win: false, amount: 0, color: "#334155" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
   { label: "LOSE", win: false, amount: 0, color: "#334155" },
-  { label: "WIN ×3", win: true, amount: 3, color: "#06b6d4" },
+  { label: "WIN ×2", win: true, amount: 2, color: "#06b6d4" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
   { label: "LOSE", win: false, amount: 0, color: "#334155" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
@@ -39,10 +39,10 @@ export default function StakeWinPage() {
   const [livePool, setLivePool] = useState(2847500)
   const [nextDrawMs, setNextDrawMs] = useState(1000*60*12 + 34000)
   const [recentWins] = useState([
-    { name: "Chioma ***", won: 4400, staked: 2000 },
-    { name: "Musa ***", won: 11000, staked: 5000 },
-    { name: "Tunde ***", won: 2200, staked: 1000 },
-    { name: "Amaka ***", won: 22000, staked: 10000 },
+    { name: "Chioma ***", won: 4000, staked: 2000 },
+    { name: "Musa ***", won: 10000, staked: 5000 },
+    { name: "Tunde ***", won: 2000, staked: 1000 },
+    { name: "Amaka ***", won: 20000, staked: 10000 },
   ])
 
   // Live stakers ticker — random Nigerian names + amounts (min ₦200,000), rotate every 5 min
@@ -67,7 +67,7 @@ export default function StakeWinPage() {
         const baseName = NIGERIAN_NAMES[nameIdx]
         const suffix = ["***", "**", "*", ""][Math.floor(Math.random() * 4)]
         const staked = Math.floor(Math.random() * (400000 - 200000) + 200000)
-        const won = Math.floor(staked * (1.5 + Math.random() * 4))
+        const won = staked * 2 // every win is ×2 — nothing more or less
         const agoMin = Math.floor(Math.random() * 28 + 2)
         names.push({
           name: baseName + " " + suffix,
@@ -118,6 +118,13 @@ export default function StakeWinPage() {
   // Exceeded spins modal - shows when user tries to enter after all 3 spins used
   const [showExceededModal, setShowExceededModal] = useState(false)
   // NOTE: no refill countdown — each tier (20/30/40%) is once per 24h, nothing refills.
+  // After the 3rd spin exhausts all tiers, the "spins complete" popup waits ~10s
+  // (so users enjoy their last result) — unless they press TAP TO SPIN at 3/3,
+  // which brings it up immediately (handled at the top of doSpin).
+  const exhaustedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    return () => { if (exhaustedTimerRef.current) clearTimeout(exhaustedTimerRef.current) }
+  }, [])
 
   useEffect(() => {
     try {
@@ -201,8 +208,10 @@ export default function StakeWinPage() {
 
   const doSpin = useCallback(() => {
     if (spinning) return
-    // 4th press when 3/3 used → go-home popup (result of last spin stays visible until then)
+    // 4th press when 3/3 used → go-home popup IMMEDIATELY (cancels the 10s
+    // delayed popup so users never wait after explicitly pressing spin).
     if ([20, 30, 40].every(pct => ((spinCooldowns as Record<number, number>)[pct] || 0) > Date.now())) {
+      if (exhaustedTimerRef.current) { clearTimeout(exhaustedTimerRef.current); exhaustedTimerRef.current = null }
       setShowSpinCompleteModal(true)
       return
     }
@@ -285,9 +294,14 @@ export default function StakeWinPage() {
           setAmount(stakeAmt)
           setCustom(String(stakeAmt))
         } else {
-          // 3/3 used: do NOT pop up yet — let the last result show.
-          // The popup comes on the 4th press (handled at the top of doSpin).
+          // 3/3 used: let the last result show first, then pop up after ~10s.
+          // Pressing TAP TO SPIN in the meantime brings it up immediately.
           setSpinSessionActive(false)
+          if (exhaustedTimerRef.current) clearTimeout(exhaustedTimerRef.current)
+          exhaustedTimerRef.current = setTimeout(() => {
+            exhaustedTimerRef.current = null
+            setShowSpinCompleteModal(true)
+          }, 10000)
         }
       }, 0)
       // Settle on the SERVER so wins survive refresh/dashboard sync.

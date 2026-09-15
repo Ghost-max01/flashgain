@@ -322,7 +322,7 @@ export default function AutoTapTaskPage() {
         if (!prev[taskId]) return prev
         
         const elapsed = (Date.now() - prev[taskId].startTime) / 1000
-        const newProgress = Math.min((elapsed / 20) * 100, 100)
+        const newProgress = Math.min((elapsed / TASK_VISIT_SECONDS) * 100, 100)
         
         // Clear interval if progress reaches 100%
         if (newProgress >= 100) {

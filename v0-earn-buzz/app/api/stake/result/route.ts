@@ -3,14 +3,14 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 
-// Win multipliers paid by the Stake Spin & Win wheel.
-const WIN_MULTIPLIERS = [2, 3, 5]
+// Win multiplier paid by the Stake Spin & Win wheel: every win is ×2.
+const WIN_MULTIPLIERS = [2]
 const MIN_STAKE = 200
 const MAX_RESULTS_PER_DAY = 20
 
 // POST /api/stake/result { userId, spinId, stake, winAmount } — records one
 // settled spin and applies it to the server balance atomically.
-// winAmount must be 0 (loss: stake deducted) or stake×{2,3,5} (win: paid on
+// winAmount must be 0 (loss: stake deducted) or stake×2 (win: paid on
 // top, stake not taken — matches page economy). spinId makes replays safe.
 export async function POST(req: NextRequest) {
   try {
