@@ -2070,32 +2070,7 @@ export default function DashboardPage() {
         />
       )}
       <GuidedOnboarding open={showGuided} onClose={() => { setShowGuided(false); localStorage.setItem("tivexx-guided-shown", "true"); localStorage.setItem("tivexx-guided-v2-shown", "true"); localStorage.setItem("tivexx-tutorial-shown", "true"); }} />
-      {/* Trust Score breakdown — scrollable with an always-visible Close so it never traps the screen */}
-      <Dialog open={showTrustInfo} onOpenChange={setShowTrustInfo}>
-        <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-white flex items-center gap-2"><Award className="h-5 w-5 text-emerald-400"/> Trust Score — how it compounds</DialogTitle><DialogDescription className="text-white/60 text-xs">Everything compounds. Your score = sum of all actions.</DialogDescription></DialogHeader>
-          <div className="space-y-3 mt-2">
-            <div className="rounded-2xl bg-gradient-to-br from-emerald-500/15 to-blue-500/15 border border-emerald-500/20 p-4 flex items-center justify-between">
-              <div><div className="text-xs text-white/60 uppercase tracking-wider font-bold">Your Score</div><div className="text-3xl font-black text-white">{trustScore}</div><div className="text-xs font-bold" style={{color: getLevel(trustScore).color}}>{getLevel(trustScore).label} • {getProgress(trustScore)}%</div></div>
-              <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center"><span className="text-2xl font-black" style={{color: getLevel(trustScore).color}}>{trustScore}</span></div>
-            </div>
-            {(() => { const m = trustMeta || { timeMs:0, referralCount:0, navCount:0, payCount:0, taskCount:0, tapCount:0 }; const timePts=Math.floor(m.timeMs/(5*60*1000))*2; const refPts=Math.floor(m.referralCount/5)*2; const navPts=Math.floor(m.navCount/5); const payPts=m.payCount*5; const taskPts=Math.floor((m.taskCount||0)/10)*2; const tapPts=Math.floor((m.tapCount||0)/50)*1; const rows=[
-              { label:"Time in app (5m = +2)", value: `${Math.floor(m.timeMs/60000)}m`, pts: timePts, icon: Clock, color:"text-emerald-400" },
-              { label:"Referrals (5 = +2)", value: `${m.referralCount}`, pts: refPts, icon: Users, color:"text-violet-400" },
-              { label:"Tasks done (10 = +2)", value: `${m.taskCount||0}`, pts: taskPts, icon: Gift, color:"text-emerald-300" },
-              { label:"Dashboard taps (50 = +1)", value: `${m.tapCount||0}`, pts: tapPts, icon: Zap, color:"text-cyan-400" },
-              { label:"App navigations (5 = +1)", value: `${m.navCount}`, pts: navPts, icon: TrendingUp, color:"text-amber-400" },
-              { label:"Payments into app (+5 each)", value: `${m.payCount}`, pts: payPts, icon: CreditCard, color:"text-blue-400" },
-            ]; return rows.map(r=> { const Ico: any = (r as any).icon || CreditCard; return (<div key={r.label} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5"><div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center ${r.color}`}><Ico className="h-4 w-4"/></div><div><div className="text-xs font-bold text-white">{r.label}</div><div className="text-[11px] text-white/50">{r.value} → +{r.pts}</div></div></div><span className="text-sm font-black text-white">+{r.pts}</span></div>); }); })()}
-            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200 leading-relaxed">💡 Tip: Stay 5 mins, do tasks (10=+2), invite 5 friends (=+2), tap 50× (=+1), explore, and fund once — you instantly jump to <b>Trusted</b>. Everything compounds.</div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={()=>{ setShowTrustInfo(false); localStorage.removeItem("tivexx-guided-v2-shown"); localStorage.removeItem("tivexx-guided-shown"); setTimeout(()=> setShowGuided(true), 300); }} className="rounded-full border-white/15 text-white">Replay tour</Button>
-              <Button onClick={()=>{ setShowTrustInfo(false); setShowGuided(true); }} className="rounded-full bg-white text-[#050d14] font-black">Take guided tour →</Button>
-            </div>
-            <Button variant="outline" onClick={()=> setShowTrustInfo(false)} className="w-full rounded-full border-emerald-500/40 text-emerald-300 font-black">← Close — back to dashboard</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Trust Score card now links to /trust-score page (see above) */}
 
       {showWithdrawalNotification && (
         <WithdrawalNotification onClose={handleCloseWithdrawalNotification} />
@@ -2542,34 +2517,32 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* ── TRUST SCORE — compounding, tap for breakdown ── */}
-        <div
-          data-tour="trust"
-          className="hh-trust-card hh-entry-3"
-          onClick={() => setShowTrustInfo(true)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") setShowTrustInfo(true);
-          }}
-        >
-          <div className="hh-trust-header">
-            <div className="hh-trust-icon">
-              <Leaf className="h-5 w-5 text-white" />
+        {/* ── TRUST SCORE — compounding, links to /trust-score page ── */}
+        <Link href="/trust-score">
+          <div
+            data-tour="trust"
+            className="hh-trust-card hh-entry-3"
+            role="button"
+            tabIndex={0}
+          >
+            <div className="hh-trust-header">
+              <div className="hh-trust-icon">
+                <Leaf className="h-5 w-5 text-white" />
+              </div>
+              <div className="hh-trust-text">
+                <div className="hh-trust-label">Trust Score</div>
+                <div className="hh-trust-value">{trustScore}</div>
+              </div>
+              <span className="hh-trust-badge">{getLevel(trustScore).label}</span>
             </div>
-            <div className="hh-trust-text">
-              <div className="hh-trust-label">Trust Score</div>
-              <div className="hh-trust-value">{trustScore}</div>
+            <div className="hh-trust-track">
+              <div className="hh-trust-fill" style={{ width: `${getProgress(trustScore)}%` }}></div>
             </div>
-            <span className="hh-trust-badge">{getLevel(trustScore).label}</span>
+            <div className="hh-trust-footer">
+              {(() => { const nxt = getNextLabel(trustScore); return nxt ? <>{nxt.need} more to <span className="hh-trust-level">{nxt.label}</span> · tap to see breakdown</> : <>Elite — max level unlocked 🎉</>; })()}
+            </div>
           </div>
-          <div className="hh-trust-track">
-            <div className="hh-trust-fill" style={{ width: `${getProgress(trustScore)}%` }}></div>
-          </div>
-          <div className="hh-trust-footer">
-            {(() => { const nxt = getNextLabel(trustScore); return nxt ? <>{nxt.need} more to <span className="hh-trust-level">{nxt.label}</span> · tap to see breakdown</> : <>Elite — max level unlocked 🎉</>; })()}
-          </div>
-        </div>
+        </Link>
 
         {/* ── QUICK ACTIONS ── */}
         <div data-tour="quick-actions" className="hh-card hh-entry-4">
