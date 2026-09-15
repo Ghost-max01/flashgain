@@ -473,7 +473,7 @@ export default function TapAndEarnPage() {
   }, [newAccrualId]);
   useEffect(() => {
     void accrueAuto();
-    const id = setInterval(() => { void accrueAuto(); }, 5000);
+    const id = setInterval(() => { void accrueAuto(); }, 3000);
     const onReturn = () => { if (document.visibilityState === "visible") void accrueAuto(); };
     window.addEventListener("focus", onReturn);
     document.addEventListener("visibilitychange", onReturn);
@@ -874,6 +874,39 @@ export default function TapAndEarnPage() {
 
   const energyPercent = (state.energy / MAX_ENERGY) * 100;
 
+  // Exact time remaining for the auto-tap countdown — HH:MM:SS,
+  // with days in front for multi-day plans (e.g. "1d 02:14:33").
+  const formatAutoLeft = (ms: number) => {
+    const totalS = Math.max(0, Math.floor(ms / 1000));
+    const d = Math.floor(totalS / 86400);
+    const h = Math.floor((totalS % 86400) / 3600);
+    const m = Math.floor((totalS % 3600) / 60);
+    const sec = totalS % 60;
+    const clock = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    return d > 0 ? `${d}d ${clock}` : clock;
+  };
+  // Live ETA to the NEXT auto credit (same plan schedule the server uses).
+  // Re-evaluates every render; renders tick every second while auto is ON.
+  const nextAutoCreditInMs = (() => {
+    void autoLeftMs;
+    if (!autoActive || !autoPlan || !autoStartedAt) return 0;
+    try {
+      const intervalMs = getAutoIntervalMs(autoPlan);
+      if (!intervalMs) return 0;
+      const elapsed = Date.now() - autoStartedAt;
+      return Math.max(0, intervalMs - (elapsed % intervalMs));
+    } catch { return 0; }
+  })();
+  const formatShortLeft = (ms: number) => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    if (s >= 3600) {
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+      return `${h}h ${String(m).padStart(2, "0")}m`;
+    }
+    if (s >= 60) return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+    return `${s}s`;
+  };
+
   if (!mounted) return null;
 
   return (
@@ -960,7 +993,7 @@ export default function TapAndEarnPage() {
             <span className="hh-tap-badge">₦{earnPerTap}/tap</span>
             {autoActive && (
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-500/25 text-orange-300 border border-orange-400/40 animate-pulse">
-                🔥 AUTO +₦{earnPerTap}/tap
+                🔥 AUTO ON • {formatAutoLeft(autoLeftMs)} • +₦{earnPerTap}/tap
               </span>
             )}
           </div>
@@ -1084,10 +1117,14 @@ export default function TapAndEarnPage() {
             </button>
           </div>
           {autoActive ? (
-            <div className="flex items-center gap-2 mt-2">
-              <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${Math.min(100,(autoTapsDone/(AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps||1))*100)}%` }}></div></div>
-              <span className="text-[11px] font-mono font-bold whitespace-nowrap text-emerald-300"><Zap className="inline h-3 w-3 -mt-0.5"/>{state.energy}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps}</span>
-            </div>
+            <>
+              <div className="flex items-center gap-2 mt-2">
+                {/* Same design as the manual bar: starts FULL, drains as auto-taps are used */}
+                <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${Math.max(0, Math.min(100, 100 - (autoTapsDone/(AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps||1))*100))}%` }}></div></div>
+                <span className="text-[11px] font-mono font-bold whitespace-nowrap text-emerald-300"><Zap className="inline h-3 w-3 -mt-0.5"/>{autoTapsDone}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps}</span>
+              </div>
+              <div className="text-center text-[11px] font-bold text-orange-300 mt-1">Next +₦{earnPerTap.toLocaleString()} in {formatShortLeft(nextAutoCreditInMs)} • {formatAutoLeft(autoLeftMs)} left</div>
+            </>
           ) : (
             <div className="flex items-center gap-2 mt-2">
               <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${(state.energy/MAX_ENERGY)*100}%` }}></div></div>

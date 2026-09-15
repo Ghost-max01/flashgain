@@ -834,7 +834,7 @@ export default function DashboardPage() {
   }, [toast, newAccrualId]);
   useEffect(() => {
     void accrueAuto();
-    const id = setInterval(() => { void accrueAuto(); }, 5000);
+    const id = setInterval(() => { void accrueAuto(); }, 3000);
     const onReturn = () => { if (document.visibilityState === "visible") void accrueAuto(); };
     window.addEventListener("focus", onReturn);
     document.addEventListener("visibilitychange", onReturn);
@@ -1130,11 +1130,37 @@ export default function DashboardPage() {
     const link = `${window.location.origin}/register?ref=${realCode}`;
     navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
   }, [autoRefCode, userData, toast]);
-  // Minimalistic auto timer — seconds in front of minutes (SS:MM, or SS:MM:HH)
+  // Exact time remaining for the auto-tap countdown — standard HH:MM:SS,
+  // with days in front for multi-day plans (e.g. "1d 02:14:33").
   const formatAutoLeft = (ms:number) => {
-    const s = Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
-    if (h>0) return `${String(sec).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(h).padStart(2,'0')}`;
-    return `${String(sec).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const totalS = Math.max(0, Math.floor(ms/1000));
+    const d = Math.floor(totalS/86400);
+    const h = Math.floor((totalS%86400)/3600);
+    const m = Math.floor((totalS%3600)/60);
+    const sec = totalS%60;
+    const clock = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return d > 0 ? `${d}d ${clock}` : clock;
+  };
+  // Live ETA to the NEXT auto credit (same plan schedule the server uses),
+  // so the balance feels alive even on slow plans (e.g. 1 tap / ~58s on 24h).
+  const nextAutoCreditInMs = (() => {
+    void autoLeftMs; // re-evaluates every second while the 1s auto countdown ticks
+    if (!autoActive || !autoPlan || !autoStartedAt) return 0;
+    try {
+      const intervalMs = getAutoIntervalMs(autoPlan);
+      if (!intervalMs) return 0;
+      const elapsed = Date.now() - autoStartedAt;
+      return Math.max(0, intervalMs - (elapsed % intervalMs));
+    } catch { return 0; }
+  })();
+  const formatShortLeft = (ms:number) => {
+    const s = Math.max(0, Math.ceil(ms/1000));
+    if (s >= 3600) {
+      const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+      return `${h}h ${String(m).padStart(2,'0')}m`;
+    }
+    if (s >= 60) return `${Math.floor(s/60)}m ${String(s%60).padStart(2,'0')}s`;
+    return `${s}s`;
   };
 
   // Animate balance changes
@@ -2394,10 +2420,14 @@ export default function DashboardPage() {
                 </button>
               </div>
               {autoActive ? (
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${Math.min(100,(autoTapsDone/(AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps||1))*100)}%` }}></div></div>
-                  <span className="text-[11px] font-mono font-bold whitespace-nowrap text-emerald-300"><Zap className="inline h-3 w-3 -mt-0.5"/>{TAP_MAX_ENERGY}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps}</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 mt-1">
+                    {/* Same design as the manual bar: starts FULL, drains as auto-taps are used */}
+                    <div className="hh-progress-track flex-1 !w-auto !h-2"><div className="hh-progress-fill" style={{ width: `${Math.max(0, Math.min(100, 100 - (autoTapsDone/(AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps||1))*100))}%` }}></div></div>
+                    <span className="text-[11px] font-mono font-bold whitespace-nowrap text-emerald-300"><Zap className="inline h-3 w-3 -mt-0.5"/>{autoTapsDone}/{AUTO_PLANS.find(p=>p.id===autoPlan)?.maxTaps}</span>
+                  </div>
+                  <div className="text-center text-[11px] font-bold text-orange-300 mt-1">Next +₦{earnPerTap.toLocaleString()} in {formatShortLeft(nextAutoCreditInMs)} • {formatAutoLeft(autoLeftMs)} left</div>
+                </>
               ) : tapExhaustUntil && tapExhaustLeft>0 ? (
                 <div className="text-center text-[11px] font-bold text-amber-300 mt-1 flex items-center justify-center gap-1"><Clock className="h-3 w-3"/> Exhausted 100/100 — wait {Math.floor(tapExhaustLeft/60000)}:{String(Math.floor((tapExhaustLeft%60000)/1000)).padStart(2,'0')} to recharge</div>
               ) : (
