@@ -17,6 +17,8 @@ import {
   Check,
   Sparkles,
   TrendingUp,
+  Smartphone,
+  Phone,
   Award,
   Bell,
   Headphones,
@@ -36,7 +38,6 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/referral";
 import { VIP_AMOUNT, VIP_KEY, VIP_REDEEMED_KEY, REFERRAL_MIN_WITHDRAW, loadVip, saveVip } from "@/lib/referral-vip";
 import { getLevel, getProgress, getNextLabel, TRUST_LEVELS, type TrustMeta, computeScore, loadMeta } from "@/lib/trust-score";
-import { Smartphone, Phone } from "lucide-react";
 
 interface UserData {
   id: string;
@@ -67,11 +68,6 @@ function ReferContent() {
   const [activeMessage, setActiveMessage] = useState("");
   const [animatedEarnings, setAnimatedEarnings] = useState(0);
   const [isEarningsChanging, setIsEarningsChanging] = useState(false);
-  // Trust score / rank state
-  const [trustScore, setTrustScore] = useState(0);
-  const [currentLevel, setCurrentLevel] = useState<TRUST_LEVELS[number]>(TRUST_LEVELS[0]);
-  const [nextLevel, setNextLevel] = useState<{ label: string; need: number; color: string } | null>(null);
-  const [progress, setProgress] = useState(0);
   // VIP airtime state
   const [vip, setVip] = useState<{ available: number; redeemed: boolean; phone?: string; network?: string; date?: string; history: any[] }>({ available: 500, redeemed: false, history: [] });
   const [vipPhone, setVipPhone] = useState("");
@@ -353,22 +349,6 @@ function ReferContent() {
         setPendingCount(data.pending_count || 0);
 
         setAnimatedEarnings(data.referral_balance || 0);
-
-        // Compute trust score / rank
-        try {
-          const meta = loadMeta();
-          const score = computeScore(meta);
-          setTrustScore(score);
-          const lvl = getLevel(score);
-          setCurrentLevel(lvl);
-          setProgress(getProgress(score));
-          const nxt = getNextLabel(score);
-          if (nxt) {
-            setNextLevel({ label: nxt.label, need: nxt.need, color: TRUST_LEVELS.find(l => l.label === nxt.label)?.color || lvl.color });
-          } else {
-            setNextLevel(null);
-          }
-        } catch {}
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -902,14 +882,31 @@ function ReferContent() {
             {(() => {
               const refCount = userData?.referral_count || 0;
               const levels = [
-                { label: "Free", color: "#64748b", Icon: Star },
-                { label: "Beginner", color: "#10b981", Icon: Flame },
-                { label: "Trusted", color: "#059669", Icon: ShieldCheck },
-                { label: "Verified", color: "#7c3aed", Icon: Trophy },
-                { label: "Elite", color: "#f59e0b", Icon: Crown },
+                { label: "Free", min: 0, color: "#64748b", Icon: Star },
+                { label: "Beginner", min: 5, color: "#10b981", Icon: Flame },
+                { label: "Trusted", min: 10, color: "#059669", Icon: ShieldCheck },
+                { label: "Verified", min: 20, color: "#7c3aed", Icon: Trophy },
+                { label: "Elite", min: 50, color: "#f59e0b", Icon: Crown },
               ];
-              const currentIdx = Math.max(0, levels.findIndex(l => l.label === (currentLevel as any)?.label));
+              // Trust score determines rank level
+              let currentLevel = levels[0];
+              let currentIdx = 0;
+              try {
+                const meta = loadMeta();
+                const score = computeScore(meta);
+                const lvl = getLevel(score);
+                const idx = levels.findIndex(l => l.label === lvl.label);
+                if (idx !== -1) { currentIdx = idx; currentLevel = levels[idx]; }
+              } catch {}
               const CurrentIcon = levels[currentIdx]?.Icon || Star;
+              const nextLevel = currentIdx < levels.length - 1 ? levels[currentIdx + 1] : null;
+              const progress = (() => {
+                try {
+                  const meta = loadMeta();
+                  const score = computeScore(meta);
+                  return getProgress(score);
+                } catch { return 0; }
+              })();
               return (
                 <>
                   <div className="hh-rank2-top">
@@ -918,7 +915,7 @@ function ReferContent() {
                     </div>
                     <div className="hh-rank2-head">
                       <div className="hh-rank2-name">{levels[currentIdx]?.label} Rank</div>
-                      <div className="hh-rank2-sub">₦500/ref • Trust {trustScore}</div>
+                      <div className="hh-rank2-sub">₦500/ref • Trust {(() => { try { return computeScore(loadMeta()); } catch { return 0; } })()}</div>
                     </div>
                     <div className="hh-rank2-count">{refCount} referrals</div>
                   </div>
@@ -928,7 +925,7 @@ function ReferContent() {
                   <div className="hh-rank2-meta">
                     <span>{refCount} referrals</span>
                     {nextLevel ? (
-                      <span className="hh-rank2-need">{nextLevel.need} needed for {nextLevel.label}</span>
+                      <span className="hh-rank2-need">{nextLevel.min - (currentLevel as any).min} needed for {nextLevel.label}</span>
                     ) : (
                       <span className="hh-rank2-need">Max rank reached 🎉</span>
                     )}

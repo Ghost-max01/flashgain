@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft as ArrowLeftIcon } from "lucide-react";
 import {
   Award,
   Clock,
@@ -18,11 +18,12 @@ import {
   computeScore,
   getLevel,
   getProgress,
+  getNextLabel,
   getEarnPerTap,
   TRUST_LEVELS,
   TRUST_META_KEY,
 } from "@/lib/trust-score";
-import BottomNav from "@/components/bottom-nav";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function TrustScorePage() {
   const [trustScore, setTrustScore] = useState(0);
@@ -79,7 +80,7 @@ export default function TrustScorePage() {
       <div className="hh-header flex items-center justify-between px-6 pt-8 pb-4">
         <Link href="/dashboard">
           <button className="hh-back-btn">
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeftIcon className="h-5 w-5" />
           </button>
         </Link>
         <div>
@@ -186,11 +187,3 @@ export default function TrustScorePage() {
   );
 }
 
-// Helper component for back arrow (since lucide ArrowLeft imported)
-function ArrowLeft() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}

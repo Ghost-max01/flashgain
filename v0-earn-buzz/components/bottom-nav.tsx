@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Gamepad2, MessagesSquare, User as UserIcon, CircleUserRound } from "lucide-react";
+import { Home, Gamepad2, MessagesSquare, User as UserIcon, CircleUserRound, Award } from "lucide-react";
 
 // Single shared bottom nav — Home • About • Chats • Refer & Earn • Profile.
 // Self-contained styling (bv- classes) so it looks identical on every page,

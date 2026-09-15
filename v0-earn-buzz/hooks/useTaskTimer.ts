@@ -1,109 +1,125 @@
 import { useEffect } from "react"
 import { safeParse } from "@/lib/safe-storage";
 
-// Minimum visit duration (seconds) a task link must stay open before credit.
-// Single source of truth — callers must use this for toast/progress copy.
 export const TASK_VISIT_SECONDS = 10;
 
-export function useTaskTimer() {
-  // Store task tracking in sessionStorage: { taskId: startTime }
-  const STORAGE_KEY = "taskTimers"
+const TIMER_KEY = "taskTimers";
+const HIDDEN_KEY = "taskPageWasHidden";
 
+function wasHidden(): boolean {
+  try { return sessionStorage.getItem(HIDDEN_KEY) === "1"; } catch { return false; }
+}
+function setHidden(v: boolean) {
+  try { sessionStorage.setItem(HIDDEN_KEY, v ? "1" : "0"); } catch {}
+}
+
+export function useTaskTimer() {
   const startTaskTimer = (taskId: string) => {
     try {
-      const timers = safeParse(sessionStorage.getItem(STORAGE_KEY), {})
-      timers[taskId] = Date.now()
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(timers))
+      const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
+      timers[taskId] = Date.now();
+      sessionStorage.setItem(TIMER_KEY, JSON.stringify(timers));
     } catch (e) {
-      console.error("Error storing task timer:", e)
+      console.error("Error storing task timer:", e);
     }
-  }
+  };
 
   const attachFocusListener = (
     onTaskSuccess: (taskId: string, elapsed: number) => void,
     onTaskIncomplete: (taskId: string, elapsed: number) => void,
     isTaskCompleted: (taskId: string) => boolean
   ) => {
-    // Track whether the page was actually hidden/blurred.
-    // Initialise from current state so re-attachments while the page
-    // is already in the background still work correctly.
-    let pageWasHidden = document.hidden || !document.hasFocus()
+    let pageWasHidden = wasHidden() || document.hidden || !document.hasFocus();
 
     const processTimers = () => {
-      // Only process when the user is genuinely RETURNING to the page
-      if (!pageWasHidden) return
-      pageWasHidden = false
+      if (!pageWasHidden) return;
+      pageWasHidden = false;
+      setHidden(false);
 
       try {
-        const timers = safeParse(sessionStorage.getItem(STORAGE_KEY), {})
-        if (!timers || Object.keys(timers).length === 0) return
+        const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
+        if (!timers || Object.keys(timers).length === 0) return;
 
-        const now = Date.now()
-        const tasksToDelete: string[] = []
+        const now = Date.now();
+        const tasksToDelete: string[] = [];
 
         Object.entries(timers).forEach(([taskId, startTime]) => {
-          const elapsed = now - (startTime as number)
-
-          // Skip already-completed tasks
+          const elapsed = now - (startTime as number);
           if (isTaskCompleted(taskId)) {
-            tasksToDelete.push(taskId)
-            return
+            tasksToDelete.push(taskId);
+            return;
           }
-
           if (elapsed >= TASK_VISIT_SECONDS * 1000) {
-            // Task qualifies for completion (10+ seconds outside)
-            onTaskSuccess(taskId, elapsed / 1000)
-            tasksToDelete.push(taskId)
+            onTaskSuccess(taskId, elapsed / 1000);
+            tasksToDelete.push(taskId);
           } else {
-            // Task incomplete — inform caller but KEEP the timer so UI
-            // progress and active state remain (user may return later to finish)
-            onTaskIncomplete(taskId, elapsed / 1000)
-            // do NOT push to tasksToDelete: leave timer in sessionStorage
+            onTaskIncomplete(taskId, elapsed / 1000);
           }
-        })
+        });
 
-        // Remove completed/processed tasks from storage
-        tasksToDelete.forEach((taskId) => {
-          delete timers[taskId]
-        })
-
+        tasksToDelete.forEach((taskId) => { delete timers[taskId]; });
         if (Object.keys(timers).length > 0) {
-          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(timers))
+          sessionStorage.setItem(TIMER_KEY, JSON.stringify(timers));
         } else {
-          sessionStorage.removeItem(STORAGE_KEY)
+          sessionStorage.removeItem(TIMER_KEY);
         }
       } catch (e) {
-        console.error("Error processing task timers on return:", e)
+        console.error("Error processing task timers on return:", e);
       }
-    }
+    };
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        pageWasHidden = true
+        pageWasHidden = true;
+        setHidden(true);
       } else {
-        processTimers()
+        processTimers();
       }
-    }
+    };
+    const handleFocus = () => { processTimers(); };
+    const handleBlur = () => { pageWasHidden = true; setHidden(true); };
 
-    const handleFocus = () => {
-      // Fallback: some browsers fire focus but not visibilitychange
-      processTimers()
-    }
-
-    const handleBlur = () => {
-      pageWasHidden = true
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("focus", handleFocus)
-    window.addEventListener("blur", handleBlur)
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("focus", handleFocus)
-      window.removeEventListener("blur", handleBlur)
-    }
-  }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
+    };
+  };
 
-  return { startTaskTimer, attachFocusListener }
+  const processPendingOnMount = (
+    onTaskSuccess: (taskId: string, elapsed: number) => void,
+    onTaskIncomplete: (taskId: string, elapsed: number) => void,
+    isTaskCompleted: (taskId: string) => boolean
+  ) => {
+    if (!wasHidden()) return false;
+    setHidden(false);
+    try {
+      const timers: Record<string, number> = safeParse(sessionStorage.getItem(TIMER_KEY), {});
+      if (!timers || Object.keys(timers).length === 0) return false;
+      const now = Date.now();
+      let processed = false;
+      const tasksToDelete: string[] = [];
+      Object.entries(timers).forEach(([taskId, startTime]) => {
+        const elapsed = now - (startTime as number);
+        if (isTaskCompleted(taskId)) { tasksToDelete.push(taskId); return; }
+        if (elapsed >= TASK_VISIT_SECONDS * 1000) {
+          onTaskSuccess(taskId, elapsed / 1000);
+          tasksToDelete.push(taskId);
+          processed = true;
+        } else {
+          onTaskIncomplete(taskId, elapsed / 1000);
+        }
+      });
+      tasksToDelete.forEach((taskId) => { delete timers[taskId]; });
+      if (Object.keys(timers).length > 0) sessionStorage.setItem(TIMER_KEY, JSON.stringify(timers));
+      else sessionStorage.removeItem(TIMER_KEY);
+      return processed;
+    } catch { return false; }
+  };
+
+  return { startTaskTimer, attachFocusListener, processPendingOnMount };
 }
