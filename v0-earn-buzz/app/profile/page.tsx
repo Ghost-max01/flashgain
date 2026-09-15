@@ -41,22 +41,40 @@ export default function ProfilePage() {
     }
     setUserData(user)
     try { setTrustScore(computeScore(loadMeta())) } catch {}
+    // Live-sync if dashboard/other tab updates picture or name.
+    let unsub: (() => void) | undefined
+    import("@/lib/profile-picture").then((m) => {
+      try { unsub = m.subscribeToUserUpdates((u: any) => { if (u) setUserData((prev) => ({ ...(prev || {} as UserData), ...u })) }) } catch {}
+    }).catch(() => {})
+    return () => { try { unsub?.() } catch {} }
   }, [router])
 
   const handleProfilePictureClick = () => fileInputRef.current?.click()
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => setPreviewImage(event.target?.result as string)
-    reader.readAsDataURL(file)
+    try { e.target.value = "" } catch {}
+    // Compress now for instant preview; persist on Save so Cancel discards.
+    try {
+      const m = await import("@/lib/profile-picture")
+      const dataUrl = await m.fileToCompressedDataUrl(file)
+      setPreviewImage(dataUrl)
+    } catch {
+      const reader = new FileReader()
+      reader.onload = (event) => setPreviewImage(event.target?.result as string)
+      reader.readAsDataURL(file)
+    }
   }
 
   const handleSaveProfilePicture = () => {
     if (!previewImage || !userData) return
     const updatedUser = { ...userData, profilePicture: previewImage }
-    try { localStorage.setItem("tivexx-user", JSON.stringify(updatedUser)) } catch {}
+    import("@/lib/profile-picture").then((m) => {
+      try { m.saveStoredUser(updatedUser) } catch {}
+    }).catch(() => {
+      try { localStorage.setItem("tivexx-user", JSON.stringify(updatedUser)) } catch {}
+    })
     setUserData(updatedUser)
     setPreviewImage(null)
   }

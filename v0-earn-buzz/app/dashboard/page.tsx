@@ -160,6 +160,14 @@ export default function DashboardPage() {
     }
     setShowInbox(true);
   };
+  // Live-sync round avatar when profile picture/name changes in Profile tab.
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    import("@/lib/profile-picture").then((m) => {
+      try { unsub = m.subscribeToUserUpdates((u: any) => { if (u) setUserData((prev: any) => ({ ...(prev || {}), ...u })); }); } catch {}
+    }).catch(() => {});
+    return () => { try { unsub?.(); } catch {} };
+  }, []);
   const [balance, setBalance] = useState(50000);
   const [animatedBalance, setAnimatedBalance] = useState(50000);
   const [isBalanceChanging, setIsBalanceChanging] = useState(false);
@@ -1533,48 +1541,19 @@ export default function DashboardPage() {
   ) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    // Reset input so the same file can be picked again in profile/dashboard.
+    try { e.target.value = ""; } catch {}
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      const fallbackRaw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("tivexx-user") ||
-            restoreUserSessionFromCookie()
-          : null;
-      const fallbackUser =
-        typeof fallbackRaw === "string" ? JSON.parse(fallbackRaw) : fallbackRaw;
-      const stableFallbackUserId =
-        fallbackUser?.userId ||
-        fallbackUser?.referral_code ||
-        fallbackUser?.referralCode ||
-        fallbackUser?.id ||
-        "";
-      const updatedUser = userData
-        ? { ...userData, profilePicture: result }
-        : {
-            name: "User",
-            email: "",
-            balance,
-            userId: stableFallbackUserId,
-            hasMomoNumber: false,
-            profilePicture: result,
-          };
-      setUserData(updatedUser);
-      try {
-        persistUserSession(updatedUser);
-      } catch (err) {
-        console.error(
-          "Failed to persist profile picture to localStorage:",
-          err,
-        );
-      }
-      toast?.({
-        title: "Profile updated",
-        description: "Your profile picture was updated locally.",
-      });
-    };
-    reader.readAsDataURL(file);
+    const { saveProfilePictureFromFile } = await import("@/lib/profile-picture");
+    const res = await saveProfilePictureFromFile(file);
+    if (res.ok && res.dataUrl) {
+      setUserData((prev: any) => (prev ? { ...prev, profilePicture: res.dataUrl } : prev));
+      toast?.({ title: "Profile updated", description: "Your profile picture was saved and synced." });
+    } else if (res.error === "quota") {
+      toast?.({ title: "Image too large", description: "Pick a smaller photo — storage is full.", variant: "destructive" } as any);
+    } else {
+      toast?.({ title: "Upload failed", description: "Pick a valid image file and try again.", variant: "destructive" } as any);
+    }
   };
 
   const menuItems: MenuItem[] = [

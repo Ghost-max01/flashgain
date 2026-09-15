@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -22,9 +23,11 @@ export default function ProfileInformationPage() {
   const router = useRouter()
   const { toast } = useToast() // Initialize useToast
   const [userData, setUserData] = useState<UserData | null>(null)
+  const [editName, setEditName] = useState("")
+  const [savingName, setSavingName] = useState(false)
 
   useEffect(() => {
-    // Check if user is logged in
+    // Check if user is logged in — real stored user, not mock.
     const storedUser = localStorage.getItem("tivexx-user")
 
     if (!storedUser) {
@@ -44,6 +47,18 @@ export default function ProfileInformationPage() {
     }
 
     setUserData(user)
+    setEditName(String(user.name || ""))
+    // Live-sync avatar/name changes from dashboard/profile tabs.
+    let unsub: (() => void) | undefined
+    import("@/lib/profile-picture").then((m) => {
+      try {
+        unsub = m.subscribeToUserUpdates((u: any) => {
+          if (!u) return
+          setUserData((prev) => ({ ...((prev || {}) as UserData), ...u }) as UserData)
+        })
+      } catch {}
+    }).catch(() => {})
+    return () => { try { unsub?.() } catch {} }
   }, [router])
 
   const handleCopyUserId = () => {
@@ -53,6 +68,42 @@ export default function ProfileInformationPage() {
         title: "Copied!",
         description: "User ID copied to clipboard.",
       })
+    }
+  }
+
+  const handleSaveName = async () => {
+    const clean = editName.trim()
+    if (!clean || !userData) return
+    if (clean === userData.name) return
+    setSavingName(true)
+    try {
+      const m = await import("@/lib/profile-picture")
+      const updated = { ...userData, name: clean }
+      m.saveStoredUser(updated)
+      setUserData(updated)
+      toast({ title: "Saved", description: "Your name was updated everywhere." })
+    } catch {
+      toast({ title: "Failed", description: "Could not save name. Try again." })
+    } finally {
+      setSavingName(false)
+    }
+  }
+
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try { e.target.value = "" } catch {}
+    try {
+      const m = await import("@/lib/profile-picture")
+      const res = await m.saveProfilePictureFromFile(file)
+      if (res.ok && res.dataUrl) {
+        setUserData((prev) => (prev ? ({ ...prev, profilePicture: res.dataUrl } as UserData) : prev))
+        toast({ title: "Profile updated", description: "Your photo was saved and synced." })
+      } else {
+        toast({ title: "Upload failed", description: "Pick a smaller image and try again." })
+      }
+    } catch {
+      toast({ title: "Upload failed", description: "Pick a valid image and try again." })
     }
   }
 
@@ -76,9 +127,9 @@ export default function ProfileInformationPage() {
 
       {/* Profile Content */}
       <div className="max-w-md mx-auto mt-6 px-4">
-        {/* Profile Picture */}
+        {/* Profile Picture — real stored photo, tap to change */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-orange-500 mb-2">
+          <label className="w-24 h-24 rounded-full overflow-hidden border-2 border-orange-500 mb-2 cursor-pointer relative block">
             {userData.profilePicture ? (
               <img
                 src={userData.profilePicture || "/placeholder.svg"}
@@ -90,8 +141,28 @@ export default function ProfileInformationPage() {
                 <User className="h-12 w-12 text-orange-500" />
               </div>
             )}
-          </div>
+            <input type="file" accept="image/*" onChange={handleAvatarFile} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Change profile picture" />
+          </label>
           <h2 className="text-xl font-bold text-gray-800">{userData.name}</h2>
+          <p className="text-xs text-gray-400 mt-1">Tap photo to change • shows in dashboard + profile</p>
+        </div>
+
+        {/* Edit name — wired to real stored user */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">Edit details</h3>
+          <label className="text-sm text-gray-500">Full name</label>
+          <div className="flex gap-2 mt-1">
+            <input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              maxLength={60}
+              placeholder="Your name"
+              className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-orange-400"
+            />
+            <Button onClick={handleSaveName} disabled={savingName || !editName.trim() || editName.trim() === userData.name} className="rounded-full bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold px-5">
+              {savingName ? "Saving…" : "Save"}
+            </Button>
+          </div>
         </div>
 
         {/* User Information Card */}
