@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { X, Send, User, Bot, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getFlashgainSupportReply } from "@/lib/flashgain-support-replies"
 
 interface LiveChatProps {
   onClose: () => void
@@ -114,14 +115,25 @@ export function LiveChat({ onClose }: LiveChatProps) {
 
     } catch (error) {
       console.error('Chat error:', error)
-      // Add error message
-      const errorMessage: Message = {
+      // Offline fallback — SAME automated response as FlashGain support.
+      const local = getFlashgainSupportReply(userInput)
+      const fallbackMessage: Message = {
         id: messages.length + 2,
-        text: "Sorry, I'm having trouble connecting. Please try again or contact support.",
+        text: local.text,
         sender: "agent",
         timestamp: new Date(),
+        link: local.link || undefined,
+        linkLabel: local.linkLabel || undefined,
       }
-      setMessages(prev => [...prev, errorMessage])
+      setMessages(prev => [...prev, fallbackMessage])
+      if (local.followUpMenu) {
+        setMessages(prev => [...prev, {
+          id: messages.length + 3,
+          text: local.followUpMenu as string,
+          sender: "agent",
+          timestamp: new Date(),
+        }])
+      }
     } finally {
       setIsLoading(false)
     }

@@ -37,7 +37,7 @@ import { LiveChat } from "@/components/live-chat";
 import dynamic from "next/dynamic";
 const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").then(m => m.GuidedOnboarding), { ssr: false }) as any;
 import { getBankDetails } from "@/lib/bank-details";
-import { readyUnseenCount, refreshPendingStatuses } from "@/lib/pending-withdrawals";
+import { readyUnseenCount, refreshPendingStatuses, listActivePendings } from "@/lib/pending-withdrawals";
 import { BottomNav } from "@/components/bottom-nav";
 import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, getEarnPerTap, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
@@ -116,9 +116,12 @@ export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawalNotification, setShowWithdrawalNotification] =
     useState(false);
-  // Mail badge (red count): pending withdrawals approved by support (24h) +
-  // channel updates. Tapping goes to History → Withdrawals to collect.
+  // Mail inbox (messages only): tapping opens inbox popup. If empty shows
+  // "Inbox is empty" and does NOT navigate to chats/history.
   const [mailCount, setMailCount] = useState(0);
+  const [showInbox, setShowInbox] = useState(false);
+  const [inboxReady, setInboxReady] = useState<any[]>([]);
+  const [inboxUnread, setInboxUnread] = useState(0);
   useEffect(() => {
     const update = () => {
       try {
@@ -143,6 +146,20 @@ export default function DashboardPage() {
       window.removeEventListener("tivexx:update", update as EventListener);
     };
   }, []);
+  const openInbox = () => {
+    try {
+      refreshPendingStatuses();
+      const all = listActivePendings();
+      setInboxReady(all.filter((p: any) => p.status === "ready"));
+      let unread = 0;
+      try { unread = Number(localStorage.getItem("tivexx-support-unread") || 0) || 0; } catch {}
+      setInboxUnread(unread);
+    } catch {
+      setInboxReady([]);
+      setInboxUnread(0);
+    }
+    setShowInbox(true);
+  };
   const [balance, setBalance] = useState(50000);
   const [animatedBalance, setAnimatedBalance] = useState(50000);
   const [isBalanceChanging, setIsBalanceChanging] = useState(false);
@@ -2342,10 +2359,10 @@ export default function DashboardPage() {
             </div>
             <div className="text-right flex items-center gap-2">
               <button
-                onClick={() => router.push("/history?tab=withdrawals")}
+                onClick={openInbox}
                 className="hh-support-btn hh-support-blue relative"
-                aria-label="Updates"
-                title="Updates — pending withdrawals & messages"
+                aria-label="Messages"
+                title="Messages — inbox"
               >
                 <Mail className="h-5 w-5 text-white" />
                 {mailCount > 0 && (
@@ -2717,6 +2734,49 @@ export default function DashboardPage() {
       {showLiveChat && (
         <div className="hh-live-chat-modal">
           <LiveChat onClose={() => setShowLiveChat(false)} />
+        </div>
+      )}
+
+      {/* ── MESSAGES INBOX (mail icon) — empty shows "Inbox is empty", no auto-redirect ── */}
+      {showInbox && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setShowInbox(false)}>
+          <div className="hh-popup max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center">
+                <Mail className="h-7 w-7 text-blue-300" />
+              </div>
+              <h2 className="text-xl font-black text-white tracking-tight">Messages</h2>
+            </div>
+            {inboxReady.length === 0 && inboxUnread === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm font-bold text-white/70">Inbox is empty</p>
+                <p className="text-xs text-white/40 mt-1">No new messages yet.</p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-2 max-h-[50vh] overflow-y-auto">
+                {inboxUnread > 0 && (
+                  <button
+                    onClick={() => { setShowInbox(false); router.push("/chats"); }}
+                    className="w-full text-left rounded-2xl border border-white/10 bg-white/5 p-3"
+                  >
+                    <div className="text-sm font-black text-white">Support reply</div>
+                    <div className="text-xs text-white/55">You have {inboxUnread} unread chat message{inboxUnread > 1 ? "s" : ""} — tap to view</div>
+                  </button>
+                )}
+                {inboxReady.map((p: any) => (
+                  <button
+                    key={p.id || p.reference}
+                    onClick={() => { setShowInbox(false); router.push("/history?tab=withdrawals"); }}
+                    className="w-full text-left rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3"
+                  >
+                    <div className="text-sm font-black text-white">Withdrawal ready — ₦{Number(p.amount || 0).toLocaleString()}</div>
+                    <div className="text-xs text-white/55">Approved — tap to complete in History → Withdrawals</div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setShowInbox(false)} className="hh-popup-btn hh-popup-btn-confirm w-full mt-4">Close</button>
+          </div>
         </div>
       )}
 

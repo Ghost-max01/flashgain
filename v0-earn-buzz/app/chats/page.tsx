@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Megaphone, Headset } from "lucide-react";
 import { safeParse } from "@/lib/safe-storage";
+import { getFlashgainSupportReply, SUPPORT_GREETING } from "@/lib/flashgain-support-replies";
 import { BottomNav } from "@/components/bottom-nav";
 
 interface ChatMsg {
@@ -76,13 +77,17 @@ export default function ChatsPage() {
     const next = [...msgs, mine];
     persist(next);
     setDraft("");
-    // Instant acknowledgement from support (a human follows up within 24h).
+    // SAME automated response as FlashGain support (dashboard popup + /api/chat).
     if (replyTimer.current) clearTimeout(replyTimer.current);
     replyTimer.current = setTimeout(() => {
+      const auto = getFlashgainSupportReply(clean);
+      const lines = [auto.text];
+      if (auto.link) lines.push(`\n${auto.linkLabel || "Open link"}: ${auto.link}`);
+      if (auto.followUpMenu) lines.push(`\n${auto.followUpMenu}`);
       const reply: ChatMsg = {
         id: newId(),
         from: "support",
-        text: `Thanks ${userName}, we got your message. Our support team replies within 24 hours. For anything urgent, tap "Talk to a human" below to reach us on Telegram.`,
+        text: lines.join("\n"),
         at: Date.now(),
       };
       setMsgs((prev) => {
@@ -91,7 +96,7 @@ export default function ChatsPage() {
         return updated;
       });
       if (document.hidden) bumpUnread();
-    }, 4000);
+    }, 1200);
   };
 
   const fmtTime = (at: number) => {
@@ -163,7 +168,7 @@ export default function ChatsPage() {
             {msgs.length === 0 && (
               <div className="text-center text-sm text-white/50 pt-8">
                 <p className="font-bold text-white/70">Hi {userName} 👋</p>
-                <p className="mt-1 text-xs">Ask about withdrawals, verification, tasks or anything else.</p>
+                <p className="mt-1 text-xs whitespace-pre-line">{SUPPORT_GREETING}</p>
               </div>
             )}
             {msgs.map((m) => (
@@ -183,15 +188,15 @@ export default function ChatsPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Quick prompts */}
+          {/* Quick prompts — same 1-5 menu as FlashGain support */}
           <div className="flex gap-2 overflow-x-auto pb-3 pt-1">
-            {["Withdrawal status", "Verification fee", "My account"].map((q) => (
+            {["1", "2", "3", "4", "5"].map((q) => (
               <button
                 key={q}
                 onClick={() => send(q)}
                 className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-emerald-300"
               >
-                {q}
+                {q === "1" ? "1 • About" : q === "2" ? "2 • Earn" : q === "3" ? "3 • Withdrawals" : q === "4" ? "4 • Referral" : "5 • Verification"}
               </button>
             ))}
             <a

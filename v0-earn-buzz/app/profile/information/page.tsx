@@ -3,11 +3,9 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, User, Mail, Award, CheckCircle, LogOut, Copy } from "lucide-react" // Added Copy
+import { ArrowLeft, User, Mail, Award, CheckCircle, Copy } from "lucide-react" // Added Copy
 import { Button } from "@/components/ui/button"
-import { LogoutConfirmation } from "@/components/logout-confirmation"
 import { useToast } from "@/hooks/use-toast" // Import useToast
-import { clearUserSession } from "@/lib/session-client"
 
 interface UserData {
   name: string
@@ -24,7 +22,6 @@ export default function ProfileInformationPage() {
   const router = useRouter()
   const { toast } = useToast() // Initialize useToast
   const [userData, setUserData] = useState<UserData | null>(null)
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
 
   useEffect(() => {
     // Check if user is logged in
@@ -48,20 +45,6 @@ export default function ProfileInformationPage() {
 
     setUserData(user)
   }, [router])
-
-  const handleLogoutClick = () => {
-    setShowLogoutConfirmation(true)
-  }
-
-  const handleLogoutConfirm = () => {
-    localStorage.removeItem("tivexx-user")
-      clearUserSession()
-    router.push("/login")
-  }
-
-  const handleLogoutCancel = () => {
-    setShowLogoutConfirmation(false)
-  }
 
   const handleCopyUserId = () => {
     if (userData?.userId) {
@@ -195,19 +178,7 @@ export default function ProfileInformationPage() {
           </div>
         </div>
 
-        {/* Logout Button */}
-        <Button
-          variant="outline"
-          className="w-full rounded-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center justify-center gap-2 mt-6 bg-transparent"
-          onClick={handleLogoutClick}
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
       </div>
-
-      {/* Logout Confirmation Popup */}
-      {showLogoutConfirmation && <LogoutConfirmation onConfirm={handleLogoutConfirm} onCancel={handleLogoutCancel} />}
     </div>
   )
 }

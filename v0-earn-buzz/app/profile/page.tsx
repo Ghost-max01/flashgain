@@ -5,10 +5,8 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Camera, LogOut, User, Key, Landmark, History, HelpCircle, ChevronRight, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Camera, User, Key, Landmark, History, HelpCircle, ChevronRight, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { LogoutConfirmation } from "@/components/logout-confirmation"
-import { clearUserSession } from "@/lib/session-client"
 import { loadMeta, computeScore, getLevel } from "@/lib/trust-score"
 import { safeParse } from "@/lib/safe-storage"
 import { BottomNav } from "@/components/bottom-nav"
@@ -25,7 +23,6 @@ interface UserData {
 export default function ProfilePage() {
   const router = useRouter()
   const [userData, setUserData] = useState<UserData | null>(null)
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
   const [showBeginnerPopup, setShowBeginnerPopup] = useState(false)
   const [trustScore, setTrustScore] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -45,12 +42,6 @@ export default function ProfilePage() {
     setUserData(user)
     try { setTrustScore(computeScore(loadMeta())) } catch {}
   }, [router])
-
-  const handleLogoutConfirm = () => {
-    localStorage.removeItem("tivexx-user")
-    clearUserSession()
-    router.push("/login")
-  }
 
   const handleProfilePictureClick = () => fileInputRef.current?.click()
 
@@ -184,16 +175,6 @@ export default function ProfilePage() {
             return <button key={r.title} onClick={handleChangeAccountNumber} className="w-full text-left">{inner}</button>
           })}
         </div>
-
-        {/* Logout */}
-        <Button
-          variant="outline"
-          className="w-full rounded-full border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center justify-center gap-2 bg-transparent"
-          onClick={() => setShowLogoutConfirmation(true)}
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
       </div>
 
       {/* Beginner gate popup */}
@@ -213,8 +194,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-
-      {showLogoutConfirmation && <LogoutConfirmation onConfirm={handleLogoutConfirm} onCancel={() => setShowLogoutConfirmation(false)} />}
 
       <BottomNav />
 
