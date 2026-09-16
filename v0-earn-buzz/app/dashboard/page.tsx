@@ -2823,7 +2823,8 @@ export default function DashboardPage() {
         .hh-root {
           font-family: "Syne", sans-serif;
           background: #050d14;
-          color: white
+          color: white;
+        }
 
         /* ─── BUBBLES ─── */
         .hh-bubbles-container {
