@@ -1362,16 +1362,26 @@ export default function TapAndEarnPage() {
       {/* ── Global styles ── */}
       {/* ── AUTO TAP: Eligible popup (20 mins free) ── */}
       {showAutoFreePopup && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowAutoFreePopup(false)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 te-fadeIn flex items-center justify-center p-4" onClick={() => setShowAutoFreePopup(false)}>
           <div className="te-slideUp w-full max-w-[420px]" onClick={(e) => e.stopPropagation()}>
             <div className="hh-modal">
               <div className="te-modal-glow"></div>
-              <div className="relative z-10 text-center">
-                <h2 className="text-xl font-black text-white mb-2">🎉 You are eligible!</h2>
-                <p className="text-gray-300 mb-4">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</p>
-                <div className="flex gap-3">
-                  <button onClick={() => setShowAutoFreePopup(false)} className="flex-1 rounded-full border border-white/15 text-white py-2">Later</button>
-                  <button onClick={() => { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full py-2">Start FREE 20 mins</button>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="hh-icon-ring">
+                    <Gift className="w-4 h-4 text-amber-300" fill="currentColor" />
+                  </div>
+                  <h2 className="hh-modal-title text-lg">You are eligible!</h2>
+                </div>
+                <p className="hh-modal-desc mb-5">
+                  You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <button onClick={() => { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="te-modal-primary-btn">
+                    <Zap className="w-4 h-4" />
+                    Start FREE 20 mins
+                  </button>
+                  <button onClick={() => setShowAutoFreePopup(false)} className="te-modal-secondary-btn">Later</button>
                 </div>
               </div>
             </div>

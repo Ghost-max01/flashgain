@@ -14,7 +14,6 @@ import {
   User,
   Gift,
   Clock,
-  Headphones,
   Mail,
   Shield,
   TrendingUp,
@@ -2363,12 +2362,6 @@ export default function DashboardPage() {
                   </span>
                 )}
               </button>
-              <button
-                onClick={() => setShowLiveChat(true)}
-                className="hh-support-btn hh-support-blue"
-              >
-                <Headphones className="h-5 w-5 text-white" />
-              </button>
               <Link href="https://t.me/flashgain9janews">
                 <button className="hh-support-btn hh-support-green relative">
                   <Bell className="h-5 w-5 text-white" />
@@ -2496,7 +2489,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── LOAN & WITHDRAW BUTTONS ── */}
-        <div className="flex gap-3 hh-entry-3">
+        <div className="flex gap-3 hh-entry-3 mb-2">
           <Link href="/task" className="flex-1">
             <button className="hh-action-btn hh-action-purple w-full">
               <span className="hh-action-icon">💳</span>
@@ -2534,7 +2527,7 @@ export default function DashboardPage() {
         <Link href="/trust-score">
           <div
             data-tour="trust"
-            className="hh-trust-card hh-entry-3"
+            className="hh-trust-card hh-entry-3 my-4"
             role="button"
             tabIndex={0}
           >
