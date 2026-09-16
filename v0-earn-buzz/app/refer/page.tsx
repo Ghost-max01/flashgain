@@ -550,6 +550,14 @@ function ReferContent() {
                   const u = JSON.parse(localStorage.getItem("tivexx-user")||"null");
                   const userId = u?.id || u?.userId;
                   if(!userId) throw new Error("Login first");
+
+                  const available = Number(userData?.referral_balance ?? (approvedCount || 0) * 500);
+                  const requiredMinimum = vip.redeemed ? 10000 : 500;
+                  if (available < requiredMinimum) {
+                    setVipMsg(`A minimum of ₦${requiredMinimum.toLocaleString()} required`);
+                    return;
+                  }
+
                   const res = await fetch("/api/airtime",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId, phone: vipPhone, network: vipNetwork, amount: 500 })});
                   const j = await res.json();
                   if(!res.ok) throw new Error(j.error||"Failed");
