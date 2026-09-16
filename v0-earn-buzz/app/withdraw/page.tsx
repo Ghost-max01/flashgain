@@ -689,7 +689,7 @@ export default function WithdrawPage() {
                       <p className="text-xs text-gray-400 mt-1">
                         {balance >= 200000 
                           ? '✓ Completed' 
-                          : `Need ₦${formatCurrency(Math.max(0, 200000 - balance)).replace('₦', '')}`}
+                          : `Remaining ₦${formatCurrency(Math.max(0, 200000 - balance)).replace('₦', '')}`}
                       </p>
                     </div>
                   </div>
@@ -1667,7 +1667,7 @@ export default function WithdrawPage() {
           color: #f5f7fb;
           overflow: hidden;
           background: linear-gradient(155deg, #244d9d 0%, #1a3d7f 38%, #0c1330 100%);
-          box-shadow: 0 30px 60px -20px rgba(0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05) inset;
+          box-shadow: 0 30px 60px -20px rgba(0,0,0.7), 0
           transform-style: preserve-3d;
           transition: transform 0.15s ease-out;
           display: flex;

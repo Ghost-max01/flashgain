@@ -1364,7 +1364,7 @@ export default function TapAndEarnPage() {
       {showAutoFreePopup && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-40 te-fadeIn flex items-center justify-center p-4" onClick={() => setShowAutoFreePopup(false)}>
           <div className="te-slideUp w-full max-w-[420px]" onClick={(e) => e.stopPropagation()}>
-            <div className="hh-popup">
+            <div className="hh-popup hh-auto-tap-modal">
               <div className="hh-popup-header">
                 <Gift className="h-8 w-8 text-amber-400" fill="currentColor" />
                 <h2 className="text-xl font-bold text-white">You are eligible!</h2>
@@ -1388,7 +1388,7 @@ export default function TapAndEarnPage() {
       {showAutoPlans && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-40 te-fadeIn flex items-center justify-center p-4" onClick={() => setShowAutoPlans(false)}>
           <div className="te-slideUp w-full max-w-[420px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="hh-popup">
+            <div className="hh-popup hh-auto-tap-modal">
               <div className="hh-popup-header">
                 <Zap className="h-8 w-8 text-amber-400" fill="currentColor" />
                 <h2 className="text-xl font-bold text-white">Choose Auto Tap Plan</h2>
@@ -1443,7 +1443,7 @@ export default function TapAndEarnPage() {
       {showAutoReq && reqPlan && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-40 te-fadeIn flex items-center justify-center p-4" onClick={() => setShowAutoReq(false)}>
           <div className="te-slideUp w-full max-w-[420px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="hh-popup">
+            <div className="hh-popup hh-auto-tap-modal">
               <div className="hh-popup-header">
                 <Zap className="h-8 w-8 text-amber-400" />
                 <h2 className="text-xl font-bold text-white">Requirement for {AUTO_PLANS.find(p=>p.id===reqPlan)?.label}</h2>

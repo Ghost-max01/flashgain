@@ -1954,7 +1954,7 @@ export default function DashboardPage() {
 
       {/* DIALOGS - unchanged logic */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <DialogContent className="hh-dialog max-w-sm">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">
               ⏰ Wait Required
@@ -1995,7 +1995,7 @@ export default function DashboardPage() {
       </Dialog>
 
       <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
-        <DialogContent className="hh-dialog max-w-sm">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">
               📢 Stay Updated!
@@ -2041,7 +2041,7 @@ export default function DashboardPage() {
           }
         }}
       >
-        <DialogContent className="hh-dialog max-w-sm">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white flex items-center justify-center gap-2">
               <Bell className="h-5 w-5 text-emerald-400" /> Enable notifications?
@@ -2090,7 +2090,7 @@ export default function DashboardPage() {
 
       {/* ── AUTO TAP: Eligible popup (20 mins free) ── */}
       <Dialog open={showAutoFreePopup} onOpenChange={setShowAutoFreePopup}>
-        <DialogContent className="hh-dialog max-w-sm">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">🎉 You are eligible!</DialogTitle>
             <DialogDescription className="text-center pt-2 text-gray-300">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</DialogDescription>
@@ -2103,7 +2103,7 @@ export default function DashboardPage() {
       </Dialog>
       {/* ── AUTO TAP: Toggle-off warning popup ── */}
       <Dialog open={showAutoToggleWarning} onOpenChange={setShowAutoToggleWarning}>
-        <DialogContent className="hh-dialog max-w-sm">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">⚠️ Turn Off Auto Tap?</DialogTitle>
             <DialogDescription className="text-center pt-2 text-gray-300 space-y-3">
@@ -2120,7 +2120,7 @@ export default function DashboardPage() {
       </Dialog>
       {/* ── AUTO TAP: Plan selector ── */}
       <Dialog open={showAutoPlans} onOpenChange={setShowAutoPlans}>
-        <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-lg text-white">Choose Auto Tap Plan</DialogTitle>
             <DialogDescription className="text-center text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</DialogDescription>
@@ -2155,7 +2155,7 @@ export default function DashboardPage() {
       </Dialog>
       {/* ── AUTO TAP: Requirement chooser for paid plans ── */}
       <Dialog open={showAutoReq} onOpenChange={setShowAutoReq}>
-        <DialogContent className="hh-dialog max-w-sm max-h-[85vh] overflow-y-auto">
+        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-lg text-white">Requirement for {reqPlan ? AUTO_PLANS.find(p=>p.id===reqPlan)?.label : ""}</DialogTitle>
             <DialogDescription className="text-center text-xs text-gray-400">Choose one of 3 options. Referrals use a new tracking link and count to your total.</DialogDescription>
