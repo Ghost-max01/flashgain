@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { getEarnPerTap } from "@/lib/trust-score-core"
+import { recomputeScore } from "@/app/api/user-trust/route"
 
 export const runtime = "nodejs"
 
@@ -94,6 +95,32 @@ export async function POST(req: NextRequest) {
       console.log(`[tap/accrue] User ${userId} trust_score=${userTrustScore}, earnPerTap=₦${earnPerTap}`);
     } catch (err) {
       console.log(`[tap/accrue] trust_score query failed for ${userId}, using default earnPerTap=₦${earnPerTap}`, err);
+    }
+
+    // Fresh-rate check: users.trust_score can lag behind real activity
+    // (trust syncs are best-effort), which would underpay taps at a stale
+    // tier (e.g. ₦100 instead of ₦120). When the client claims a higher
+    // tier, re-verify server-side with the SAME capped formula as
+    // /api/user-trust and pay the verified rate. This can only ever raise
+    // the rate toward the honest value — never lower it — and the verified
+    // score is written back so later calls skip this check (zero added cost
+    // once converged).
+    const claimedScore = Math.floor(Number((body as any)?.trustScore) || 0)
+    if (getEarnPerTap(claimedScore) > earnPerTap) {
+      try {
+        const t = ((body as any)?.trust || {}) as { timeMs?: unknown; navCount?: unknown; tapCount?: unknown }
+        const { score: freshScore } = await recomputeScore(supabase, userId, {
+          timeMs: Number(t?.timeMs) || 0,
+          navCount: Number(t?.navCount) || 0,
+          tapCount: Number(t?.tapCount) || 0,
+        })
+        if (Number.isFinite(freshScore) && freshScore > userTrustScore) {
+          userTrustScore = freshScore
+          earnPerTap = getEarnPerTap(freshScore)
+          try { await supabase.from("users").update({ trust_score: freshScore }).eq("id", userId) } catch {}
+          console.log(`[tap/accrue] Fresh verified rate for ${userId}: score=${freshScore}, earnPerTap=₦${earnPerTap}`)
+        }
+      } catch {}
     }
 
     if (kind === "manual") {

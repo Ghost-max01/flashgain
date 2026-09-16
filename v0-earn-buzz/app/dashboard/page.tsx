@@ -854,6 +854,23 @@ export default function DashboardPage() {
     } catch {}
     return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
   }, []);
+  // Fresh trust counters for /api/tap/accrue so the server pays the real
+  // tier rate (its stored trust_score can lag behind live activity).
+  const getTrustPayload = useCallback(() => {
+    try {
+      const m = loadMeta();
+      return {
+        trustScore: computeScore(m),
+        trust: {
+          timeMs: Math.max(0, Number(m.timeMs) || 0),
+          navCount: Math.max(0, Number(m.navCount) || 0),
+          tapCount: Math.max(0, Number(m.tapCount) || 0),
+        },
+      };
+    } catch {
+      return { trustScore: 0, trust: { timeMs: 0, navCount: 0, tapCount: 0 } };
+    }
+  }, []);
   const accrueAuto = useCallback(async () => {
     const s = autoStateRef.current;
     if (!s.active || !s.plan || !s.expiresAt || !s.startedAt) return;
@@ -881,7 +898,9 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         // Unique id per attempt; the server caps credit at schedule-earned
         // minus already-paid, so retries can never double-pay.
-        body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "auto", taps: delta, planId: s.plan, startedAt: s.startedAt }),
+        // trustScore + trust counters let the server pay the verified live
+        // tier rate instead of a stale stored one.
+        body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "auto", taps: delta, planId: s.plan, startedAt: s.startedAt, ...getTrustPayload() }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.success) throw new Error(j?.error || "accrue failed");
@@ -892,6 +911,25 @@ export default function DashboardPage() {
       setTapEarned((p) => p + creditedAuto);
       setBalance(j.newBalance);
       setAnimatedBalance(j.newBalance);
+      // CREDIT MOMENT: fly the SERVER-confirmed per-tap rate (one item per
+      // credited tap) on the exact tick the balance increases. The countdown
+      // FX stays emoji-only, so amounts never show before they are paid.
+      try {
+        const serverRate = typeof j?.earnPerTap === "number" && (j.earnPerTap as number) > 0 ? (j.earnPerTap as number) : 0;
+        const creditedN = typeof j?.creditedTaps === "number" && (j.creditedTaps as number) > 0
+          ? (j.creditedTaps as number)
+          : (typeof j?.creditedAmount === "number" && (j.creditedAmount as number) > 0 && serverRate > 0
+              ? Math.max(1, Math.round((j.creditedAmount as number) / serverRate)) : 0);
+        const burstEmojis = ["💰", "🔥", "⚡", "💎"];
+        for (let k = 0; k < Math.min(creditedN, 5); k++) {
+          const em = burstEmojis[k % burstEmojis.length];
+          setTimeout(() => {
+            const fid = autoFxId.current++;
+            setAutoFx((prev) => [...prev.slice(-14), { id: fid, text: `+₦${serverRate.toLocaleString()}`, emoji: em, x: 8 + Math.random() * 84 }]);
+            setTimeout(() => setAutoFx((prev) => prev.filter((p) => p.id !== fid)), 1400);
+          }, k * 180);
+        }
+      } catch {}
       try {
         const raw2 = localStorage.getItem("tivexx-user");
         if (raw2) {
@@ -911,7 +949,7 @@ export default function DashboardPage() {
     } finally {
       accruingRef.current = false;
     }
-  }, [toast, newAccrualId]);
+  }, [toast, newAccrualId, getTrustPayload]);
   useEffect(() => {
     void accrueAuto();
     const id = setInterval(() => { void accrueAuto(); }, 3000);
@@ -920,19 +958,17 @@ export default function DashboardPage() {
     document.addEventListener("visibilitychange", onReturn);
     return () => { clearInterval(id); window.removeEventListener("focus", onReturn); document.removeEventListener("visibilitychange", onReturn); };
   }, [accrueAuto]);
-  // Auto-tap orb FX: fast floating rewards at the user's own ₦ rate + fire,
-  // so users can SEE auto-tap working. Runs while auto is ON (incl. background
-  // plans resumed from wall-clock state).
+  // Auto-tap orb FX while counting down: EMOJIS ONLY. The ₦ amount flies
+  // only at the real credit tick (see the accrueAuto burst above), so the
+  // orb never shows money before it is actually paid.
   useEffect(() => {
     if (!autoActive) { setAutoFx([]); return; }
-    // Full-game autoFx behavior, replicated exactly: trust-based ₦ rate + fire/money emojis.
     const emojis = ["🔥", "💰", "⚡", "💎"];
     const id = setInterval(() => {
       const n = autoFxId.current++;
-      const rate = earnPerTapRef.current || TAP_EARN_PER;
       setAutoFx((prev) => [
         ...prev.slice(-14),
-        { id: n, text: `+₦${rate.toLocaleString()}`, emoji: emojis[n % emojis.length], x: 8 + Math.random() * 84 },
+        { id: n, text: "", emoji: emojis[n % emojis.length], x: 8 + Math.random() * 84 },
       ]);
       setTimeout(() => setAutoFx((prev) => prev.filter((p) => p.id !== n)), 1400);
     }, 320);
@@ -959,7 +995,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/tap/accrue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps }),
+        body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps, ...getTrustPayload() }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.success) {
@@ -986,7 +1022,7 @@ export default function DashboardPage() {
       // Re-queue so taps are never silently lost — next flush retries.
       tapAccum.current += total;
     }
-  }, [newAccrualId]);
+  }, [newAccrualId, getTrustPayload]);
   const syncTapToBalance = useCallback((amount: number) => {
     tapAccum.current += amount;
     if (tapSyncTimeout.current) clearTimeout(tapSyncTimeout.current);
@@ -2449,7 +2485,7 @@ export default function DashboardPage() {
                     <div className="te-orb-center"><div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}>{autoActive ? (<Flame className="w-8 h-8 text-orange-300" strokeWidth={1.5} />) : (<HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} />)}</div><span className="te-tap-label">{autoActive ? `+₦${earnPerTap}` : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
                     {autoActive && autoFx.map((f) => (
                       <span key={f.id} className="te-auto-fx" style={{ left: `${f.x}%` }}>
-                        <span className="te-auto-fx-reward">{f.text}</span>
+                        {f.text ? <span className="te-auto-fx-reward">{f.text}</span> : null}
                         <span className="te-auto-fx-emoji">{f.emoji}</span>
                       </span>
                     ))}

@@ -57,7 +57,9 @@ async function getOwnedUid(req: NextRequest, claimedUserId: string | null): Prom
   return null;
 }
 
-async function recomputeScore(
+// Exported for reuse by /api/tap/accrue's fresh-rate check (same formula,
+// same caps — single source of truth, no drift between the two routes).
+export async function recomputeScore(
   supabase: any,
   userId: string,
   clientMeta?: { timeMs?: number; navCount?: number; tapCount?: number },
@@ -71,10 +73,12 @@ async function recomputeScore(
   } catch {}
 
   // Payments: best-effort from transactions table if it exists.
+  // ONLY money-in rows count — tap payouts (tap_manual/tap_auto) are money
+  // OUT and must never inflate this (each flush would otherwise mint +5).
   let payCount = 0;
   try {
-    const { data: txs, error } = await supabase.from("transactions").select("id").eq("user_id", userId).limit(5000);
-    if (!error) payCount = txs?.length ?? 0;
+    const { data: txs, error } = await supabase.from("transactions").select("id,type").eq("user_id", userId).limit(5000);
+    if (!error) payCount = (txs || []).filter((t: any) => !String((t as any)?.type || "").startsWith("tap_")).length;
   } catch {}
 
   // Tasks: prefer user_tasks, fall back to task_completions.
