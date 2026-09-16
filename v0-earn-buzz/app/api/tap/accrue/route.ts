@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { getEarnPerTap } from "@/lib/trust-score-core"
 
 export const runtime = "nodejs"
 
-const TAP_EARN_BASE = 100
-const TAP_EARN_STEP = 10
 const MANUAL_MAX_PER_CALL = 200
 const MANUAL_MAX_PER_DAY = 15000
-
-// Trust tiers are 30 points each: Free 0-29, Beginner 30-59, Trusted 60-89,
-// Verified 90-119, Elite 120+. Per-tap: 100 / 110 / 120 / 130 / 140.
-function earnPerTapForScore(score: number): number {
-  const s = Math.max(0, Math.floor(Number(score) || 0))
-  const idx = s < 30 ? 0 : s < 60 ? 1 : s < 90 ? 2 : s < 120 ? 3 : 4
-  return TAP_EARN_BASE + idx * TAP_EARN_STEP
-}
 
 const AUTO_PLANS: Record<string, { durationMs: number; maxTaps: number }> = {
   free1h: { durationMs: 20 * 60 * 1000, maxTaps: 200 },
@@ -83,6 +74,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
       if (existing) {
         const { data: u } = await supabase.from("users").select("balance").eq("id", userId).maybeSingle()
+        console.log(`[tap/accrue] Duplicate accrual for ${userId}: ${taps} taps, earnPerTap baseline`);
         return NextResponse.json({ success: true, duplicate: true, newBalance: Number((u as any)?.balance || 0) })
       }
     } catch {}
@@ -93,11 +85,16 @@ export async function POST(req: NextRequest) {
     let type = "tap_manual"
 
     // Trust-based rate (authoritative): read the user's stored trust_score.
-    let earnPerTap = TAP_EARN_BASE
+    let earnPerTap = getEarnPerTap(0);  // defaults to Free (100)
+    let userTrustScore = 0;
     try {
       const { data: tu } = await supabase.from("users").select("trust_score").eq("id", userId).maybeSingle()
-      earnPerTap = earnPerTapForScore(Number((tu as any)?.trust_score || 0))
-    } catch {}
+      userTrustScore = Number((tu as any)?.trust_score || 0)
+      earnPerTap = getEarnPerTap(userTrustScore)
+      console.log(`[tap/accrue] User ${userId} trust_score=${userTrustScore}, earnPerTap=₦${earnPerTap}`);
+    } catch (err) {
+      console.log(`[tap/accrue] trust_score query failed for ${userId}, using default earnPerTap=₦${earnPerTap}`, err);
+    }
 
     if (kind === "manual") {
       if (taps > MANUAL_MAX_PER_CALL) {
@@ -162,6 +159,8 @@ export async function POST(req: NextRequest) {
     const finalRef = kind === "auto"
       ? `tapacc-${userId}-auto-${String(body?.planId)}-${Number(body?.startedAt)}-${accrualId}`.slice(0, 120)
       : reference
+
+    console.log(`[tap/accrue] ${kind} crediting: taps=${creditTaps}, earnPerTap=₦${earnPerTap}, amount=₦${amount} (${creditTaps} × ₦${earnPerTap})`);
 
     try {
       const { error: txErr } = await supabase.from("transactions").insert({

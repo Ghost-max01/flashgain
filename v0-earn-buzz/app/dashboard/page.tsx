@@ -944,33 +944,43 @@ export default function DashboardPage() {
     const total = tapAccum.current;
     if (total === 0) return;
     tapAccum.current = 0;
+    const clientEarnPerTap = earnPerTapRef.current || TAP_EARN_PER;
+    console.log(`[FlushTaps] Starting flush: total_naira=₦${total}, clientEarnPerTap=₦${clientEarnPerTap}`);
     try {
       const raw = localStorage.getItem("tivexx-user");
-      if (!raw) { tapAccum.current += total; return; }
+      if (!raw) { tapAccum.current += total; console.log(`[FlushTaps] No user in localStorage, re-queueing`); return; }
       const u = JSON.parse(raw);
       const uid = u.id || u.userId;
-      if (!uid) { tapAccum.current += total; return; }
-      const taps = Math.max(1, Math.round(total / (earnPerTapRef.current || TAP_EARN_PER)));
+      if (!uid) { tapAccum.current += total; console.log(`[FlushTaps] No uid, re-queueing`); return; }
+      const taps = Math.max(1, Math.round(total / clientEarnPerTap));
+      console.log(`[FlushTaps] Calculated: ${taps} taps (${total}₦ ÷ ${clientEarnPerTap}₦/tap)`);
       const res = await fetch("/api/tap/accrue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: uid, accrualId: newAccrualId(), kind: "manual", taps }),
       });
       const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j?.success) throw new Error(j?.error || "tap sync failed");
+      if (!res.ok || !j?.success) {
+        console.log(`[FlushTaps] Server returned error: ${j?.error || "unknown"}`, j);
+        throw new Error(j?.error || "tap sync failed");
+      }
+      console.log(`[FlushTaps] Server response: newBalance=₦${j.newBalance}, creditedAmount=₦${j.creditedAmount}, earnPerTap=₦${j.earnPerTap}`);
       try {
         const raw2 = localStorage.getItem("tivexx-user");
         if (raw2) {
           const u2 = JSON.parse(raw2);
+          const oldBalance = u2.balance;
           u2.balance = j.newBalance;
           localStorage.setItem("tivexx-user", JSON.stringify(u2));
           persistUserSession(u2);
           setUserData(u2);
           setBalance(j.newBalance);
           setAnimatedBalance(j.newBalance);
+          console.log(`[FlushTaps] Balance synced: ${oldBalance} → ${j.newBalance} (change: +₦${j.newBalance - oldBalance})`);
         }
       } catch {}
-    } catch {
+    } catch (err) {
+      console.log(`[FlushTaps] Error during flush:`, err);
       // Re-queue so taps are never silently lost — next flush retries.
       tapAccum.current += total;
     }
@@ -1041,6 +1051,8 @@ export default function DashboardPage() {
     setTimeout(() => setTapParticles((prev) => prev.filter((p) => p.id !== id)), 700);
     setTapTapping(true); setTimeout(() => setTapTapping(false), 140);
     const rate = earnPerTapRef.current || TAP_EARN_PER;
+    const currentTapCount = tapCount;
+    console.log(`[TapEarn] Tap #${currentTapCount + 1}: earnPerTap=₦${rate}, tapAccum will add ₦${rate}`);
     setTapEnergy((p) => p - 1);
     setTapEarned((p) => p + rate);
     setBalance((p) => p + rate);
