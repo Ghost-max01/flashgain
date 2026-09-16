@@ -1391,14 +1391,16 @@ export default function TapAndEarnPage() {
 
       {/* ── AUTO TAP: Plan selector ── */}
       {showAutoPlans && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowAutoPlans(false)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 te-fadeIn flex items-center justify-center p-4" onClick={() => setShowAutoPlans(false)}>
           <div className="te-slideUp w-full max-w-[420px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="hh-modal">
               <div className="te-modal-glow"></div>
               <div className="relative z-10">
-                <h2 className="text-lg font-black text-white text-center mb-1">Choose Auto Tap Plan</h2>
-                <p className="text-xs text-gray-400 text-center mb-3">Only first-time users get 20 mins FREE. After that it is crossed out.</p>
-                <div className="space-y-3">
+                <div className="text-center mb-4">
+                  <h2 className="hh-modal-title text-lg mb-1">Choose Auto Tap Plan</h2>
+                  <p className="text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</p>
+                </div>
+                <div className="space-y-2.5">
                   {AUTO_PLANS.map((p, idx) => {
                     const isFree = p.id === "free1h";
                     const freeDisabled = isFree && autoFirstFreeUsed;
@@ -1409,21 +1411,36 @@ export default function TapAndEarnPage() {
                     const lockDays = Math.floor(lockLeft/86400000);
                     const lockHours = Math.floor((lockLeft%86400000)/3600000);
                     return (
-                      <div key={p.id} className="flex items-center gap-2">
-                        <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">{idx+1}</span>
-                        <button disabled={disabled} onClick={() => startAutoPlan(p.id)} className={`flex-1 text-left relative rounded-2xl border p-3 flex items-center justify-between ${disabled ? "bg-white/5 border-white/10 opacity-50" : "bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border-emerald-500/30 hover:border-emerald-400/50"}`}>
+                      <button key={p.id} disabled={disabled} onClick={() => startAutoPlan(p.id)} className={`w-full relative rounded-[18px] border p-4 flex items-center justify-between transition-all ${
+                        disabled ? "bg-white/5 border-white/10 opacity-50 cursor-not-allowed" : "bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-400/30 hover:border-emerald-400/60 hover:from-emerald-500/15 hover:to-teal-500/15"
+                      }`}>
+                        <div className="flex items-start gap-3 flex-1 text-left">
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${
+                            disabled ? "bg-gray-600/40 text-gray-500" : "bg-emerald-500/30 text-emerald-300"
+                          }`}>{idx+1}</div>
                           <div>
-                            <div className={`text-sm font-black ${disabled ? "text-gray-400" : "text-white"}`}>{p.label} {isLocked ? "• Locked 1 week" : ""}</div>
-                            <div className="text-xs text-white/60">max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub} {isLocked ? `• ${lockDays}d ${lockHours}h left` : ""}</div>
+                            <div className={`text-sm font-black leading-tight ${disabled ? "text-gray-400" : "text-white"}`}>
+                              {p.label}
+                              {isFree && autoFirstFreeUsed && <span className="text-[10px] ml-2 line-through opacity-60">FREE only</span>}
+                              {isLocked && <span className="text-[10px] ml-2 text-amber-300">Locked 1 week</span>}
+                            </div>
+                            <div className={`text-xs mt-1 ${
+                              disabled ? "text-gray-500" : "text-white/70"
+                            }`}>max ₦{p.maxEarn.toLocaleString()} {p.sub.includes("max") ? "" : p.sub}</div>
+                            {isLocked && <div className="text-[10px] text-amber-300/70 mt-0.5">{lockDays}d {lockHours}h remaining</div>}
                           </div>
-                          <div className={`px-3 py-1 rounded-full text-xs font-black ml-2 shrink-0 ${disabled ? "bg-gray-600 text-white" : "bg-emerald-500 text-white"}`}>{isLocked ? "Locked" : disabled ? "Used" : "Start"}</div>
-                          {disabled && <div className="absolute left-3 right-3 top-1/2 h-[2px] bg-gray-400/70 -translate-y-1/2"></div>}
-                        </button>
-                      </div>
+                        </div>
+                        <div className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black ml-3 whitespace-nowrap ${
+                          disabled ? "bg-gray-600/40 text-gray-400" : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/40"
+                        }`}>
+                          {isLocked ? "Locked" : disabled ? "Used" : "Start"}
+                        </div>
+                        {disabled && <div className="absolute inset-0 rounded-[18px] h-[1px] bg-gradient-to-r from-transparent via-gray-500/30 to-transparent top-1/2 -translate-y-1/2"></div>}
+                      </button>
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-center text-white/50 mt-3">Auto tap locks the orb (no animation) — balance still rises in real time.</p>
+                <p className="text-[10px] text-center text-white/40 mt-4 px-2">Auto tap locks the orb (no animation) — balance still rises in real time.</p>
               </div>
             </div>
           </div>
@@ -1432,52 +1449,85 @@ export default function TapAndEarnPage() {
 
       {/* ── AUTO TAP: Requirement chooser for paid plans ── */}
       {showAutoReq && reqPlan && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowAutoReq(false)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 te-fadeIn flex items-center justify-center p-4" onClick={() => setShowAutoReq(false)}>
           <div className="te-slideUp w-full max-w-[420px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="hh-modal">
               <div className="te-modal-glow"></div>
               <div className="relative z-10">
-                <h2 className="text-lg font-black text-white text-center mb-1">Requirement for {AUTO_PLANS.find(p=>p.id===reqPlan)?.label}</h2>
-                <p className="text-xs text-gray-400 text-center mb-3">Choose one of 3 options. Referrals use a new tracking link and count to your total.</p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">a</span>
-                    <button onClick={() => { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}&plan=${reqPlan}`:`/mu-tasks?need=${need}&plan=${reqPlan}`; router.push(path); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div className="text-center mb-4">
+                  <h2 className="hh-modal-title text-lg mb-1">Requirement for {AUTO_PLANS.find(p=>p.id===reqPlan)?.label}</h2>
+                  <p className="text-xs text-gray-400">Choose one of 3 options. Referrals use a new tracking link and count to your total.</p>
+                </div>
+                <div className="space-y-2.5">
+                  <button 
+                    onClick={() => { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}&plan=${reqPlan}`:`/mu-tasks?need=${need}&plan=${reqPlan}`; router.push(path); }} 
+                    className={`w-full relative rounded-[18px] border p-4 flex items-center justify-between transition-all ${
+                      reqChoice==="task" ? "bg-emerald-500/20 border-emerald-400/60" : "bg-white/5 border-white/15 hover:bg-white/8 hover:border-white/25"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 flex-1 text-left">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${
+                        reqChoice==="task" ? "bg-emerald-500/50 text-emerald-200" : "bg-white/10 text-white/60"
+                      }`}>a</div>
                       <div>
-                        <div className="text-sm font-black text-white">{AUTO_REQ_TASK[reqPlan]} tasks required</div>
-                        <div className="text-xs text-white/70 mt-1">you've only done {getPerPlanDone(reqPlan)}/{AUTO_REQ_TASK[reqPlan]} — this plan counts separately from others</div>
-                        <div className="mt-1 text-xs text-white/50">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]})</div>
+                        <div className="text-sm font-black text-white leading-tight">{AUTO_REQ_TASK[reqPlan]} Tasks Required</div>
+                        <div className="text-xs text-white/60 mt-1.5">You've done {getPerPlanDone(reqPlan)}/{AUTO_REQ_TASK[reqPlan]} — plan counts separately</div>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">b</span>
-                    <button onClick={() => { setReqChoice("referral"); router.push(`/refer/auto-tap?plan=${reqPlan}`); setShowAutoReq(false); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                    </div>
+                    <span className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black ml-3 whitespace-nowrap ${
+                      reqChoice==="task" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/40" : "bg-white/10 text-white/70"
+                    }`}>Start</span>
+                  </button>
+                  <button 
+                    onClick={() => { setReqChoice("referral"); router.push(`/refer/auto-tap?plan=${reqPlan}`); setShowAutoReq(false); }} 
+                    className={`w-full relative rounded-[18px] border p-4 flex items-center justify-between transition-all ${
+                      reqChoice==="referral" ? "bg-emerald-500/20 border-emerald-400/60" : "bg-white/5 border-white/15 hover:bg-white/8 hover:border-white/25"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 flex-1 text-left">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${
+                        reqChoice==="referral" ? "bg-emerald-500/50 text-emerald-200" : "bg-white/10 text-white/60"
+                      }`}>b</div>
                       <div>
-                        <div className="text-sm font-black text-white">Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
-                        <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
+                        <div className="text-sm font-black text-white leading-tight">{AUTO_REQ_REF[reqPlan]} Referrals</div>
+                        <div className="text-xs text-white/60 mt-1.5">New tracking link generated for this plan</div>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">c</span>
-                    <button onClick={() => setReqChoice("payment")} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                    </div>
+                    <span className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black ml-3 whitespace-nowrap ${
+                      reqChoice==="referral" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/40" : "bg-white/10 text-white/70"
+                    }`}>Start</span>
+                  </button>
+                  <button 
+                    onClick={() => setReqChoice("payment")} 
+                    className={`w-full relative rounded-[18px] border p-4 flex items-center justify-between transition-all ${
+                      reqChoice==="payment" ? "bg-emerald-500/20 border-emerald-400/60" : "bg-white/5 border-white/15 hover:bg-white/8 hover:border-white/25"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 flex-1 text-left">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${
+                        reqChoice==="payment" ? "bg-emerald-500/50 text-emerald-200" : "bg-white/10 text-white/60"
+                      }`}>c</div>
                       <div>
-                        <div className="text-sm font-black text-white">Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()} for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} estimated taps</div>
-                        <div className="text-xs text-white/60 mt-1">One-time payment to unlock auto tap for this plan.</div>
+                        <div className="text-sm font-black text-white leading-tight">Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()}</div>
+                        <div className="text-xs text-white/60 mt-1.5">One-time payment for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} taps</div>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
-                    </button>
-                  </div>
-                  <button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black py-2">Unlock & Start Auto Tap</button>
-                  <button onClick={() => setShowAutoReq(false)} className="w-full rounded-full border border-white/15 text-white py-2">Cancel</button>
+                    </div>
+                    <span className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black ml-3 whitespace-nowrap ${
+                      reqChoice==="payment" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/40" : "bg-white/10 text-white/70"
+                    }`}>Start</span>
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2 mt-5">
+                  <button onClick={fulfillRequirement} disabled={!reqChoice} className={`w-full py-2.5 rounded-full font-black transition-all ${
+                    reqChoice ? "hh-btn-primary" : "bg-white/10 text-white/50 cursor-not-allowed"
+                  }`}>Unlock & Start Auto Tap</button>
+                  <button onClick={() => setShowAutoReq(false)} className="w-full py-2.5 rounded-full border border-white/20 text-white/80 font-black hover:border-white/40 hover:text-white transition">Cancel</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      )}
       )}
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
