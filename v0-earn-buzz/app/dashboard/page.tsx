@@ -2210,34 +2210,34 @@ export default function DashboardPage() {
             <div className="space-y-3 mt-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">a</span>
-                <button onClick={()=> { setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}&plan=${reqPlan}`:`/mu-tasks?need=${need}&plan=${reqPlan}`; router.push(path); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div onClick={()=> setReqChoice("task")} onKeyDown={(e)=> { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setReqChoice("task"); } }} role="button" tabIndex={0} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between cursor-pointer ${reqChoice==="task" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                   <div>
                     <div className="text-sm font-black text-white">{AUTO_REQ_TASK[reqPlan]} tasks required</div>
                     <div className="text-xs text-white/70 mt-1">you've only done {getPerPlanDone(reqPlan)}/{AUTO_REQ_TASK[reqPlan]} — this plan counts separately from others</div>
                     <div className="mt-1 text-xs text-white/50">Open {(reqPlan==="24h"||reqPlan==="3d")?"MT":"MU"} Tasks ({AUTO_REQ_TASK[reqPlan]})</div>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
-                </button>
+                  <button type="button" onClick={(e)=> { e.stopPropagation(); setReqChoice("task"); const need=AUTO_REQ_TASK[reqPlan]; const path=(reqPlan==="24h"||reqPlan==="3d")?`/mt-tasks?need=${need}&plan=${reqPlan}`:`/mu-tasks?need=${need}&plan=${reqPlan}`; router.push(path); }} className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">b</span>
-                <button onClick={()=> { setReqChoice("referral"); router.push(`/refer/auto-tap?plan=${reqPlan}`); setShowAutoReq(false); }} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div onClick={()=> setReqChoice("referral")} onKeyDown={(e)=> { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setReqChoice("referral"); } }} role="button" tabIndex={0} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between cursor-pointer ${reqChoice==="referral" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                   <div>
                     <div className="text-sm font-black text-white">Referral — {AUTO_REQ_REF[reqPlan]} referrals</div>
                     <div className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan.</div>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
-                </button>
+                  <button type="button" onClick={(e)=> { e.stopPropagation(); setReqChoice("referral"); router.push(`/refer/auto-tap?plan=${reqPlan}`); setShowAutoReq(false); }} className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/70 w-5 text-center shrink-0">c</span>
-                <button onClick={()=> setReqChoice("payment")} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
+                <div onClick={()=> setReqChoice("payment")} onKeyDown={(e)=> { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setReqChoice("payment"); } }} role="button" tabIndex={0} className={`flex-1 text-left rounded-2xl border p-3 flex items-center justify-between cursor-pointer ${reqChoice==="payment" ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/5"}`}>
                   <div>
                     <div className="text-sm font-black text-white">Pay ₦{AUTO_REQ_PAY[reqPlan].toLocaleString()} for {AUTO_PLANS.find(p=>p.id===reqPlan)?.maxEarn.toLocaleString()} estimated taps</div>
                     <div className="text-xs text-white/60 mt-1">One-time payment to unlock auto tap for this plan.</div>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</span>
-                </button>
+                  <button type="button" onClick={(e)=> { e.stopPropagation(); setReqChoice("payment"); }} className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white ml-2 shrink-0">Start</button>
+                </div>
               </div>
               <Button onClick={fulfillRequirement} disabled={!reqChoice} className="w-full hh-btn-primary rounded-full font-black">Unlock & Start Auto Tap</Button>
               <Button variant="outline" onClick={()=> setShowAutoReq(false)} className="w-full rounded-full border-white/15 text-white">Cancel</Button>
@@ -2482,7 +2482,7 @@ export default function DashboardPage() {
                     })()}
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
                     {/* Center icon — same as full game: Flame while auto, hand otherwise (mini sizing kept) */}
-                    <div className="te-orb-center"><div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}>{autoActive ? (<Flame className="w-8 h-8 text-orange-300" strokeWidth={1.5} />) : (<HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} />)}</div><span className="te-tap-label">{autoActive ? `+₦${earnPerTap}` : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
+                    <div className="te-orb-center"><div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}>{autoActive ? (<Flame className="w-8 h-8 text-orange-300" strokeWidth={1.5} />) : (<HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} />)}</div><span className="te-tap-label">{autoActive ? `AUTO` : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
                     {autoActive && autoFx.map((f) => (
                       <span key={f.id} className="te-auto-fx" style={{ left: `${f.x}%` }}>
                         {f.text ? <span className="te-auto-fx-reward">{f.text}</span> : null}
