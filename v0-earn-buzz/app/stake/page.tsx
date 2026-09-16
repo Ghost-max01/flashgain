@@ -122,9 +122,37 @@ export default function StakeWinPage() {
   // (so users enjoy their last result) — unless they press TAP TO SPIN at 3/3,
   // which brings it up immediately (handled at the top of doSpin).
   const exhaustedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isTimerActiveRef = useRef(false)
   useEffect(() => {
     return () => { if (exhaustedTimerRef.current) clearTimeout(exhaustedTimerRef.current) }
   }, [])
+
+  // Detect user interaction while waiting for 10s to show popup — trigger popup early on any interaction
+  useEffect(() => {
+    if (!isTimerActiveRef.current) return
+
+    const handleInteraction = () => {
+      if (exhaustedTimerRef.current && isTimerActiveRef.current) {
+        clearTimeout(exhaustedTimerRef.current)
+        exhaustedTimerRef.current = null
+        isTimerActiveRef.current = false
+        setShowSpinCompleteModal(true)
+      }
+    }
+
+    // Add event listeners for user interactions
+    const events = ['click', 'touchstart', 'keydown', 'scroll', 'wheel']
+    events.forEach(event => {
+      window.addEventListener(event, handleInteraction, { capture: true, passive: true })
+    })
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleInteraction, { capture: true })
+      })
+    }
+  }, [])
+
 
   useEffect(() => {
     try {
@@ -212,6 +240,7 @@ export default function StakeWinPage() {
     // delayed popup so users never wait after explicitly pressing spin).
     if ([20, 30, 40].every(pct => ((spinCooldowns as Record<number, number>)[pct] || 0) > Date.now())) {
       if (exhaustedTimerRef.current) { clearTimeout(exhaustedTimerRef.current); exhaustedTimerRef.current = null }
+      isTimerActiveRef.current = false
       setShowSpinCompleteModal(true)
       return
     }
@@ -301,8 +330,10 @@ export default function StakeWinPage() {
           // Pressing TAP TO SPIN in the meantime brings it up immediately.
           setSpinSessionActive(false)
           if (exhaustedTimerRef.current) clearTimeout(exhaustedTimerRef.current)
+          isTimerActiveRef.current = true
           exhaustedTimerRef.current = setTimeout(() => {
             exhaustedTimerRef.current = null
+            isTimerActiveRef.current = false
             setShowSpinCompleteModal(true)
           }, 10000)
         }

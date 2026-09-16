@@ -923,7 +923,7 @@ export default function DashboardPage() {
   // plans resumed from wall-clock state).
   useEffect(() => {
     if (!autoActive) { setAutoFx([]); return; }
-    const emojis = ["🔥", "💰", "⚡", "💎", "📖"];
+    const emojis = ["🔥", "💰", "⚡", "💎", "🪙"];
     const id = setInterval(() => {
       const n = autoFxId.current++;
       const rate = earnPerTapRef.current || TAP_EARN_PER;
