@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
         password,
       })
 
+      console.log("[login] Supabase Auth attempt for:", email, "error:", authError?.message || "none")
+
       if (!authError && authData?.user) {
         const { data } = await admin
           .from("users")
@@ -42,6 +44,7 @@ export async function POST(request: NextRequest) {
           .maybeSingle()
 
         if (data) {
+          console.log("[login] Supabase Auth success, user found in users table")
           fullUser = data
         }
       }
@@ -49,6 +52,7 @@ export async function POST(request: NextRequest) {
 
     // STEP 2: Legacy fallback through the service role so RLS cannot block it
     if (!fullUser) {
+      console.log("[login] Auth failed or user not in users table, trying legacy fallback for:", email)
       const { data: localUser, error: localError } = await admin
         .from("users")
         .select(USER_COLUMNS)
@@ -59,23 +63,38 @@ export async function POST(request: NextRequest) {
 
       if (localError) {
         console.error("[login] legacy user lookup failed:", localError)
+        return NextResponse.json({ error: "Database error during lookup" }, { status: 500 })
       }
 
       if (!legacyUser) {
+        console.log("[login] User not found in legacy table:", email)
         return NextResponse.json({ error: "Invalid email, password, or user ID" }, { status: 401 })
       }
+
+      console.log("[login] Legacy user found, checking password. Has password_hash:", !!legacyUser?.password_hash, "has password:", !!legacyUser?.password)
 
       const normalizedInput = password.trim().toUpperCase()
       const normalizedReferralCode = String(legacyUser?.referral_code || "").toUpperCase()
-      const matchesPassword = legacyUser?.password_hash
-        ? sha256Hex((legacyUser?.password_salt || "") + password) === legacyUser.password_hash
-        : legacyUser?.password === password
+      
+      let matchesPassword = false
+      if (legacyUser?.password_hash) {
+        const computed = sha256Hex((legacyUser?.password_salt || "") + password)
+        matchesPassword = computed === legacyUser.password_hash
+        console.log("[login] Password hash check:", { computed: computed.substring(0, 8), stored: legacyUser.password_hash.substring(0, 8), match: matchesPassword })
+      } else {
+        matchesPassword = legacyUser?.password === password
+        console.log("[login] Plaintext password check:", matchesPassword)
+      }
+      
       const matchesUserId = normalizedInput.length > 0 && normalizedInput === normalizedReferralCode
+      console.log("[login] Referral code check:", { input: normalizedInput.substring(0, 4), stored: normalizedReferralCode.substring(0, 4), match: matchesUserId })
 
       if (!matchesPassword && !matchesUserId) {
+        console.log("[login] Password and referral code both failed")
         return NextResponse.json({ error: "Invalid email, password, or user ID" }, { status: 401 })
       }
 
+      console.log("[login] Legacy login successful for:", email)
       fullUser = legacyUser
     }
 
