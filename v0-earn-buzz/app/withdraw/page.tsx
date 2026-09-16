@@ -677,7 +677,7 @@ export default function WithdrawPage() {
                   : 'Complete the requirements below before withdrawing.'}
               </p>
 
-              <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
+              <div className="space-y-3 mb-6">
                 {/* Balance requirement */}
                 <div className={`hh-req-detail-item ${balance >= 200000 ? 'hh-req-detail-met' : 'hh-req-detail-missing'}`}>
                   <div className="flex items-center gap-3">
@@ -695,29 +695,27 @@ export default function WithdrawPage() {
                   </div>
                 </div>
 
-                {/* Referral requirement (hidden if toggle is on) */}
-                {!toggleActive && (
-                  <div
-                    className={`hh-req-detail-item ${referralCount >= REQUIRED_REFERRALS ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
-                    onClick={() => router.push('/refer')}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`hh-req-detail-icon ${referralCount >= REQUIRED_REFERRALS ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        <Users className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-white">Active Referrals</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {referralCount >= REQUIRED_REFERRALS 
-                            ? '✓ Completed' 
-                            : `${referralCount}/${REQUIRED_REFERRALS} referrals`}
-                        </p>
-                      </div>
+                {/* Referral requirement (always visible) */}
+                <div
+                  className={`hh-req-detail-item ${referralCount >= REQUIRED_REFERRALS ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
+                  onClick={() => router.push('/refer')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`hh-req-detail-icon ${referralCount >= REQUIRED_REFERRALS ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-white">Active Referrals</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {referralCount >= REQUIRED_REFERRALS 
+                          ? '✓ Completed' 
+                          : `${referralCount}/${REQUIRED_REFERRALS} referrals`}
+                      </p>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Spin & Win daily play requirement */}
                 <div
@@ -1415,7 +1413,7 @@ export default function WithdrawPage() {
         }
 
         .hh-req-detail-item {
-          padding: 14px;
+          padding: 12px;
           background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 12px;
@@ -1437,6 +1435,16 @@ export default function WithdrawPage() {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          width: 28px;
+          height: 28px;
+        }
+
+        .hh-req-detail-item p:first-of-type {
+          font-size: 0.78rem;
+        }
+
+        .hh-req-detail-item p:last-of-type {
+          font-size: 0.68rem;
         }
 
         @keyframes hh-btn-glow {
@@ -1659,7 +1667,7 @@ export default function WithdrawPage() {
           color: #f5f7fb;
           overflow: hidden;
           background: linear-gradient(155deg, #244d9d 0%, #1a3d7f 38%, #0c1330 100%);
-          box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05) inset;
+          box-shadow: 0 30px 60px -20px rgba(0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05) inset;
           transform-style: preserve-3d;
           transition: transform 0.15s ease-out;
           display: flex;
