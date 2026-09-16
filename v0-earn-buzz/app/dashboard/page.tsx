@@ -2095,10 +2095,10 @@ export default function DashboardPage() {
       {showAutoFreePopup && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="hh-popup max-w-sm w-full mx-4">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl text-white">🎉 You are eligible!</DialogTitle>
-            <DialogDescription className="text-center pt-2 text-gray-300">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</DialogDescription>
-          </DialogHeader>
+          <div className="hh-popup-header">
+            <h2 className="text-center text-xl text-white font-semibold leading-none tracking-tight">🎉 You are eligible!</h2>
+            <p className="text-center pt-2 text-gray-300">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</p>
+          </div>
           <div className="flex gap-3 mt-4">
             <Button variant="outline" onClick={()=> setShowAutoFreePopup(false)} className="flex-1 rounded-full border-white/15 text-white">Later</Button>
             <Button onClick={()=> { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full">Start FREE 20 mins</Button>
@@ -2110,14 +2110,14 @@ export default function DashboardPage() {
       {showAutoToggleWarning && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="hh-popup max-w-sm w-full mx-4">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl text-white">⚠️ Turn Off Auto Tap?</DialogTitle>
-            <DialogDescription className="text-center pt-2 text-gray-300 space-y-3">
+          <div className="hh-popup-header">
+            <h2 className="text-center text-xl text-white font-semibold leading-none tracking-tight">⚠️ Turn Off Auto Tap?</h2>
+            <p className="text-center pt-2 text-gray-300 space-y-3">
               Turning off auto-tap while it is still running will <span className="font-bold text-amber-300">forfeit the remaining time and progress</span>.
               <br />
               Your balance will stop increasing and any unused taps will be lost.
-            </DialogDescription>
-          </DialogHeader>
+            </p>
+          </div>
           <div className="flex gap-3 mt-4">
             <Button variant="outline" onClick={()=> setShowAutoToggleWarning(false)} className="flex-1 rounded-full border-white/15 text-white">Cancel — Keep Running</Button>
             <Button onClick={confirmAutoToggleOff} className="flex-1 hh-btn-primary rounded-full" style={{ background: "#dc2626", hover: "#b91c1c" }}>End Auto Tap</Button>
@@ -2129,10 +2129,10 @@ export default function DashboardPage() {
       {showAutoPlans && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="hh-popup max-w-sm w-full mx-4 max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-center text-lg text-white">Choose Auto Tap Plan</DialogTitle>
-            <DialogDescription className="text-center text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</DialogDescription>
-          </DialogHeader>
+          <div className="hh-popup-header">
+            <h2 className="text-center text-lg text-white font-semibold leading-none tracking-tight">Choose Auto Tap Plan</h2>
+            <p className="text-center text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</p>
+          </div>
           <div className="space-y-3 mt-3">
             {AUTO_PLANS.map((p, idx)=> {
               const isFree = p.id==="free1h";
@@ -2166,10 +2166,10 @@ export default function DashboardPage() {
       {showAutoReq && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="hh-popup max-w-sm w-full mx-4 max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-center text-lg text-white">Requirement for {reqPlan ? AUTO_PLANS.find(p=>p.id===reqPlan)?.label : ""}</DialogTitle>
-            <DialogDescription className="text-center text-xs text-gray-400">Choose one of 3 options. Referrals use a new tracking link and count to your total.</DialogDescription>
-          </DialogHeader>
+          <div className="hh-popup-header">
+            <h2 className="text-center text-lg text-white font-semibold leading-none tracking-tight">Requirement for {reqPlan ? AUTO_PLANS.find(p=>p.id===reqPlan)?.label : ""}</h2>
+            <p className="text-center text-xs text-gray-400">Choose one of 3 options. Referrals use a new tracking link and count to your total.</p>
+          </div>
           {reqPlan && (
             <div className="space-y-3 mt-3">
               <div className="flex items-center gap-2">
