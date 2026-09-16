@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Home, Gamepad2, MessagesSquare, User as UserIcon, CircleUserRound, Award } from "lucide-react";
 
-// Single shared bottom nav — Home • About • Chats • Refer & Earn • Profile.
+// Single shared bottom nav — Home • Chats • Refer & Earn • Profile.
 // Self-contained styling (bv- classes) so it looks identical on every page,
 // including pages that never had a bottom nav before.
 const ITEMS = [
   { href: "/dashboard", label: "Home", Icon: Home, match: ["/dashboard"] },
-  { href: "/abouttivexx", label: "About", Icon: Gamepad2, match: ["/abouttivexx", "/about"] },
+  // { href: "/abouttivexx", label: "About", Icon: Gamepad2, match: ["/abouttivexx", "/about"] },
   { href: "/chats", label: "Chats", Icon: MessagesSquare, match: ["/chats", "/support"] },
   { href: "/refer", label: "Refer & Earn", Icon: UserIcon, match: ["/refer"] },
   { href: "/profile", label: "Profile", Icon: CircleUserRound, match: ["/profile", "/history", "/setup-bank"] },
