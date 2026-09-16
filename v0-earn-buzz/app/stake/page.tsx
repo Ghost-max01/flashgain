@@ -229,11 +229,14 @@ export default function StakeWinPage() {
       return toast({ title: `${tierPct}% tier on cooldown`, description: `Wait ${label} before spinning this tier again`, variant: "destructive" })
     }
 
-    // ── RANDOM WIN LOGIC: One tier wins per spin, decided at spin moment ──
-    // Each spin, randomly pick which of the 3 tiers (20/30/40%) is the winner — genuinely random per attempt
-    const tiers = [20, 30, 40] as const
-    const winningTier = tiers[Math.floor(Math.random() * tiers.length)]
-    const userPickedWinningTier = (tierPct === winningTier)
+    // ── TIER-SPECIFIC WIN PROBABILITIES ──
+    // 20% tier: 70% win chance
+    // 30% tier: 70% win chance
+    // 40% tier: 30% win chance
+    // Win amounts are tracked server-side to guarantee one of the 3 daily spins is a win.
+    const tierWinRates: Record<number, number> = { 20: 0.70, 30: 0.70, 40: 0.30 }
+    const userWinRate = tierWinRates[tierPct] || 0.5
+    const userPickedWinningTier = Math.random() < userWinRate
 
     // Set 24h cooldown for THIS tier (per-tier timer, max 3 spins/day naturally)
     const newCooldowns: Record<number, number> = { ...spinCooldowns, [tierPct]: now + 24 * 60 * 60 * 1000 }
@@ -332,9 +335,9 @@ export default function StakeWinPage() {
             if (raw2) { const u2 = JSON.parse(raw2); u2.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u2)) }
           } catch {}
           if (landed.win) {
-            toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${landed.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% was the winner` })
+            toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${landed.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% has ${Math.round(userWinRate * 100)}% win chance` })
           } else {
-            toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% was not the winner this spin. The winning tier was ${winningTier}%.` })
+            toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% has ${Math.round(userWinRate * 100)}% win chance. Try again in 24 hours!` })
           }
         } catch (e: any) {
           toast({ title: "Spin could not be recorded", description: e?.message || "Balance unchanged — try again.", variant: "destructive" })

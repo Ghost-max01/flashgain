@@ -75,13 +75,24 @@ export default function TaskPage() {
 
   const completeVerification = useCallback(async (taskId: string) => {
     const task = AVAILABLE_TASKS_DEDUPED.find((t) => t.id === taskId)
-    if (!task) return
-    if (completedTasks.includes(taskId)) return
+    if (!task) {
+      console.warn(`[Task] Task ID not found: ${taskId}`);
+      return
+    }
+    if (completedTasks.includes(taskId)) {
+      console.log(`[Task] Task already completed: ${taskId}`);
+      return
+    }
 
     const storedUserRaw = localStorage.getItem("tivexx-user")
     const parsedUser = safeParse(storedUserRaw, null)
     const claimUserId = parsedUser?.id || parsedUser?.user_id || parsedUser?.userId || ""
-    if (!claimUserId) return
+    if (!claimUserId) {
+      console.warn(`[Task] No user ID found`);
+      return
+    }
+
+    console.log(`[Task] Starting verification for ${taskId}, user: ${claimUserId}`);
 
     let serverOk = false
     try {
@@ -91,20 +102,40 @@ export default function TaskPage() {
         body: JSON.stringify({ userId: claimUserId, taskId: task.id, taskName: task.platform, reward: task.reward }),
       })
       const data = await res.json().catch(() => ({}))
+      console.log(`[Task] Server responded:`, { ok: res.ok, status: res.status, data });
+      
       if (data?.duplicate) {
         toast({ title: "Already claimed", description: "This task was already credited on the server.", variant: "destructive" })
+        console.log(`[Task] Duplicate claim detected`);
         return
       }
-      if (!res.ok || !data?.success) return
+      if (!res.ok || !data?.success) {
+        console.error(`[Task] Server error: res.ok=${res.ok}, success=${data?.success}, error=${data?.error}`);
+        return
+      }
       serverOk = true
-    } catch (err) { console.error("Failed to track task completion:", err); return }
-    if (!serverOk) return
+    } catch (err) { 
+      console.error("Failed to track task completion:", err);
+      return 
+    }
+    if (!serverOk) {
+      console.warn(`[Task] Server OK flag not set`);
+      return
+    }
 
     // Use functional updates to avoid stale closure on balance
-    setBalance((prev) => prev + task.reward)
+    const currentUser = safeParse(localStorage.getItem("tivexx-user"), null)
+    const currentBalance = currentUser?.balance || balance || 0
+    
+    setBalance((prev) => {
+      const next = prev + task.reward
+      console.log(`[Task] Balance update: ${prev} + ${task.reward} = ${next}`);
+      return next
+    })
     setCompletedTasks((prev) => {
       const next = [...prev, task.id]
       try { localStorage.setItem("tivexx-completed-tasks", JSON.stringify(next)) } catch {}
+      console.log(`[Task] Completed tasks updated:`, next);
       return next
     })
 
@@ -112,18 +143,21 @@ export default function TaskPage() {
       const storedUser = localStorage.getItem("tivexx-user")
       if (storedUser) {
         const user = JSON.parse(storedUser)
-        user.balance = balance + task.reward
+        const newBalance = currentBalance + task.reward
+        user.balance = newBalance
         try { localStorage.setItem("tivexx-user", JSON.stringify(user)) } catch {}
         try {
           await fetch(`/api/user-balance`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: user.id || user.user_id || user.userId, balance: balance + task.reward }),
+            body: JSON.stringify({ userId: user.id || user.user_id || user.userId, balance: newBalance }),
           })
+          console.log(`[Task] Balance synced to server: ${newBalance}`);
         } catch (err) { console.error("Failed to sync user balance to server:", err) }
       }
     } catch {}
 
     recordTaskEarning(task.id, task.platform || task.id, task.reward)
+    console.log(`[Task] Task earning recorded`);
 
     // Increment trust score taskCount
     try {
@@ -131,6 +165,7 @@ export default function TaskPage() {
       meta.taskCount = (meta.taskCount || 0) + 1
       saveMeta(meta)
       const score = computeScore(meta)
+      console.log(`[Task] Trust score updated: taskCount=${meta.taskCount}, score=${score}`);
       if (typeof window !== "undefined") {
         try {
           const uid = (JSON.parse(localStorage.getItem("tivexx-user") || "{}")).id || (JSON.parse(localStorage.getItem("tivexx-user") || "{}")).userId
@@ -146,6 +181,7 @@ export default function TaskPage() {
     setCooldowns((prev) => {
       const next = { ...prev, [task.id]: nextReset }
       try { localStorage.setItem("tivexx-task-cooldowns", JSON.stringify(next)) } catch {}
+      console.log(`[Task] Cooldown set until: ${new Date(nextReset).toISOString()}`);
       return next
     })
 
@@ -155,7 +191,7 @@ export default function TaskPage() {
     toast({ title: "Reward Credited 🎉", description: `₦${task.reward.toLocaleString()} has been added to your balance.` })
     setShowCoinRain(true)
     setTimeout(() => setShowCoinRain(false), 3000)
-  }, [completedTasks, toast, balance])
+  }, [completedTasks, toast])
 
   const startProgressAnimation = (taskId: string) => {
     if (progressIntervals.current[taskId]) clearInterval(progressIntervals.current[taskId])
