@@ -12,17 +12,32 @@ const USER_COLUMNS =
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[login] === START POST ===")
+    
     const body = await request.json().catch(() => ({}))
     const email = String(body?.email || "").trim().toLowerCase()
     const password = String(body?.password || "")
 
+    console.log("[login] Received email:", email, "password length:", password.length)
+
     if (!email || !password) {
+      console.log("[login] Missing email or password")
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const admin = getSupabaseAdmin()
+    let admin: any = null
+    try {
+      admin = getSupabaseAdmin()
+      console.log("[login] Got admin client")
+    } catch (e) {
+      console.error("[login] Failed to get admin client:", e)
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    console.log("[login] Supabase config: url exists:", !!supabaseUrl, "key exists:", !!anonKey)
+    
     const anonClient = supabaseUrl && anonKey ? createClient(supabaseUrl, anonKey) : null
 
     let fullUser: any = null
@@ -99,9 +114,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { password: _password, password_hash: _passwordHash, password_salt: _passwordSalt, ...safeUser } = fullUser
+    console.log("[login] === SUCCESS, returning user ===")
     return NextResponse.json({ user: safeUser })
   } catch (error) {
-    console.error("[login] error:", error)
-    return NextResponse.json({ error: "Login failed" }, { status: 500 })
+    console.error("[login] === CAUGHT ERROR ===", error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error("[login] Error message:", msg)
+    console.error("[login] Error stack:", error instanceof Error ? error.stack : "no stack")
+    return NextResponse.json({ error: "Login failed: " + msg }, { status: 500 })
   }
 }
