@@ -14,6 +14,7 @@ import {
   User,
   Gift,
   Clock,
+  Flame,
   Mail,
   Shield,
   TrendingUp,
@@ -23,6 +24,7 @@ import {
   Zap,
   HandCoins,
   Sparkles,
+  Star,
   Trophy,
   Award,
 } from "lucide-react";
@@ -923,7 +925,8 @@ export default function DashboardPage() {
   // plans resumed from wall-clock state).
   useEffect(() => {
     if (!autoActive) { setAutoFx([]); return; }
-    const emojis = ["🔥", "💰", "⚡", "💎", "🪙"];
+    // Full-game autoFx behavior, replicated exactly: trust-based ₦ rate + fire/money emojis.
+    const emojis = ["🔥", "💰", "⚡", "💎"];
     const id = setInterval(() => {
       const n = autoFxId.current++;
       const rate = earnPerTapRef.current || TAP_EARN_PER;
@@ -2088,9 +2091,10 @@ export default function DashboardPage() {
         <WithdrawalNotification onClose={handleCloseWithdrawalNotification} />
       )}
 
-      {/* ── AUTO TAP: Eligible popup (20 mins free) ── */}
-      <Dialog open={showAutoFreePopup} onOpenChange={setShowAutoFreePopup}>
-        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
+      {/* ── AUTO TAP: Eligible popup (20 mins free) — .hh-popup pattern (same bg as 3/3 Spins Exhausted) ── */}
+      {showAutoFreePopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">🎉 You are eligible!</DialogTitle>
             <DialogDescription className="text-center pt-2 text-gray-300">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</DialogDescription>
@@ -2099,11 +2103,13 @@ export default function DashboardPage() {
             <Button variant="outline" onClick={()=> setShowAutoFreePopup(false)} className="flex-1 rounded-full border-white/15 text-white">Later</Button>
             <Button onClick={()=> { setShowAutoFreePopup(false); startAutoPlan("free1h"); }} className="flex-1 hh-btn-primary rounded-full">Start FREE 20 mins</Button>
           </div>
-        </DialogContent>
-      </Dialog>
-      {/* ── AUTO TAP: Toggle-off warning popup ── */}
-      <Dialog open={showAutoToggleWarning} onOpenChange={setShowAutoToggleWarning}>
-        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm">
+          </div>
+        </div>
+      )}
+      {/* ── AUTO TAP: Toggle-off warning popup — .hh-popup pattern (same bg as 3/3 Spins Exhausted) ── */}
+      {showAutoToggleWarning && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4">
           <DialogHeader>
             <DialogTitle className="text-center text-xl text-white">⚠️ Turn Off Auto Tap?</DialogTitle>
             <DialogDescription className="text-center pt-2 text-gray-300 space-y-3">
@@ -2116,11 +2122,13 @@ export default function DashboardPage() {
             <Button variant="outline" onClick={()=> setShowAutoToggleWarning(false)} className="flex-1 rounded-full border-white/15 text-white">Cancel — Keep Running</Button>
             <Button onClick={confirmAutoToggleOff} className="flex-1 hh-btn-primary rounded-full" style={{ background: "#dc2626", hover: "#b91c1c" }}>End Auto Tap</Button>
           </div>
-        </DialogContent>
-      </Dialog>
-      {/* ── AUTO TAP: Plan selector ── */}
-      <Dialog open={showAutoPlans} onOpenChange={setShowAutoPlans}>
-        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm max-h-[85vh] overflow-y-auto">
+          </div>
+        </div>
+      )}
+      {/* ── AUTO TAP: Plan selector — .hh-popup pattern (same bg as 3/3 Spins Exhausted) ── */}
+      {showAutoPlans && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-lg text-white">Choose Auto Tap Plan</DialogTitle>
             <DialogDescription className="text-center text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</DialogDescription>
@@ -2151,11 +2159,13 @@ export default function DashboardPage() {
             })}
           </div>
           <p className="text-[11px] text-center text-white/50 mt-3">Auto tap locks the orb (no animation) — balance still rises in real time.</p>
-        </DialogContent>
-      </Dialog>
-      {/* ── AUTO TAP: Requirement chooser for paid plans ── */}
-      <Dialog open={showAutoReq} onOpenChange={setShowAutoReq}>
-        <DialogContent className="hh-dialog hh-auto-tap-dialog max-w-sm max-h-[85vh] overflow-y-auto">
+          </div>
+        </div>
+      )}
+      {/* ── AUTO TAP: Requirement chooser for paid plans — .hh-popup pattern (same bg as 3/3 Spins Exhausted) ── */}
+      {showAutoReq && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-lg text-white">Requirement for {reqPlan ? AUTO_PLANS.find(p=>p.id===reqPlan)?.label : ""}</DialogTitle>
             <DialogDescription className="text-center text-xs text-gray-400">Choose one of 3 options. Referrals use a new tracking link and count to your total.</DialogDescription>
@@ -2197,8 +2207,9 @@ export default function DashboardPage() {
               <Button variant="outline" onClick={()=> setShowAutoReq(false)} className="w-full rounded-full border-white/15 text-white">Cancel</Button>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
 
       {/* Browser Check Popup */}
       {showBrowserCheck && (
@@ -2434,12 +2445,26 @@ export default function DashboardPage() {
                       );
                     })()}
                     <div className="te-orb-shine !top-3 !left-6 !w-10 !h-5"></div>
-                    <div className="te-orb-center"><div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}><HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} /></div><span className="te-tap-label">{autoActive ? `🔥 +₦${earnPerTap}` : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
+                    {/* Center icon — same as full game: Flame while auto, hand otherwise (mini sizing kept) */}
+                    <div className="te-orb-center"><div className={autoActive ? "te-orb-auto-bounce" : "te-orb-icon-bounce"}>{autoActive ? (<Flame className="w-8 h-8 text-orange-300" strokeWidth={1.5} />) : (<HandCoins className="w-8 h-8 text-white" strokeWidth={1.5} />)}</div><span className="te-tap-label">{autoActive ? `+₦${earnPerTap}` : (tapExhaustUntil !== null && tapExhaustLeft > 0 ? "FILLING" : "TAP")}</span></div>
                     {autoActive && autoFx.map((f) => (
                       <span key={f.id} className="te-auto-fx" style={{ left: `${f.x}%` }}>
                         <span className="te-auto-fx-reward">{f.text}</span>
                         <span className="te-auto-fx-emoji">{f.emoji}</span>
                       </span>
+                    ))}
+                    {/* Orbiting stars — same as full game, radius scaled to fit the 118px mini orb */}
+                    {[0, 120, 240].map((deg) => (
+                      <div key={deg} className="te-orbit-star">
+                        <Star
+                          className="text-amber-400/50"
+                          size={11}
+                          fill="currentColor"
+                          style={{
+                            transform: `rotate(${deg}deg) translateX(47px) rotate(-${deg}deg)`,
+                          }}
+                        />
+                      </div>
                     ))}
                   </button>
                   {tapParticles.map(p=> (<span key={p.id} className="hh-tap-particle" style={{left: 75 + (p.x - 28), top: 75 + (p.y - 28)}}>+₦{earnPerTap}</span>))}
@@ -3272,13 +3297,13 @@ export default function DashboardPage() {
         }
         .te-auto-fx-reward {
           font-family: "JetBrains Mono", monospace;
-          font-size: 15px;
+          font-size: 17px;
           font-weight: 800;
           color: #fdba74;
-          text-shadow: 0 0 12px rgba(249,115,22,0.9);
+          text-shadow: 0 0 12px rgba(249,115,22,0.9), 0 0 30px rgba(249,115,22,0.5);
           white-space: nowrap;
         }
-        .te-auto-fx-emoji { font-size: 18px; filter: drop-shadow(0 0 8px rgba(249,115,22,0.8)); }
+        .te-auto-fx-emoji { font-size: 20px; filter: drop-shadow(0 0 8px rgba(249,115,22,0.8)); }
         @keyframes te-auto-rise {
           0% { opacity: 0; transform: translateY(20px) scale(0.6); }
           15% { opacity: 1; transform: translateY(0) scale(1.15); }
@@ -3801,12 +3826,26 @@ export default function DashboardPage() {
         .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(52,211,153,0.95), #10b981 48%, rgba(6,95,70,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 60px rgba(16,185,129,0.45), 0 0 120px rgba(16,185,129,0.15); }
         .te-orb-depleted { background: radial-gradient(circle at 38% 32%, rgba(107,114,128,0.6), rgba(55,65,81,0.8) 100%); box-shadow: inset 0 -8px 20px rgba(0,0,0,0.5); opacity: 0.55; cursor: not-allowed; }
         .te-orb-tap { transform: scale(0.86) !important; }
+        .te-orb-active:hover {
+          box-shadow:
+            inset 0 -12px 28px rgba(6, 95, 70, 0.7),
+            inset 0 6px 22px rgba(52, 211, 153, 0.35),
+            0 0 80px rgba(16, 185, 129, 0.6),
+            0 0 140px rgba(16, 185, 129, 0.2);
+        }
         .te-orb-shine { position: absolute; top: 18px; left: 36px; width: 80px; height: 36px; border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.7), transparent); filter: blur(10px); opacity: 0.25; pointer-events: none; }
         .te-orb-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
         .te-orb-icon-bounce { animation: te-icon-bounce 1.6s ease-in-out infinite; }
         @keyframes te-icon-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
         .te-tap-label { font-size: 10px; font-weight: 900; letter-spacing: 0.22em; color: rgba(255,255,255,0.65); animation: te-label-pulse 2s ease-in-out infinite; }
         @keyframes te-label-pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
+        /* Orbiting stars — verbatim from full game */
+        .te-orbit-star {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          animation: te-spin 8s linear infinite;
+        }
         .hh-orb-stage-sm { position: relative; width: 135px; height: 135px; display: flex; align-items: center; justify-content: center; margin: 2px 0; }
         .hh-orb-stage-sm .te-halo { inset: -18px; }
         .hh-orb-stage-sm .te-ring-outer { inset: -22px; }
