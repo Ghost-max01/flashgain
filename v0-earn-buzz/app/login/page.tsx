@@ -72,7 +72,7 @@ export default function LoginPage() {
         url.searchParams.has("type")
 
       if (hasAuthParams) {
-        const { data, error } = await supabase.auth.getSessionFromUrl()
+        const { data, error } = await (supabase.auth as any).getSessionFromUrl?.()
         if (!error && data?.session?.user) {
           const { data: userRow, error: userError } = await supabase
             .from("users")
@@ -81,12 +81,13 @@ export default function LoginPage() {
             .single()
 
           if (!userError && userRow) {
+            const userRowAny = userRow as any
             persistUserSession(stripSensitive({
-              ...userRow,
-              userId: userRow.userId || userRow.referral_code || userRow.referralCode || userRow.id,
-              balance: Number(userRow?.balance || 0),
-              referral_balance: Number(userRow?.referral_balance || 0),
-              referral_count: Number(userRow?.referral_count || 0),
+              ...userRowAny,
+              userId: userRowAny.userId || userRowAny.referral_code || userRowAny.referralCode || userRowAny.id,
+              balance: Number(userRowAny?.balance || 0),
+              referral_balance: Number(userRowAny?.referral_balance || 0),
+              referral_count: Number(userRowAny?.referral_count || 0),
             }))
             try {
               localStorage.setItem("tivexx-just-authenticated", "1");
@@ -114,51 +115,20 @@ export default function LoginPage() {
         return;
       }
 
-      let fullUser: any = null;
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
 
-      // STEP 1: Try Supabase Auth login first
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-      if (!authError && authData?.user) {
-        // User exists in Supabase Auth → pull everything
-        const { data } = await supabase
-          .from("users")
-          .select(SAFE_USER_COLUMNS)
-          .eq("id", authData.user.id)
-          .single();
-
-        fullUser = data;
-      } else {
-        // STEP 2: Legacy fallback — check your old users table
-        const { data: localUser } = await supabase
-          .from("users")
-          .select(SAFE_USER_COLUMNS)
-          .eq("email", email)
-          .single();
-
-        const normalizedInput = password.trim().toUpperCase();
-        const normalizedReferralCode = (localUser?.referral_code || "").toUpperCase();
-        const matchesPassword = localUser?.password_hash
-          ? (await sha256Hex((localUser?.password_salt || "") + password)) === localUser.password_hash
-          : localUser?.password === password;
-        const matchesUserId = normalizedInput.length > 0 && normalizedInput === normalizedReferralCode;
-
-        if (!localUser || (!matchesPassword && !matchesUserId)) {
-          setError("Invalid email, password, or user ID");
-          setLoading(false);
-          return;
-        }
-
-        fullUser = localUser;
-
-        // REMOVED THE signUp() LINE ON PURPOSE
-        // This was giving people extra referral money on every new browser
-        // No more silent migration here → referral bonus only on real register
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error || "Invalid email, password, or user ID");
+        setLoading(false);
+        return;
       }
+
+      const fullUser = result.user;
 
       // Save the FULL user object with correct numbers
       const stableUserId = fullUser?.userId || fullUser?.referral_code || fullUser?.referralCode || fullUser?.id
