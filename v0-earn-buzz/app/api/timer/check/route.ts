@@ -84,13 +84,19 @@ export async function POST(req: NextRequest) {
       if (isExpired && !timerData.notified) {
         console.log(`[timer/check] Timer expired for user ${userId}, sending notification`)
 
-        // Send push notification
+        // Send push notification (+ inbox mirror so it shows in-app too).
+        // Dedupe key pins it to this timer expiry — the 30s poll retries
+        // without duplicating the inbox row.
         let stats: any = null
         try {
+          const endsIso = timerData?.timer_ends_at ? new Date(timerData.timer_ends_at).toISOString() : "na"
           stats = await sendNotificationToUser({
             uid: userId,
             title: "Claim Ready!",
             body: "Your timer is 00:00. Claim your ₦2,000 now.",
+            clickUrl: "/dashboard",
+            kind: "claim",
+            dedupeKey: `claim:${userId}:${endsIso}`,
           })
         } catch (notifyErr) {
           console.error("[timer/check] Error sending notification:", notifyErr)

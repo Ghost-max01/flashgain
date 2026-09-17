@@ -128,6 +128,38 @@ export default function DashboardPage() {
   const [showInbox, setShowInbox] = useState(false);
   const [inboxReady, setInboxReady] = useState<any[]>([]);
   const [inboxUnread, setInboxUnread] = useState(0);
+  // Server inbox feed (push ↔ inbox sync): pushes land here too, cross-device.
+  const [inboxFeed, setInboxFeed] = useState<any[]>([]);
+  const [inboxFeedUnread, setInboxFeedUnread] = useState(0);
+  const refreshInboxFeed = useCallback(async (uid: string) => {
+    if (!uid) return;
+    try {
+      const r = await fetch(`/api/notify/inbox?userId=${encodeURIComponent(uid)}&t=${Date.now()}`);
+      const d = await r.json().catch(() => ({} as any));
+      if (d && (d as any).success && Array.isArray((d as any).items)) {
+        setInboxFeed((d as any).items.slice(0, 50));
+        setInboxFeedUnread(Number((d as any).unread || 0));
+      }
+    } catch {}
+  }, []);
+  const markInboxRead = useCallback(async (uid: string, ids?: string[]) => {
+    if (!uid) return;
+    try {
+      await fetch("/api/notify/inbox/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ids && ids.length > 0 ? { userId: uid, ids } : { userId: uid, all: true }),
+      });
+    } catch {}
+    if (!ids || ids.length === 0) {
+      setInboxFeed((prev) => prev.map((f: any) => ({ ...f, read: true })));
+      setInboxFeedUnread(0);
+    } else {
+      const set = new Set(ids);
+      setInboxFeed((prev) => prev.map((f: any) => (set.has(String(f.id)) ? { ...f, read: true } : f)));
+      setInboxFeedUnread((prev) => Math.max(0, prev - ids.length));
+    }
+  }, []);
   useEffect(() => {
     const update = () => {
       try {
@@ -180,12 +212,32 @@ export default function DashboardPage() {
       let unread = 0;
       try { unread = Number(localStorage.getItem("tivexx-support-unread") || 0) || 0; } catch {}
       setInboxUnread(unread);
+      try {
+        const raw = localStorage.getItem("tivexx-user");
+        const u = raw ? JSON.parse(raw) : null;
+        const uid = u?.id || u?.userId || u?.user_id || "";
+        if (uid) void refreshInboxFeed(uid);
+      } catch {}
     } catch {
       setInboxReady([]);
       setInboxUnread(0);
     }
     setShowInbox(true);
   };
+  // Server inbox feed also refreshes in the background (badge stays live).
+  useEffect(() => {
+    const raw = (() => { try { return localStorage.getItem("tivexx-user"); } catch { return null; } })();
+    const u = raw ? JSON.parse(raw || "null") : null;
+    const uid = (u as any)?.id || (u as any)?.userId || (u as any)?.user_id || "";
+    if (!uid) return;
+    void refreshInboxFeed(uid);
+    const id = setInterval(() => { void refreshInboxFeed(uid); }, 30000);
+    const onReturn = () => { if (document.visibilityState === "visible") void refreshInboxFeed(uid); };
+    const onFocus = () => { void refreshInboxFeed(uid); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => { clearInterval(id); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onReturn); };
+  }, [userData, refreshInboxFeed]);
   // Live-sync round avatar when profile picture/name changes in Profile tab.
   // Also re-attach persisted picture on mount (survives reloads/cookie restores).
   useEffect(() => {
@@ -2541,12 +2593,12 @@ export default function DashboardPage() {
                 title="Messages — inbox"
               >
                 <Mail className="h-5 w-5 text-white" />
-                {mailCount > 0 && (
+                {(mailCount + inboxFeedUnread) > 0 && (
                   <span
                     className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse"
                     style={{ boxShadow: "0 0 10px rgba(220,38,38,0.9)" }}
                   >
-                    {mailCount > 9 ? "9+" : mailCount}
+                    {(mailCount + inboxFeedUnread) > 9 ? "9+" : (mailCount + inboxFeedUnread)}
                   </span>
                 )}
               </button>
@@ -2983,13 +3035,55 @@ export default function DashboardPage() {
               </div>
               <h2 className="text-xl font-black text-white tracking-tight">Messages</h2>
             </div>
-            {inboxReady.length === 0 && inboxUnread === 0 ? (
+            {inboxReady.length === 0 && inboxUnread === 0 && inboxFeed.length === 0 ? (
               <div className="text-center py-6">
                 <p className="text-sm font-bold text-white/70">Inbox is empty</p>
                 <p className="text-xs text-white/40 mt-1">No new messages yet.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-2 max-h-[50vh] overflow-y-auto">
+                {inboxFeedUnread > 0 && (
+                  <button
+                    onClick={() => {
+                      try {
+                        const raw = localStorage.getItem("tivexx-user");
+                        const u = raw ? JSON.parse(raw) : null;
+                        const uid = u?.id || u?.userId || u?.user_id || "";
+                        if (uid) void markInboxRead(uid);
+                      } catch {}
+                    }}
+                    className="w-full text-center text-[11px] font-bold text-blue-300 hover:text-blue-200 py-1"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                {inboxFeed.map((f: any) => (
+                  <button
+                    key={String(f.id)}
+                    onClick={() => {
+                      const fid = String(f.id);
+                      const url = String(f.clickUrl || "/dashboard");
+                      try {
+                        const raw = localStorage.getItem("tivexx-user");
+                        const u = raw ? JSON.parse(raw) : null;
+                        const uid = u?.id || u?.userId || u?.user_id || "";
+                        if (uid && !f.read) void markInboxRead(uid, [fid]);
+                      } catch {}
+                      setShowInbox(false);
+                      router.push(url.startsWith("/") ? url : "/dashboard");
+                    }}
+                    className={`w-full text-left rounded-2xl border p-3 ${f.read ? "border-white/10 bg-white/5" : "border-blue-500/30 bg-blue-500/10"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {!f.read && <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />}
+                      <div className="text-sm font-black text-white flex-1 min-w-0 truncate">{String(f.title || "Notification")}</div>
+                    </div>
+                    {!!f.body && <div className="text-xs text-white/55 mt-0.5 line-clamp-2">{String(f.body)}</div>}
+                    <div className="text-[10px] text-white/35 mt-1">
+                      {(() => { try { const t = new Date(Number(f.at) || 0); return Number.isFinite(t.getTime()) && Number(f.at) > 0 ? t.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""; } catch { return ""; } })()}
+                    </div>
+                  </button>
+                ))}
                 {inboxUnread > 0 && (
                   <button
                     onClick={() => { setShowInbox(false); router.push("/chats"); }}

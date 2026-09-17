@@ -140,6 +140,44 @@ export async function sendNotificationToUser(payload: NotificationSendPayload) {
   const clickUrl = payload.clickUrl || DEFAULT_CLICK_URL
   const absoluteClickUrl = buildAbsoluteClickUrl(clickUrl)
 
+  // Push ↔ inbox sync: mirror to the mail-icon inbox FIRST (best-effort, never
+  // fails the push). Users with no push subscription still see it in-app;
+  // dedupeKey makes retried crons upsert-noop instead of duplicating.
+  if (payload.kind) {
+    try {
+      const row: Record<string, unknown> = {
+        user_id: payload.uid,
+        title: title.slice(0, 200),
+        body: body.slice(0, 1000),
+        click_url: String(clickUrl).slice(0, 500),
+        kind: String(payload.kind).slice(0, 32),
+        read: false,
+      }
+      if (payload.dedupeKey) {
+        try {
+          await supabaseRest("notification_inbox?on_conflict=dedupe_key", {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+            body: JSON.stringify({ ...row, dedupe_key: String(payload.dedupeKey).slice(0, 160) }),
+          })
+        } catch {
+          // No dedupe constraint yet (migration pending) → plain insert.
+          await supabaseRest("notification_inbox", {
+            method: "POST",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify(row),
+          })
+        }
+      } else {
+        await supabaseRest("notification_inbox", {
+          method: "POST",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(row),
+        })
+      }
+    } catch {}
+  }
+
   const stats = {
     fcmAttempted: 0,
     fcmSent: 0,

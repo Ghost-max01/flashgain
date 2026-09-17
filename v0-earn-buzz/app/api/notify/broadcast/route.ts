@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       const results = await Promise.all(
         batch.map(async (uid) => {
           try {
-            const stats = await sendNotificationToUser({ uid, title, body: msgBody, clickUrl })
+            const stats = await sendNotificationToUser({ uid, title, body: msgBody, clickUrl, kind: "admin" })
             return (Number(stats?.fcmSent || 0) + Number(stats?.webpushSent || 0)) > 0
           } catch {
             return false

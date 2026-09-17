@@ -8,7 +8,7 @@
 // the rest stay pending for the next trigger. Oldest-due first.
 
 import { sendNotificationToUser } from "@/lib/notifications/server"
-import { timerMessage } from "@/lib/notifications/notify-auth"
+import { timerMessage, timerTypeKind } from "@/lib/notifications/notify-auth"
 
 export type DueTimer = {
   id: number
@@ -56,6 +56,8 @@ export async function flushDueNotifications(
               title: msg.title,
               body: msg.body,
               clickUrl: msg.clickUrl,
+              kind: timerTypeKind(timer.timer_type),
+              dedupeKey: `timer:${timer.id}`,
             })
             const sent = (stats?.fcmSent || 0) + (stats?.webpushSent || 0)
             return { rowId: timer.id, ok: sent > 0 }

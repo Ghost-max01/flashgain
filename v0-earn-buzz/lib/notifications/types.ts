@@ -28,4 +28,8 @@ export type NotificationSendPayload = {
   icon?: string
   badge?: string
   clickUrl?: string
+  /** Inbox category: claim | auto | tap_refill | admin. Set → also mirrored to the mail-icon inbox. */
+  kind?: string
+  /** Idempotency for the inbox mirror (e.g. timer:<rowId>). Retries upsert-noop. */
+  dedupeKey?: string
 }

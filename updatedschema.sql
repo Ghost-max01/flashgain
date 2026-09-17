@@ -172,7 +172,38 @@ ALTER TABLE public.spins ADD COLUMN IF NOT EXISTS created_at timestamp with time
 CREATE INDEX IF NOT EXISTS idx_spins_user ON public.spins(user_id);
 
 -- ------------------------------------------------------------
--- 8) Referral triggers (canonical versions — safe to re-apply):
+-- 8) notification_inbox (push ↔ mail-icon sync: every server push also
+--    lands here so the in-app inbox shows it cross-device with read states)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.notification_inbox (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,
+  title text NOT NULL DEFAULT '',
+  body text NOT NULL DEFAULT '',
+  click_url text NOT NULL DEFAULT '/dashboard',
+  kind text NOT NULL DEFAULT 'admin',
+  read boolean NOT NULL DEFAULT false,
+  dedupe_key text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notification_inbox_pkey PRIMARY KEY (id)
+);
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS title text;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS body text;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS click_url text;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS kind text;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS read boolean;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS dedupe_key text;
+ALTER TABLE public.notification_inbox ADD COLUMN IF NOT EXISTS created_at timestamp with time zone;
+DO $$ BEGIN
+  ALTER TABLE public.notification_inbox ADD CONSTRAINT notification_inbox_dedupe_unique UNIQUE (dedupe_key);
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'notification_inbox dedupe key skipped: %', SQLERRM;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_notification_inbox_user ON public.notification_inbox(user_id, created_at DESC);
+
+-- ------------------------------------------------------------
+-- 9) Referral triggers (canonical versions — safe to re-apply):
 --    count immediately + pay on Beginner(30); promote pendings on crossing.
 --    NOTE: no balance backfill here on purpose. The historical backfill
 --    queries from updatedatabase.sql §7 REWRITE referral balances from the
