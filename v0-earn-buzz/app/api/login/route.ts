@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createHash } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { issueNotifyToken } from "@/lib/notifications/notify-auth"
 
 function sha256Hex(input: string) {
   return createHash("sha256").update(input).digest("hex")
@@ -115,7 +116,12 @@ export async function POST(request: NextRequest) {
 
     const { password: _password, password_hash: _passwordHash, password_salt: _passwordSalt, ...safeUser } = fullUser
     console.log("[login] === SUCCESS, returning user ===")
-    return NextResponse.json({ user: safeUser })
+    // Offline-push token: lets this device prove uid ownership on
+    // /api/notifications/subscribe + /status (the app has no Supabase Auth
+    // JWT). Stored inside tivexx-user by persistUserSession automatically.
+    let notifyToken: string | null = null
+    try { notifyToken = issueNotifyToken(String((fullUser as any)?.id || "")) } catch {}
+    return NextResponse.json({ user: { ...safeUser, notifyToken } })
   } catch (error) {
     console.error("[login] === CAUGHT ERROR ===", error)
     const msg = error instanceof Error ? error.message : String(error)

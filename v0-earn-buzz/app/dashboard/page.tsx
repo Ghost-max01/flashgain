@@ -48,6 +48,8 @@ import {
   requestNotificationPermission,
   showLocalNotification,
   getSubscriptionStatus,
+  scheduleReminder,
+  pingDueNotifications,
 } from "@/services/notification-service";
 import {
   persistUserSession,
@@ -147,6 +149,26 @@ export default function DashboardPage() {
       window.removeEventListener("tivexx:update", update as EventListener);
     };
   }, []);
+  // Foreground expedite: while a session is open, flush THIS user's due
+  // server reminders now (auto finish / refill). Throttled to ~60s; the
+  // scheduled cron covers truly-offline users. Best-effort, never blocks.
+  const lastDuePing = useRef(0);
+  useEffect(() => {
+    const uid = (userData as any)?.id || (userData as any)?.userId || "";
+    if (!uid) return;
+    const ping = () => {
+      const now = Date.now();
+      if (now - lastDuePing.current < 60000) return;
+      lastDuePing.current = now;
+      void pingDueNotifications(uid).catch(() => {});
+    };
+    ping();
+    const id = setInterval(ping, 60000);
+    const onReturn = () => { if (document.visibilityState === "visible") ping(); };
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => { clearInterval(id); window.removeEventListener("focus", onReturn); document.removeEventListener("visibilitychange", onReturn); };
+  }, [userData]);
   const openInbox = () => {
     try {
       refreshPendingStatuses();
@@ -641,6 +663,7 @@ export default function DashboardPage() {
       if (left === 0) {
         setTapExhaustUntil(null);
         try { localStorage.removeItem(TAP_EXHAUST_KEY); } catch {}
+        try { localStorage.removeItem("tap_refill_scheduled_for"); } catch {}
         setTapEnergy(TAP_MAX_ENERGY);
       }
     };
@@ -669,6 +692,19 @@ export default function DashboardPage() {
       const until = Date.now() + TAP_EXHAUST_COOLDOWN_MS;
       setTapExhaustUntil(until);
       try { localStorage.setItem(TAP_EXHAUST_KEY, String(until)); } catch {}
+      // Offline push: register the refill server-side ONCE per exhaustion so
+      // the "energy refilled" notice can arrive even with the app closed.
+      try {
+        if (localStorage.getItem("tap_refill_scheduled_for") !== String(until)) {
+          const raw = localStorage.getItem("tivexx-user");
+          const u = raw ? JSON.parse(raw) : null;
+          const uid = u?.id || u?.userId || "";
+          if (uid) {
+            localStorage.setItem("tap_refill_scheduled_for", String(until));
+            void scheduleReminder({ kind: "tap_refill", userId: uid, endsAt: until }).catch(() => {});
+          }
+        }
+      } catch {}
     }
   }, [tapEnergy, tapEarned, tapExhaustUntil, resyncExhaustFromStorage]);
   // ── Trust Score engine (compounding) ──
@@ -1164,6 +1200,12 @@ export default function DashboardPage() {
     }
     setShowAutoPlans(false); setShowAutoFreePopup(false);
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
+    // Offline push: register the run server-side so the finish notice can
+    // arrive even when the app is closed (best-effort, never blocks).
+    try {
+      const uid = (userData as any)?.id || (userData as any)?.userId || "";
+      if (uid) void scheduleReminder({ kind: "auto_finish", userId: uid, planId: id, startedAt: startedFree }).catch(() => {});
+    } catch {}
   }, [autoFirstFreeUsed, toast, userData, autoPlanCooldowns]);
   const fulfillRequirement = useCallback(async () => {
     if (!reqPlan || !reqChoice) return;
@@ -1251,6 +1293,12 @@ export default function DashboardPage() {
     }
     setShowAutoReq(false); setReqPlan(null); setReqChoice(null);
     toast({ title: "Auto tap ON", description: `${plan.label} started` });
+    // Offline push: register the run server-side so the finish notice can
+    // arrive even when the app is closed (best-effort, never blocks).
+    try {
+      const uid = (userData as any)?.id || (userData as any)?.userId || "";
+      if (uid) void scheduleReminder({ kind: "auto_finish", userId: uid, planId: reqPlan, startedAt: startedPaid }).catch(() => {});
+    } catch {}
   }, [reqPlan, reqChoice, balance, userData, toast, autoPlanCooldowns]);
   const copyAutoRefLink = useCallback(()=>{
     // NOTE: ?ref= must be the REAL referral_code — fake XXXX-AUTO codes never
@@ -2457,7 +2505,7 @@ export default function DashboardPage() {
                   <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
                   <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
                   <span className="hh-tap-badge">₦{earnPerTap}/tap</span>
-                  {autoActive && <span className="hh-auto-on-badge">🔥 AUTO ON • {formatAutoLeft(autoLeftMs)} • +₦{earnPerTap}/tap</span>}
+                  {autoActive && <span className="hh-auto-on-badge">Auto +₦{earnPerTap}/tap</span>}
                 </div>
                 <span className="text-[11px] font-mono font-bold text-emerald-300 flex items-center gap-1"><Sparkles className="h-3 w-3"/> +₦{tapEarned.toLocaleString()}</span>
               </div>
@@ -2734,6 +2782,12 @@ export default function DashboardPage() {
                 <div className={`text-xs font-bold ${subscriptionStatus.hasWebpush ? "text-emerald-300" : "text-gray-400"}`}>{subscriptionStatus.hasWebpush ? "yes" : "no"}</div>
               </div>
             </div>
+          )}
+
+          {subscriptionStatus && !subscriptionStatus.hasAny && notificationPermission === "granted" && !(userData as any)?.notifyToken && (
+            <p className="mt-3 text-[11px] text-amber-300/90 text-center">
+              Offline alerts need one fresh login — log out and back in once, then tap Enable.
+            </p>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">

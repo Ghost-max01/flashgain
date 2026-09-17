@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendNotificationToUser } from "@/lib/notifications/server"
+import { timerMessage } from "@/lib/notifications/notify-auth"
 
 export const runtime = "nodejs"
 
 type ExpiredTimer = {
+  id: number
   user_id: string
+  timer_type: string | null
 }
 
 type TimerResult = {
+  rowId: number
   userId: string
   success: boolean
   attemptedCount: number
@@ -19,9 +23,23 @@ async function runCron(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
   const expectedKey = process.env.CRON_SECRET || ""
 
-  if (expectedKey) {
-    if (authHeader !== `Bearer ${expectedKey}`) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+  const hasSecret = Boolean(authHeader && expectedKey && authHeader === `Bearer ${expectedKey}`)
+
+  // Foreground expedite: a logged-in app may ping its OWN due rows without
+  // the cron secret (covers users while any session is open). With a valid
+  // secret (Vercel Cron / scheduler) all due rows are processed as before.
+  let scopeUid: string | null = null
+  if (!hasSecret) {
+    if (expectedKey) {
+      let bodyUid = ""
+      try {
+        const b = await req.json().catch(() => ({} as any))
+        bodyUid = String((b as any)?.userId || "")
+      } catch {}
+      if (!bodyUid) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      }
+      scopeUid = bodyUid
     }
   }
 
@@ -40,12 +58,14 @@ async function runCron(req: NextRequest) {
 
   try {
     const now = new Date().toISOString()
-    const { data: expiredTimers, error: fetchError } = await supabase
+    let query = supabase
       .from("user_timers")
-      .select("user_id")
+      .select("id,user_id,timer_type")
       .eq("notified", false)
       .lte("timer_ends_at", now)
       .limit(100)
+    if (scopeUid) query = query.eq("user_id", scopeUid)
+    const { data: expiredTimers, error: fetchError } = await query
 
     if (fetchError) {
       console.error("[timer/cron] Error fetching expired timers:", fetchError)
@@ -56,7 +76,7 @@ async function runCron(req: NextRequest) {
       (timer): timer is ExpiredTimer => Boolean(timer?.user_id),
     )
 
-    console.log(`[timer/cron] Found ${timers.length} expired timers`)
+    console.log(`[timer/cron] Found ${timers.length} expired timers${scopeUid ? ` (self-scope ${scopeUid})` : ""}`)
 
     if (timers.length === 0) {
       return NextResponse.json({ success: true, processed: 0, message: "No expired timers" })
@@ -64,32 +84,35 @@ async function runCron(req: NextRequest) {
 
     const processTimer = async (timer: ExpiredTimer): Promise<TimerResult> => {
       const userId = timer.user_id
+      // Per-type message: claim timers keep the long-standing Claim Ready
+      // text; auto/refill rows (from /api/notify/schedule) get their own.
+      const msg = timerMessage(timer.timer_type)
       try {
-        console.log(`[timer/cron] Sending notification to user: ${userId}`)
+        console.log(`[timer/cron] Sending ${timer.timer_type || "claim"} notification to user: ${userId}`)
 
         const stats = await sendNotificationToUser({
           uid: userId,
-          title: "⏰ Claim Ready!",
-          body: "Your timer hit 00:00. Open FlashGain 9ja to claim your ₦2,000 now!",
-          clickUrl: "/dashboard",
+          title: msg.title,
+          body: msg.body,
+          clickUrl: msg.clickUrl,
         })
 
         const sentCount = (stats?.fcmSent || 0) + (stats?.webpushSent || 0)
         const attemptedCount = (stats?.fcmAttempted || 0) + (stats?.webpushAttempted || 0)
 
         if (sentCount > 0) {
-          return { userId, success: true, attemptedCount, reason: undefined }
+          return { rowId: timer.id, userId, success: true, attemptedCount, reason: undefined }
         }
 
-        const reason = stats?.reason || "no notification delivered"
+        const reason = (stats as any)?.reason || "no notification delivered"
         console.warn(
           `[timer/cron] No push sent for user ${userId}. Keeping timer pending for retry. attempted=${attemptedCount} reason=${reason}`,
         )
 
-        return { userId, success: false, attemptedCount, reason }
+        return { rowId: timer.id, userId, success: false, attemptedCount, reason }
       } catch (error) {
         console.error(`[timer/cron] Error processing timer for user ${userId}:`, error)
-        return { userId, success: false, attemptedCount: 0, reason: String(error) }
+        return { rowId: timer.id, userId, success: false, attemptedCount: 0, reason: String(error) }
       }
     }
 
@@ -102,7 +125,9 @@ async function runCron(req: NextRequest) {
       results.push(...batchResults)
     }
 
-    const successIds = results.filter((result) => result.success).map((result) => result.userId)
+    // Mark notified PER ROW (user_id + timer_type), never blanket per user —
+    // a user can hold claim + auto + refill rows at once.
+    const successIds = results.filter((result) => result.success).map((result) => result.rowId)
     const failureCount = results.filter((result) => !result.success).length
 
     let updatedCount = 0
@@ -110,7 +135,7 @@ async function runCron(req: NextRequest) {
       const { error: updateError } = await supabase
         .from("user_timers")
         .update({ notified: true })
-        .in("user_id", successIds)
+        .in("id", successIds)
 
       if (updateError) {
         console.error("[timer/cron] Error updating notified timers:", updateError)

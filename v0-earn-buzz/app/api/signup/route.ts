@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto"
 import { createClient } from "@/lib/supabase/server"
 import { generateReferralCode } from "@/lib/utils/referral"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { issueNotifyToken } from "@/lib/notifications/notify-auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -166,7 +167,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ success: true, user: newUser })
+    // Offline-push token (see /api/login): fresh accounts can subscribe
+    // for background alerts immediately, no re-login needed.
+    let notifyToken: string | null = null
+    try { notifyToken = issueNotifyToken(String((newUser as any)?.id || userId || "")) } catch {}
+    return NextResponse.json({ success: true, user: { ...newUser, notifyToken } })
   } catch (error) {
     console.error("[v0] Signup error:", error)
     return NextResponse.json({ error: "Server error" }, { status: 500 })

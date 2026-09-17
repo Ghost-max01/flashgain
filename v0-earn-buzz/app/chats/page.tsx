@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Send, Megaphone, Headset } from "lucide-react";
 import { safeParse } from "@/lib/safe-storage";
 import { getFlashgainSupportReply, SUPPORT_GREETING } from "@/lib/flashgain-support-replies";
+import { showLocalNotification } from "@/services/notification-service";
 import { BottomNav } from "@/components/bottom-nav";
 
 interface ChatMsg {
@@ -95,7 +96,12 @@ export default function ChatsPage() {
         try { localStorage.setItem(CHAT_KEY, JSON.stringify(updated.slice(-200))); } catch {}
         return updated;
       });
-      if (document.hidden) bumpUnread();
+      if (document.hidden) {
+        bumpUnread();
+        // Tab hidden/minimized but app open: surface the reply as a system
+        // notification too (no-op unless permission was granted).
+        try { showLocalNotification("💬 Support reply", { body: reply.text.slice(0, 120), data: { url: "/chats" } as any }); } catch {}
+      }
     }, 1200);
   };
 

@@ -2,19 +2,33 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { saveNotificationSubscription } from "@/lib/notifications/server"
+import { verifyNotifyToken } from "@/lib/notifications/notify-auth"
 import type { NotificationSubscribePayload } from "@/lib/notifications/types"
+
+async function isOwner(req: NextRequest, uid: string, notifyToken?: unknown): Promise<boolean> {
+  // Primary: Supabase JWT uid match (unchanged legacy behavior).
+  try {
+    const supaAuth = await createClient();
+    const { data: { user } } = await supaAuth.auth.getUser();
+    if (user && user.id === uid) return true;
+  } catch {}
+  // Fallback: HMAC offline-push token issued at login/signup (the app has
+  // no Supabase Auth session in the browser, so JWT alone would 401 everyone).
+  try {
+    if (verifyNotifyToken(notifyToken, uid)) return true;
+  } catch {}
+  return false;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const payload = (await req.json()) as NotificationSubscribePayload
     const uid = (payload as any)?.uid ? String((payload as any).uid) : "";
     if (!uid) return NextResponse.json({ success: false, error: "Missing uid" }, { status: 400 });
-    // require JWT uid match
-    try {
-      const supaAuth = await createClient();
-      const { data: { user } } = await supaAuth.auth.getUser();
-      if (!user || user.id !== uid) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    } catch { return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 }); }
+    // require ownership: Supabase JWT match OR login-issued notify token
+    if (!(await isOwner(req, uid, (payload as any)?.notifyToken))) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
     // validate endpoint/token length
     if ((payload as any).type === "fcm") {
       const token = String((payload as any).token || "");

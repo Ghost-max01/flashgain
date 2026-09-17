@@ -35,6 +35,23 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray
 }
 
+// ─── Offline-push ownership token ──────────────────────────────────────────
+// Issued at login/signup (see /api/login) and stored inside tivexx-user.
+// The app has no Supabase Auth JWT, so subscribe/status endpoints accept
+// this HMAC token as proof of uid ownership instead.
+
+export function getNotifyToken(): string | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem("tivexx-user")
+    if (!raw) return null
+    const t = (JSON.parse(raw) as any)?.notifyToken
+    return typeof t === "string" && t.length > 0 ? t : null
+  } catch {
+    return null
+  }
+}
+
 // ─── Service Worker Registration ─────────────────────────────────────────────
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -98,7 +115,7 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     await fetch("/api/notifications/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON() }),
+      body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON(), notifyToken: getNotifyToken() }),
     })
 
     try {
@@ -111,6 +128,49 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     return true
   } catch (error) {
     console.error("[notification-service] iOS Web Push subscription failed:", error)
+    return false
+  }
+}
+
+// ─── Native Web Push for ALL platforms (VAPID, no Firebase needed) ─────────
+// Same PushManager flow as iOS, but usable on Android/desktop too. This is
+// the channel that keeps working when the app is closed or minimized:
+// pushes are delivered by the OS/browser push service to /sw.js, which shows
+// the notification even with no tab open.
+
+export async function registerNativeWebPush(uid: string): Promise<boolean> {
+  if (typeof window === "undefined") return false
+  if (!uid || uid === "anonymous") return false
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false
+    const sw = await registerServiceWorker()
+    if (!sw) return false
+    const existing = await sw.pushManager.getSubscription()
+    const subscription =
+      existing ??
+      (await sw.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(getVapidPublicKey()) as unknown as BufferSource,
+      }))
+    const res = await fetch("/api/notifications/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON(), notifyToken: getNotifyToken() }),
+    })
+    if (!res.ok) {
+      console.warn("[notification-service] Native Web Push subscribe rejected:", res.status)
+      return false
+    }
+    try {
+      localStorage.setItem("tivexx-notification-optin", "1")
+      const prev = localStorage.getItem("tivexx-notification-channel")
+      localStorage.setItem("tivexx-notification-channel", prev === "fcm" ? "fcm+webpush" : "webpush")
+      localStorage.setItem("tivexx-notification-registered-at", Date.now().toString())
+    } catch {}
+    console.log("[notification-service] Native Web Push subscription saved")
+    return true
+  } catch (error) {
+    console.error("[notification-service] Native Web Push subscription failed:", error)
     return false
   }
 }
@@ -152,7 +212,7 @@ async function registerFCMPush(uid: string): Promise<boolean> {
     await fetch("/api/notifications/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uid, type: "fcm", token }),
+      body: JSON.stringify({ uid, type: "fcm", token, notifyToken: getNotifyToken() }),
     })
 
     try {
@@ -195,10 +255,60 @@ export async function registerForFCM(uid: string): Promise<boolean> {
       return registerIOSWebPush(uid)
     }
 
-    // All other browsers — use FCM
-    return registerFCMPush(uid)
+    // All other browsers — FCM first (legacy channel), then native Web Push
+    // (VAPID) as the always-on offline channel. Either success counts.
+    let ok = false
+    try {
+      ok = (await registerFCMPush(uid)) || ok
+    } catch (error) {
+      console.error("[notification-service] FCM step failed, continuing to Web Push:", error)
+    }
+    try {
+      ok = (await registerNativeWebPush(uid)) || ok
+    } catch (error) {
+      console.error("[notification-service] Web Push step failed:", error)
+    }
+    return ok
   } catch (error) {
     console.error("[notification-service] registerForFCM error:", error)
+    return false
+  }
+}
+
+// ─── Background reminder scheduling + foreground expedite ────────────────────
+// scheduleReminder registers a server-side timer (auto finish / tap refill)
+// so /api/timer/cron can push it even when the app is closed. Best-effort:
+// failures never break the calling flow.
+// pingDueNotifications asks the cron to flush THIS user's due rows now
+// (used while a session is open; the scheduled cron covers offline users).
+
+export async function scheduleReminder(
+  input:
+    | { kind: "auto_finish"; userId: string; planId: string; startedAt: number }
+    | { kind: "tap_refill"; userId: string; endsAt: number },
+): Promise<boolean> {
+  try {
+    const res = await fetch("/api/notify/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+export async function pingDueNotifications(uid: string): Promise<boolean> {
+  if (!uid || typeof window === "undefined") return false
+  try {
+    const res = await fetch("/api/timer/cron", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: uid }),
+    })
+    return res.ok
+  } catch {
     return false
   }
 }
@@ -216,7 +326,7 @@ export async function getSubscriptionStatus(uid: string): Promise<{
     const response = await fetch("/api/notifications/status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uid }),
+      body: JSON.stringify({ uid, notifyToken: getNotifyToken() }),
     })
 
     if (!response.ok) {
