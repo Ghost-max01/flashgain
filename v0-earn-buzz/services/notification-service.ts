@@ -18,8 +18,29 @@ function getVapidPublicKey(): string {
   return k;
 }
 
+// Static public-env table. Bare `process` does NOT exist in browsers and
+// Next.js only inlines STATIC process.env.NEXT_PUBLIC_* accesses at build
+// time — dynamic (process.env as any)?.[name] reads crash client-side
+// (ReferenceError) even when the var is configured. Never read env dynamically.
+function publicEnv(name: string): string | undefined {
+  try {
+    const table: Record<string, string | undefined> = {
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    };
+    return table[name];
+  } catch {
+    return undefined;
+  }
+}
+
 function requiredEnv(name: string): string {
-  const v = (process.env as any)?.[name];
+  const v = publicEnv(name);
   if (!v) throw new Error(`Missing ${name}`);
   return v;
 }
@@ -375,7 +396,7 @@ export async function registerForFCM(uid: string): Promise<boolean> {
 // traced to its exact cause on the device itself. The marker proves which
 // build is running (stale builds show an older marker).
 
-export const PUSH_BUILD_MARKER = "push-2026-09-17e"
+export const PUSH_BUILD_MARKER = "push-2026-09-17f"
 
 export type PushDiagRow = { key: string; label: string; ok: boolean; detail: string }
 
@@ -426,18 +447,28 @@ export async function runPushDiagnostics(uid: string | null): Promise<{ marker: 
     push("token", "Login token", Boolean(tok), tok ? "present" : "MISSING — log out/in once, or unlock with password")
     // 6. Firebase config (legacy FCM channel only; native push doesn't need it)
     const fcmKeys = ["NEXT_PUBLIC_FIREBASE_API_KEY", "NEXT_PUBLIC_FIREBASE_PROJECT_ID", "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID", "NEXT_PUBLIC_FIREBASE_APP_ID"]
-    const missingFcm = fcmKeys.filter((k) => !(process.env as any)?.[k])
-    push("fcm-config", "Google (FCM) config", missingFcm.length === 0, missingFcm.length === 0 ? "present" : `missing: ${missingFcm.map((k) => k.replace("NEXT_PUBLIC_FIREBASE_", "")).join(", ")}`)
+    const missingFcm = fcmKeys.filter((k) => !publicEnv(k))
+    push("fcm-config", "Google (FCM) config", missingFcm.length === 0, missingFcm.length === 0 ? "present (legacy channel)" : `missing — legacy FCM off, native push unaffected`)
     // 7. Server-saved subscriptions
     if (!uid) {
       push("server", "Saved on server", false, "no uid (not logged in?)")
     } else {
       try {
         const st = await getSubscriptionStatus(uid)
-        push("server", "Saved on server", st.hasAny, st.hasAny ? `FCM:${st.hasFcm ? "yes" : "no"} WebPush:${st.hasWebpush ? "yes" : "no"}` : "none saved (subscribe step never landed)")
+        push("server", "Saved on server", st.hasAny, st.hasAny ? `FCM:${st.hasFcm ? "yes" : "no"} WebPush:${st.hasWebpush ? "yes" : "no"}` : "none saved (subscribe step never landed — tap Enable)")
       } catch (e: any) {
         push("server", "Saved on server", false, String(e?.message || e || "status check failed").slice(0, 80))
       }
+    }
+    // 8. Server push config (private key + subject live in server env only —
+    // without them EVERY send throws, even with a perfect device setup).
+    try {
+      const r = await fetch("/api/notify/env-check", { cache: "no-store" })
+      const j = await r.json().catch(() => ({} as any))
+      const vapidOk = (j as any)?.vapid === true
+      push("server-env", "Server can send", vapidOk, vapidOk ? "VAPID sender configured" : "VAPID PRIVATE KEY / SUBJECT missing on server — no push can go out")
+    } catch {
+      push("server-env", "Server can send", false, "env check unreachable")
     }
   } catch (e: any) {
     push("fatal", "Diagnostics", false, String(e?.message || e || "failed").slice(0, 80))
