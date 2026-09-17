@@ -51,9 +51,31 @@ with header `Authorization: Bearer <CRON_SECRET>` — same endpoint, same routin
 
 ## 3. Database
 
-Required tables (already used in production — verify with the admin-gated
-`GET /api/notifications/diagnostics`):
-`notification_fcm_tokens`, `notification_webpush_subscriptions`, `user_timers`.
+Required tables (verify with the admin-gated
+`GET /api/notifications/diagnostics`): `notification_fcm_tokens`,
+`notification_webpush_subscriptions`, `user_timers`. **If the two
+notification tables were never created, every subscribe returns 500 and no
+device can ever receive pushes — run this once in Supabase SQL editor:**
+
+```sql
+CREATE TABLE IF NOT EXISTS public.notification_fcm_tokens (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  token text NOT NULL UNIQUE,
+  created_at timestamptz DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public.notification_webpush_subscriptions (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  endpoint text NOT NULL UNIQUE,
+  p256dh_key text,
+  auth_key text,
+  expiration_time bigint,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_notif_fcm_user ON public.notification_fcm_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_notif_webpush_user ON public.notification_webpush_subscriptions(user_id);
+```
 
 If `user_timers` predates the type column, run once in Supabase SQL editor:
 

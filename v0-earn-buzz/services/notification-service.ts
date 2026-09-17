@@ -133,6 +133,26 @@ function classifyError(err: unknown): string {
   return "register-failed"
 }
 
+// Reads the server's rejection body (it names the real cause, e.g. a
+// missing table) so failures surface it instead of a bare status code.
+async function subscribeRejection(res: Response, hasToken: boolean): Promise<string> {
+  let body = ""
+  try {
+    const txt = await res.text()
+    body = String(txt || "").replace(/\s+/g, " ").slice(0, 120)
+  } catch {}
+  let detail = ""
+  try {
+    const j = JSON.parse(body)
+    detail = String((j as any)?.error || "")
+  } catch {
+    detail = body
+  }
+  detail = detail.slice(0, 100)
+  if (res.status === 401 && !hasToken) return "no-token"
+  return `subscribe-rejected:${res.status}${detail ? `:${detail}` : ""}`
+}
+
 // ─── Service Worker Registration ─────────────────────────────────────────────
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -203,7 +223,7 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     })
     if (!res.ok) {
       // 401 almost always = session predates the offline-push token.
-      setPushError(res.status === 401 && !getNotifyToken() ? "no-token" : `subscribe-rejected:${res.status}`)
+      setPushError(await subscribeRejection(res, Boolean(getNotifyToken())))
       console.warn("[notification-service] iOS Web Push subscribe rejected:", res.status)
       return false
     }
@@ -256,7 +276,7 @@ export async function registerNativeWebPush(uid: string): Promise<boolean> {
       body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON(), notifyToken: getNotifyToken() }),
     })
     if (!res.ok) {
-      setPushError(res.status === 401 && !getNotifyToken() ? "no-token" : `subscribe-rejected:${res.status}`)
+      setPushError(await subscribeRejection(res, Boolean(getNotifyToken())))
       console.warn("[notification-service] Native Web Push subscribe rejected:", res.status)
       return false
     }
@@ -322,7 +342,7 @@ async function registerFCMPush(uid: string): Promise<boolean> {
       body: JSON.stringify({ uid, type: "fcm", token, notifyToken: getNotifyToken() }),
     })
     if (!res.ok) {
-      setPushError(res.status === 401 && !getNotifyToken() ? "no-token" : `subscribe-rejected:${res.status}`)
+      setPushError(await subscribeRejection(res, Boolean(getNotifyToken())))
       console.warn("[notification-service] FCM subscribe rejected:", res.status)
       return false
     }

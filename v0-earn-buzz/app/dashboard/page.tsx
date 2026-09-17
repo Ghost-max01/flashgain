@@ -1649,7 +1649,7 @@ export default function DashboardPage() {
                     : reason === "push-unsupported"
                       ? "This browser doesn't support push notifications."
                       : reason.startsWith("subscribe-rejected")
-                        ? `Server rejected the subscription (${reason.split(":")[1] || "error"}). Log out and back in, then retry.`
+                        ? `Server rejected the subscription (${reason.split(":").slice(1).join(":") || "error"}). Screenshot this and report it.`
                         : "Subscription failed. Tap Check status, or log out and back in and retry.";
           toast({ title: "Couldn't enable notifications", description: friendly, variant: "destructive" });
         }
