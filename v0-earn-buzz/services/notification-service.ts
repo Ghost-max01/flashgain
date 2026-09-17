@@ -52,6 +52,44 @@ export function getNotifyToken(): string | null {
   }
 }
 
+// ─── One-time token mint for pre-token sessions ────────────────────────────
+// Sessions created before token issuance (and fresh devices) have no
+// notifyToken, so subscribe/status get 401. This verifies the account
+// password ONCE server-side and merges the issued token into tivexx-user
+// (persisted automatically) — no logout/login needed.
+export async function mintNotifyToken(uid: string, password: string): Promise<boolean> {
+  if (typeof window === "undefined") return false
+  if (!uid || !password) return false
+  try {
+    const res = await fetch("/api/notify/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: uid, password }),
+    })
+    const j = await res.json().catch(() => ({} as any))
+    const token = typeof j?.notifyToken === "string" && j.notifyToken ? j.notifyToken : null
+    if (!res.ok || !j?.success || !token) {
+      setPushError(res.status === 429 ? "token-rate-limited" : "token-rejected")
+      return false
+    }
+    try {
+      const raw = localStorage.getItem("tivexx-user")
+      const u = raw ? JSON.parse(raw) : {}
+      u.notifyToken = token
+      const { persistUserSession } = await import("@/lib/session-client")
+      persistUserSession(u)
+    } catch {
+      return false
+    }
+    setPushError(null)
+    return true
+  } catch (error) {
+    console.error("[notification-service] mintNotifyToken failed:", error)
+    setPushError("register-failed")
+    return false
+  }
+}
+
 // ─── Last-error surfacing (failures were silent before) ─────────────────────
 // Every registration step records WHY it failed here so the dashboard can
 // show an actionable message instead of a dead "fcm no / webpush no" card.

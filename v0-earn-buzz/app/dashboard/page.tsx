@@ -351,6 +351,10 @@ export default function DashboardPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<{ hasAny: boolean; hasFcm: boolean; hasWebpush: boolean } | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  // One-time offline-alerts unlock for pre-token sessions (password confirm).
+  const [confirmPw, setConfirmPw] = useState("");
+  const [mintingToken, setMintingToken] = useState(false);
+  const [mintMsg, setMintMsg] = useState("");
 
   const notifyClaimReady = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -1656,6 +1660,39 @@ export default function DashboardPage() {
     }
   }, [userData, toast]);
 
+  const handleMintNotifyToken = useCallback(async () => {
+    if (!userData || mintingToken) return;
+    const uid = (userData as any)?.id || (userData as any)?.userId || "";
+    if (!uid || !confirmPw) {
+      setMintMsg("Enter your account password first.");
+      return;
+    }
+    setMintingToken(true);
+    setMintMsg("");
+    try {
+      const { mintNotifyToken } = await import("@/services/notification-service");
+      const minted = await mintNotifyToken(uid, confirmPw);
+      if (!minted) {
+        setMintMsg("Password didn't match — try again, or log out and back in.");
+        return;
+      }
+      // Merge the fresh token into live state (persisted to storage already).
+      setUserData((prev: any) => {
+        if (!prev) return prev;
+        try {
+          const raw = localStorage.getItem("tivexx-user");
+          const stored = raw ? JSON.parse(raw) : {};
+          return { ...prev, notifyToken: (stored as any)?.notifyToken || (prev as any)?.notifyToken };
+        } catch { return prev; }
+      });
+      setConfirmPw("");
+      setMintMsg("Unlocked ✓ — tap Enable below to finish.");
+      toast({ title: "Offline alerts unlocked", description: "Now tap Enable to subscribe this device." });
+    } finally {
+      setMintingToken(false);
+    }
+  }, [userData, confirmPw, mintingToken, toast]);
+
   const handleCheckNotificationStatus = useCallback(async () => {
     if (!userData) return;
     const uid = (userData as any).id || userData.userId;
@@ -2808,9 +2845,30 @@ export default function DashboardPage() {
           )}
 
           {subscriptionStatus && !subscriptionStatus.hasAny && notificationPermission === "granted" && !(userData as any)?.notifyToken && (
-            <p className="mt-3 text-[11px] text-amber-300/90 text-center">
-              Offline alerts need one fresh login — log out and back in once, then tap Enable.
-            </p>
+            <div className="mt-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3">
+              <p className="text-[11px] font-bold text-amber-200 text-center">
+                Your session predates offline alerts — confirm your password once to unlock them here (no logout needed).
+              </p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="password"
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  placeholder="Account password"
+                  autoComplete="current-password"
+                  className="flex-1 min-w-0 rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm font-bold text-white placeholder:text-white/30 outline-none"
+                />
+                <button
+                  onClick={handleMintNotifyToken}
+                  disabled={mintingToken || !confirmPw}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black disabled:opacity-50 shrink-0"
+                >
+                  {mintingToken ? "Checking…" : "Unlock"}
+                </button>
+              </div>
+              {mintMsg && <p className="mt-2 text-[11px] text-center text-white/70">{mintMsg}</p>}
+              <p className="mt-1.5 text-[10px] text-center text-white/40">Or log out and back in once, then tap Enable.</p>
+            </div>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">

@@ -155,6 +155,9 @@ export default function RegisterPage() {
         hasMomoNumber: false,
         level: "Basic",
         referralCode: data.user.referral_code,
+        // Offline-push token (server-issued) — must be kept or background
+        // alerts can never subscribe. stripSensitive below preserves it.
+        notifyToken: (data.user as any)?.notifyToken || null,
       };
       // Never persist password material in the client session
       const { password: _pw, password_hash: _ph, password_salt: _ps, ...safeUserData } = userData as Record<string, any>;
