@@ -163,7 +163,10 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
   console.log("[notification-service] iOS standalone detected — attempting native Web Push")
 
   const sw = await registerServiceWorker()
-  if (!sw) return false
+  if (!sw) {
+    setPushError("no-sw")
+    return false
+  }
 
   try {
     const existing = await sw.pushManager.getSubscription()
@@ -258,7 +261,10 @@ async function registerFCMPush(uid: string): Promise<boolean> {
   console.log("[notification-service] Non-iOS browser — attempting FCM registration")
 
   const sw = await getFirebaseMessagingSW()
-  if (!sw) return false
+  if (!sw) {
+    setPushError("no-sw")
+    return false
+  }
 
   try {
     const { initializeApp, getApps } = await import("firebase/app")
@@ -364,6 +370,80 @@ export async function registerForFCM(uid: string): Promise<boolean> {
   }
 }
 
+// ─── In-app diagnostics (read-only — changes nothing) ────────────────────────
+// Exposes every pipeline stage so a dead "fcm no / webpush no" card can be
+// traced to its exact cause on the device itself. The marker proves which
+// build is running (stale builds show an older marker).
+
+export const PUSH_BUILD_MARKER = "push-2026-09-17e"
+
+export type PushDiagRow = { key: string; label: string; ok: boolean; detail: string }
+
+export async function runPushDiagnostics(uid: string | null): Promise<{ marker: string; rows: PushDiagRow[] }> {
+  const rows: PushDiagRow[] = []
+  const push = (key: string, label: string, ok: boolean, detail: string) => rows.push({ key, label, ok, detail })
+  try {
+    if (typeof window === "undefined") {
+      push("env", "Browser", false, "no window")
+      return { marker: PUSH_BUILD_MARKER, rows }
+    }
+    // 1. Permission (reads state only — never prompts here)
+    const perm = "Notification" in window ? Notification.permission : "unsupported";
+    push("permission", "Phone permission", perm === "granted", perm === "unsupported" ? "no Notification API" : perm)
+    // 2. Service worker
+    if (!("serviceWorker" in navigator)) {
+      push("sw", "Service worker", false, "not supported")
+    } else {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration("/")
+        const active = Boolean(reg?.active)
+        push("sw", "Service worker", Boolean(reg) && active, reg ? (active ? "registered + active" : "registered, not active yet") : "NOT registered (/sw.js missing?)")
+      } catch (e: any) {
+        push("sw", "Service worker", false, String(e?.message || e || "error").slice(0, 80))
+      }
+    }
+    // 3. PushManager + existing subscription (read-only)
+    if (!("PushManager" in window)) {
+      push("pushmanager", "Push manager", false, "not supported on this browser")
+    } else {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration("/")
+        const sub = await reg?.pushManager.getSubscription().catch(() => null)
+        push("pushmanager", "Push manager", true, sub ? "device already has a push subscription" : "available, no device subscription yet")
+      } catch (e: any) {
+        push("pushmanager", "Push manager", false, String(e?.message || e || "error").slice(0, 80))
+      }
+    }
+    // 4. VAPID public key (client env)
+    try {
+      const k = getVapidPublicKey()
+      push("vapid", "VAPID key (server config)", k.length > 20, k.length > 20 ? "present" : "present but looks short")
+    } catch {
+      push("vapid", "VAPID key (server config)", false, "NEXT_PUBLIC_VAPID_PUBLIC_KEY missing")
+    }
+    // 5. Ownership token (proves this login can save subscriptions)
+    const tok = getNotifyToken()
+    push("token", "Login token", Boolean(tok), tok ? "present" : "MISSING — log out/in once, or unlock with password")
+    // 6. Firebase config (legacy FCM channel only; native push doesn't need it)
+    const fcmKeys = ["NEXT_PUBLIC_FIREBASE_API_KEY", "NEXT_PUBLIC_FIREBASE_PROJECT_ID", "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID", "NEXT_PUBLIC_FIREBASE_APP_ID"]
+    const missingFcm = fcmKeys.filter((k) => !(process.env as any)?.[k])
+    push("fcm-config", "Google (FCM) config", missingFcm.length === 0, missingFcm.length === 0 ? "present" : `missing: ${missingFcm.map((k) => k.replace("NEXT_PUBLIC_FIREBASE_", "")).join(", ")}`)
+    // 7. Server-saved subscriptions
+    if (!uid) {
+      push("server", "Saved on server", false, "no uid (not logged in?)")
+    } else {
+      try {
+        const st = await getSubscriptionStatus(uid)
+        push("server", "Saved on server", st.hasAny, st.hasAny ? `FCM:${st.hasFcm ? "yes" : "no"} WebPush:${st.hasWebpush ? "yes" : "no"}` : "none saved (subscribe step never landed)")
+      } catch (e: any) {
+        push("server", "Saved on server", false, String(e?.message || e || "status check failed").slice(0, 80))
+      }
+    }
+  } catch (e: any) {
+    push("fatal", "Diagnostics", false, String(e?.message || e || "failed").slice(0, 80))
+  }
+  return { marker: PUSH_BUILD_MARKER, rows }
+}
 // ─── Background reminder scheduling + foreground expedite ────────────────────
 // scheduleReminder registers a server-side timer (auto finish / tap refill)
 // so /api/timer/cron can push it even when the app is closed. Best-effort:

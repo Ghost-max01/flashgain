@@ -50,6 +50,7 @@ import {
   getSubscriptionStatus,
   getLastPushError,
   mintNotifyToken,
+  runPushDiagnostics,
   scheduleReminder,
   pingDueNotifications,
 } from "@/services/notification-service";
@@ -356,6 +357,9 @@ export default function DashboardPage() {
   const [confirmPw, setConfirmPw] = useState("");
   const [mintingToken, setMintingToken] = useState(false);
   const [mintMsg, setMintMsg] = useState("");
+  // In-app push diagnostics (read-only checklist).
+  const [diag, setDiag] = useState<{ marker: string; rows: { key: string; label: string; ok: boolean; detail: string }[] } | null>(null);
+  const [diagnosing, setDiagnosing] = useState(false);
 
   const notifyClaimReady = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -1700,8 +1704,20 @@ export default function DashboardPage() {
     }
   }, [userData, confirmPw, mintingToken, toast]);
 
-  const handleCheckNotificationStatus = useCallback(async () => {
-    if (!userData) return;
+  const handleRunDiagnostics = useCallback(async () => {
+    if (!userData || diagnosing) return;
+    const uid = (userData as any)?.id || (userData as any)?.userId || "";
+    setDiagnosing(true);
+    try {
+      setDiag(await runPushDiagnostics(uid || null));
+    } catch (e) {
+      console.error("[dashboard] diagnostics failed", e);
+    } finally {
+      setDiagnosing(false);
+    }
+  }, [userData, diagnosing]);
+
+  const handleCheckNotificationStatus = useCallback(async () => {    if (!userData) return;
     const uid = (userData as any).id || userData.userId;
     if (!uid) return;
     setIsCheckingStatus(true);
@@ -2851,7 +2867,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {subscriptionStatus && !subscriptionStatus.hasAny && notificationPermission === "granted" && !(userData as any)?.notifyToken && (
+          {notificationPermission === "granted" && !(userData as any)?.notifyToken && (!subscriptionStatus || !subscriptionStatus.hasAny) && (
             <div className="mt-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3">
               <p className="text-[11px] font-bold text-amber-200 text-center">
                 Your session predates offline alerts — confirm your password once to unlock them here (no logout needed).
@@ -2895,6 +2911,33 @@ export default function DashboardPage() {
               {isCheckingStatus ? "Checking…" : "Check status"}
             </Button>
           </div>
+          <Button
+            variant="outline"
+            onClick={handleRunDiagnostics}
+            disabled={diagnosing}
+            className="w-full mt-2 rounded-full border-white/15 text-white hover:bg-white/10 bg-transparent text-xs"
+          >
+            {diagnosing ? "Diagnosing…" : "Diagnose push pipeline"}
+          </Button>
+          {diag && (
+            <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-white">Push checklist</span>
+                <span className="text-[10px] font-mono text-white/40">{diag.marker}</span>
+              </div>
+              <div className="space-y-1.5">
+                {diag.rows.map((r) => (
+                  <div key={r.key} className="flex items-start gap-2">
+                    <span className={`mt-0.5 text-sm leading-none ${r.ok ? "text-emerald-300" : "text-red-400"}`}>{r.ok ? "✓" : "✗"}</span>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold text-white">{r.label}</div>
+                      <div className="text-[10px] text-white/50 break-words">{r.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="mt-2 text-[11px] text-gray-500 text-center">Only visible after you log in or sign up. Guests don&apos;t see this.</p>
         </div>
 
