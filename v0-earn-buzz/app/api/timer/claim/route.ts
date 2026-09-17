@@ -22,7 +22,20 @@ export async function POST(req: NextRequest) {
     if (!supabase) return NextResponse.json({ success: false, error: "Server not configured" }, { status: 500 })
 
     const now = Date.now()
-    const { data: timerRow } = await supabase.from("user_timers").select("*").eq("user_id", userId).maybeSingle()
+    // Claim row only: the table also holds push-reminder rows (auto_*, tap_refill)
+    // which must never be read or overwritten here. Fall back to legacy
+    // user_id-only lookup when the timer_type migration hasn't been applied.
+    let timerRow: any = null
+    try {
+      const scoped = await supabase.from("user_timers").select("*").eq("user_id", userId).or("timer_type.is.null,timer_type.eq.claim").maybeSingle()
+      timerRow = scoped.data || null
+      if (scoped.error) throw scoped.error
+    } catch {
+      try {
+        const legacy = await supabase.from("user_timers").select("*").eq("user_id", userId).maybeSingle()
+        timerRow = (legacy as any)?.data || null
+      } catch {}
+    }
 
     // Pause enforcement: claim_count>=50 and pause_until in future
     const pauseUntil = timerRow?.pause_until ? new Date(timerRow.pause_until).getTime() : 0
@@ -49,17 +62,35 @@ export async function POST(req: NextRequest) {
 
     if (newCount >= 50) {
       const pause = new Date(now + 5 * 60 * 60 * 1000).toISOString()
-      await supabase.from("user_timers").upsert(
-        { user_id: userId, timer_ends_at: new Date(now + 5 * 60 * 60 * 1000).toISOString(), claim_count: 0, pause_until: pause, notified: false },
-        { onConflict: "user_id" },
-      )
+      // Composite upsert (per-type rows); fall back to legacy user_id-only
+      // when the migration hasn't been applied yet.
+      try {
+        const r = await supabase.from("user_timers").upsert(
+          { user_id: userId, timer_type: "claim", timer_ends_at: new Date(now + 5 * 60 * 60 * 1000).toISOString(), claim_count: 0, pause_until: pause, notified: false },
+          { onConflict: "user_id,timer_type" },
+        )
+        if ((r as any)?.error) throw (r as any).error
+      } catch {
+        await supabase.from("user_timers").upsert(
+          { user_id: userId, timer_ends_at: new Date(now + 5 * 60 * 60 * 1000).toISOString(), claim_count: 0, pause_until: pause, notified: false },
+          { onConflict: "user_id" },
+        )
+      }
       return NextResponse.json({ success: true, newBalance, claimCount: 0, paused: true, pauseUntil: pause })
     }
 
-    await supabase.from("user_timers").upsert(
-      { user_id: userId, timer_ends_at: new Date(now + 60 * 1000).toISOString(), claim_count: newCount, pause_until: null, notified: false },
-      { onConflict: "user_id" },
-    )
+    try {
+      const r = await supabase.from("user_timers").upsert(
+        { user_id: userId, timer_type: "claim", timer_ends_at: new Date(now + 60 * 1000).toISOString(), claim_count: newCount, pause_until: null, notified: false },
+        { onConflict: "user_id,timer_type" },
+      )
+      if ((r as any)?.error) throw (r as any).error
+    } catch {
+      await supabase.from("user_timers").upsert(
+        { user_id: userId, timer_ends_at: new Date(now + 60 * 1000).toISOString(), claim_count: newCount, pause_until: null, notified: false },
+        { onConflict: "user_id" },
+      )
+    }
     return NextResponse.json({ success: true, newBalance, claimCount: newCount })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: String(e?.message || e) }, { status: 500 })

@@ -37,19 +37,35 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // Get user's active timer
-      const { data: timerData, error: timerError } = await supabase
-        .from("user_timers")
-        .select("*")
-        .eq("user_id", userId)
-        .single()
-
-      if (timerError && timerError.code !== "PGRST116") {
-        console.error("[timer/check] Error fetching timer:", timerError)
-        return NextResponse.json(
-          { success: false, timerReady: false },
-          { status: 200 },
-        )
+      // Claim row only: the table also holds push-reminder rows (auto_*,
+      // tap_refill) which belong to /api/timer/cron, not here. Fall back to
+      // legacy user_id-only lookup when the migration hasn't been applied.
+      let timerData: any = null
+      try {
+        const scoped = await supabase
+          .from("user_timers")
+          .select("*")
+          .eq("user_id", userId)
+          .or("timer_type.is.null,timer_type.eq.claim")
+          .maybeSingle()
+        if (scoped.error && (scoped.error as any)?.code !== "PGRST116") throw scoped.error
+        timerData = scoped.data || null
+      } catch (e: any) {
+        // Legacy single-row table (or unexpected shape): best-effort fallback.
+        try {
+          const legacy = await supabase
+            .from("user_timers")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle()
+          timerData = (legacy as any)?.data || null
+        } catch {
+          console.error("[timer/check] Error fetching timer:", (e as any)?.message || e)
+          return NextResponse.json(
+            { success: false, timerReady: false },
+            { status: 200 },
+          )
+        }
       }
 
       if (!timerData) {
@@ -84,10 +100,19 @@ export async function POST(req: NextRequest) {
 
         if (sentCount > 0) {
           try {
-            await supabase
-              .from("user_timers")
-              .update({ notified: true })
-              .eq("user_id", userId)
+            // Scope to THIS claim row only — never blanket-mark the user's
+            // auto/refill reminder rows (those belong to /api/timer/cron).
+            if ((timerData as any)?.id !== undefined && (timerData as any)?.id !== null) {
+              await supabase
+                .from("user_timers")
+                .update({ notified: true })
+                .eq("id", (timerData as any).id)
+            } else {
+              await supabase
+                .from("user_timers")
+                .update({ notified: true })
+                .eq("user_id", userId)
+            }
           } catch (updateErr) {
             console.error("[timer/check] Error marking notified:", updateErr)
           }

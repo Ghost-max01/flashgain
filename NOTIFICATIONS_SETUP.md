@@ -77,13 +77,13 @@ CREATE INDEX IF NOT EXISTS idx_notif_fcm_user ON public.notification_fcm_tokens(
 CREATE INDEX IF NOT EXISTS idx_notif_webpush_user ON public.notification_webpush_subscriptions(user_id);
 ```
 
-If `user_timers` predates the type column, run once in Supabase SQL editor:
+If `user_timers` predates the type column (or any table below is missing),
+run `flashgain/updatedschema.sql` in the Supabase SQL editor — it is the
+single idempotent remnants file (safe to re-run) and covers this plus
+`claim_count`/`pause_until`:
 
 ```sql
-ALTER TABLE public.user_timers ADD COLUMN IF NOT EXISTS timer_type text DEFAULT 'claim';
-ALTER TABLE public.user_timers ADD COLUMN IF NOT EXISTS notified boolean DEFAULT false;
-ALTER TABLE public.user_timers ADD COLUMN IF NOT EXISTS timer_duration integer DEFAULT 60;
-CREATE INDEX IF NOT EXISTS idx_user_timers_due ON public.user_timers(notified, timer_ends_at);
+-- (see updatedschema.sql §1 — paste the whole file, not just this)
 ```
 
 No unique constraint is required — the scheduler uses delete+insert and
