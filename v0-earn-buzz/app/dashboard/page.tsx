@@ -48,6 +48,7 @@ import {
   requestNotificationPermission,
   showLocalNotification,
   getSubscriptionStatus,
+  getLastPushError,
   scheduleReminder,
   pingDueNotifications,
 } from "@/services/notification-service";
@@ -1622,7 +1623,27 @@ export default function DashboardPage() {
       } else {
         const perm = typeof Notification !== "undefined" ? (Notification.permission as NotificationPermission) : "denied";
         setNotificationPermission(perm);
-        if (perm === "denied") toast({ title: "Notifications blocked", description: "Please enable in browser settings." });
+        if (perm === "denied") {
+          toast({ title: "Notifications blocked", description: "Please enable in browser settings." });
+        } else {
+          // Registration failed AFTER permission — say exactly why.
+          const reason = getLastPushError() || "";
+          const friendly =
+            reason === "no-token"
+              ? "Your session predates offline alerts. Log out and back in once, then tap Enable."
+              : reason === "missing-vapid-key"
+                ? "Push service isn't configured on the server yet (VAPID key missing)."
+                : reason === "missing-firebase-config"
+                  ? "Google push isn't configured; native push also failed — try again."
+                  : reason === "ios-needs-install"
+                    ? "On iPhone, add the app to your Home Screen first (Share → Add to Home Screen)."
+                    : reason === "push-unsupported"
+                      ? "This browser doesn't support push notifications."
+                      : reason.startsWith("subscribe-rejected")
+                        ? `Server rejected the subscription (${reason.split(":")[1] || "error"}). Log out and back in, then retry.`
+                        : "Subscription failed. Tap Check status, or log out and back in and retry.";
+          toast({ title: "Couldn't enable notifications", description: friendly, variant: "destructive" });
+        }
       }
     } catch (e) {
       console.error("[dashboard] enable notifications failed", e);
@@ -1648,7 +1669,9 @@ export default function DashboardPage() {
         title: status.hasAny ? "Notifications active" : "No subscription found",
         description: status.hasAny
           ? `FCM: ${status.hasFcm ? "yes" : "no"} • WebPush: ${status.hasWebpush ? "yes" : "no"}`
-          : "Tap Enable to subscribe.",
+          : (userData as any)?.notifyToken
+            ? "Tap Enable to subscribe."
+            : "Tap Enable to subscribe. If it fails: log out and back in once first (old session).",
       });
     } catch (e) {
       console.error("[dashboard] check status failed", e);

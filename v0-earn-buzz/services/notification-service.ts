@@ -52,6 +52,28 @@ export function getNotifyToken(): string | null {
   }
 }
 
+// ─── Last-error surfacing (failures were silent before) ─────────────────────
+// Every registration step records WHY it failed here so the dashboard can
+// show an actionable message instead of a dead "fcm no / webpush no" card.
+let lastPushError: string | null = null
+
+export function getLastPushError(): string | null {
+  return lastPushError
+}
+
+function setPushError(reason: string | null) {
+  lastPushError = reason
+}
+
+function classifyError(err: unknown): string {
+  const msg = String((err as any)?.message || err || "")
+  if (/NEXT_PUBLIC_VAPID_PUBLIC_KEY/i.test(msg)) return "missing-vapid-key"
+  if (/NEXT_PUBLIC_FIREBASE_/i.test(msg)) return "missing-firebase-config"
+  if (/permission|denied|not allowed/i.test(msg)) return "permission-denied"
+  if (/pushmanager|push service|not supported/i.test(msg)) return "push-unsupported"
+  return "register-failed"
+}
+
 // ─── Service Worker Registration ─────────────────────────────────────────────
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -112,11 +134,17 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
       applicationServerKey: urlBase64ToUint8Array(getVapidPublicKey()) as unknown as BufferSource,
     })
 
-    await fetch("/api/notifications/subscribe", {
+    const res = await fetch("/api/notifications/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON(), notifyToken: getNotifyToken() }),
     })
+    if (!res.ok) {
+      // 401 almost always = session predates the offline-push token.
+      setPushError(res.status === 401 && !getNotifyToken() ? "no-token" : `subscribe-rejected:${res.status}`)
+      console.warn("[notification-service] iOS Web Push subscribe rejected:", res.status)
+      return false
+    }
 
     try {
       localStorage.setItem("tivexx-notification-optin", "1")
@@ -125,8 +153,10 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     } catch {}
 
     console.log("[notification-service] iOS Web Push subscription saved")
+    setPushError(null)
     return true
   } catch (error) {
+    setPushError(classifyError(error))
     console.error("[notification-service] iOS Web Push subscription failed:", error)
     return false
   }
@@ -142,9 +172,15 @@ export async function registerNativeWebPush(uid: string): Promise<boolean> {
   if (typeof window === "undefined") return false
   if (!uid || uid === "anonymous") return false
   try {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushError("push-unsupported")
+      return false
+    }
     const sw = await registerServiceWorker()
-    if (!sw) return false
+    if (!sw) {
+      setPushError("no-sw")
+      return false
+    }
     const existing = await sw.pushManager.getSubscription()
     const subscription =
       existing ??
@@ -158,6 +194,7 @@ export async function registerNativeWebPush(uid: string): Promise<boolean> {
       body: JSON.stringify({ uid, type: "webpush", subscription: subscription.toJSON(), notifyToken: getNotifyToken() }),
     })
     if (!res.ok) {
+      setPushError(res.status === 401 && !getNotifyToken() ? "no-token" : `subscribe-rejected:${res.status}`)
       console.warn("[notification-service] Native Web Push subscribe rejected:", res.status)
       return false
     }
@@ -168,8 +205,10 @@ export async function registerNativeWebPush(uid: string): Promise<boolean> {
       localStorage.setItem("tivexx-notification-registered-at", Date.now().toString())
     } catch {}
     console.log("[notification-service] Native Web Push subscription saved")
+    setPushError(null)
     return true
   } catch (error) {
+    setPushError(classifyError(error))
     console.error("[notification-service] Native Web Push subscription failed:", error)
     return false
   }
@@ -206,14 +245,22 @@ async function registerFCMPush(uid: string): Promise<boolean> {
 
     if (!token) {
       console.warn("[notification-service] FCM returned empty token")
+      setPushError("fcm-token-failed")
       return false
     }
 
-    await fetch("/api/notifications/subscribe", {
+    // NOTE: the server rejects without uid ownership (401) — verify, or the
+    // app reports "enabled" while nothing was saved (silent dead channel).
+    const res = await fetch("/api/notifications/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uid, type: "fcm", token, notifyToken: getNotifyToken() }),
     })
+    if (!res.ok) {
+      setPushError(res.status === 401 && !getNotifyToken() ? "no-token" : `subscribe-rejected:${res.status}`)
+      console.warn("[notification-service] FCM subscribe rejected:", res.status)
+      return false
+    }
 
     try {
       localStorage.setItem("tivexx-notification-optin", "1")
@@ -223,8 +270,10 @@ async function registerFCMPush(uid: string): Promise<boolean> {
     } catch {}
 
     console.log("[notification-service] FCM token saved")
+    setPushError(null)
     return true
   } catch (error) {
+    setPushError(classifyError(error))
     console.error("[notification-service] FCM registration failed:", error)
     return false
   }
@@ -241,6 +290,7 @@ export async function registerForFCM(uid: string): Promise<boolean> {
   try {
     const permission = await requestNotificationPermission()
     if (permission !== "granted") {
+      setPushError("permission-denied")
       console.warn("[notification-service] Notification permission not granted")
       return false
     }
@@ -249,6 +299,7 @@ export async function registerForFCM(uid: string): Promise<boolean> {
     if (isIOS()) {
       if (!isStandalone()) {
         // iOS Safari tab — Web Push requires standalone (Add to Home Screen)
+        setPushError("ios-needs-install")
         console.warn("[notification-service] iOS Safari tab mode — Web Push requires standalone install")
         return false
       }
