@@ -235,7 +235,7 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     } catch {}
 
     console.log("[notification-service] iOS Web Push subscription saved")
-    setPushError(null)
+    setPushError("saved-ok:webpush")
     return true
   } catch (error) {
     setPushError(classifyError(error))
@@ -287,7 +287,7 @@ export async function registerNativeWebPush(uid: string): Promise<boolean> {
       localStorage.setItem("tivexx-notification-registered-at", Date.now().toString())
     } catch {}
     console.log("[notification-service] Native Web Push subscription saved")
-    setPushError(null)
+    setPushError("saved-ok:webpush")
     return true
   } catch (error) {
     setPushError(classifyError(error))
@@ -355,7 +355,7 @@ async function registerFCMPush(uid: string): Promise<boolean> {
     } catch {}
 
     console.log("[notification-service] FCM token saved")
-    setPushError(null)
+    setPushError("saved-ok:fcm")
     return true
   } catch (error) {
     setPushError(classifyError(error))
@@ -416,7 +416,7 @@ export async function registerForFCM(uid: string): Promise<boolean> {
 // traced to its exact cause on the device itself. The marker proves which
 // build is running (stale builds show an older marker).
 
-export const PUSH_BUILD_MARKER = "push-2026-09-17f"
+export const PUSH_BUILD_MARKER = "push-2026-09-17g"
 
 export type PushDiagRow = { key: string; label: string; ok: boolean; detail: string }
 
@@ -479,6 +479,20 @@ export async function runPushDiagnostics(uid: string | null): Promise<{ marker: 
       } catch (e: any) {
         push("server", "Saved on server", false, String(e?.message || e || "status check failed").slice(0, 80))
       }
+    }
+    // 8. Last save attempt — the exact outcome, if Enable was ever tapped.
+    // This is the single most important row when "Saved on server" is empty.
+    try {
+      const last = getLastPushError()
+      if (last === null) {
+        push("last-save", "Last save attempt", false, "none yet this load — tap Enable, then re-run Diagnose")
+      } else if (last.startsWith("saved-ok")) {
+        push("last-save", "Last save attempt", true, `succeeded (${last.split(":")[1] || "saved"}) — if server still shows none, report this`)
+      } else {
+        push("last-save", "Last save attempt", false, last)
+      }
+    } catch {
+      push("last-save", "Last save attempt", false, "unreadable")
     }
     // 8. Server push config (private key + subject live in server env only —
     // without them EVERY send throws, even with a perfect device setup).
