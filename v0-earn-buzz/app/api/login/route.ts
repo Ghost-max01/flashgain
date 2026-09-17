@@ -121,7 +121,19 @@ export async function POST(request: NextRequest) {
     // JWT). Stored inside tivexx-user by persistUserSession automatically.
     let notifyToken: string | null = null
     try { notifyToken = issueNotifyToken(String((fullUser as any)?.id || "")) } catch {}
-    return NextResponse.json({ user: { ...safeUser, notifyToken } })
+    // Trust persistence: hand the server snapshot to the fresh session so
+    // the score restores on login exactly like balance (client max-merges).
+    let trustScore = 0
+    let trustMeta: any = null
+    try {
+      const t = await admin.from("users").select("trust_score, trust_meta").eq("id", (fullUser as any)?.id).maybeSingle()
+      if (!t.error && t.data) {
+        trustScore = Number((t.data as any)?.trust_score || 0)
+        const tm = (t.data as any)?.trust_meta
+        trustMeta = tm && typeof tm === "object" ? tm : null
+      }
+    } catch {}
+    return NextResponse.json({ user: { ...safeUser, notifyToken }, trustScore, trustMeta })
   } catch (error) {
     console.error("[login] === CAUGHT ERROR ===", error)
     const msg = error instanceof Error ? error.message : String(error)

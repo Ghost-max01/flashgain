@@ -72,6 +72,21 @@ export async function GET(request: Request) {
 
     const balance = user.balance || 100000
 
+    // Trust persistence: return the server snapshot (score + counters) so
+    // logins/devices hydrate to the persisted score exactly like balance.
+    // Best-effort and isolated — a missing trust_meta column must never
+    // break the balance read above.
+    let trustScore = 0
+    let trustMeta: any = null
+    try {
+      const t = await supabase.from("users").select("trust_score, trust_meta").eq("id", userId).maybeSingle()
+      if (!t.error && t.data) {
+        trustScore = Number((t.data as any)?.trust_score || 0)
+        const tm = (t.data as any)?.trust_meta
+        trustMeta = tm && typeof tm === "object" ? tm : null
+      }
+    } catch {}
+
     // Compute referral stats from trust_score truth (count immediately, pay on Beginner 30+)
     let referralCount = 0
     let referralBalance = 0
@@ -113,7 +128,7 @@ export async function GET(request: Request) {
       }
     } catch (refError) {
       console.error("Error fetching referrals:", refError)
-      return NextResponse.json({ success: true, balance, referral_balance: 0, referral_count: 0, pending_count: 0, approved_count: 0 })
+      return NextResponse.json({ success: true, balance, referral_balance: 0, referral_count: 0, pending_count: 0, approved_count: 0, trust_score: trustScore, trust_meta: trustMeta })
     }
 
     // Sync users table (best-effort) so legacy reads stay consistent
@@ -129,6 +144,8 @@ export async function GET(request: Request) {
       pending_count: pendingCount,
       approved_count: approvedCount,
       pending_balance: pendingCount * 500,
+      trust_score: trustScore,
+      trust_meta: trustMeta,
     })
   } catch (error) {
     console.error("Error:", error)

@@ -26,6 +26,7 @@ import {
   getProgress,
   getNextLabel,
   getEarnPerTap,
+  hydrateTrustFromServer,
   TRUST_LEVELS,
   TRUST_META_KEY,
 } from "@/lib/trust-score";
@@ -44,6 +45,23 @@ export default function TrustScorePage() {
         const score = computeScore(meta);
         setTrustScore(score);
         setTrustMeta(meta);
+        // Persisted score: max-merge the server snapshot (login-grade
+        // restore — never moves backwards, breakdown still sums exactly).
+        try {
+          const raw = localStorage.getItem("tivexx-user");
+          const u = raw ? JSON.parse(raw) : null;
+          const uid = u?.id || u?.userId || u?.user_id || "";
+          if (uid) {
+            fetch(`/api/user-balance?userId=${encodeURIComponent(uid)}&t=${Date.now()}`)
+              .then((r) => r.json()).then((d) => {
+                if (d && (d as any).trust_meta && typeof (d as any).trust_meta === "object") {
+                  const merged = hydrateTrustFromServer((d as any).trust_meta);
+                  setTrustScore(computeScore(merged));
+                  setTrustMeta(merged);
+                }
+              }).catch(() => {});
+          }
+        } catch {}
       } catch (e) {
         console.error("Failed to load trust meta:", e);
         setTrustScore(0);

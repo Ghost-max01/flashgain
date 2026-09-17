@@ -109,15 +109,32 @@ export async function POST(req: NextRequest) {
     if (getEarnPerTap(claimedScore) > earnPerTap) {
       try {
         const t = ((body as any)?.trust || {}) as { timeMs?: unknown; navCount?: unknown; tapCount?: unknown }
-        const { score: freshScore } = await recomputeScore(supabase, userId, {
+        const verified = await recomputeScore(supabase, userId, {
           timeMs: Number(t?.timeMs) || 0,
           navCount: Number(t?.navCount) || 0,
           tapCount: Number(t?.tapCount) || 0,
         })
+        const freshScore = verified.score
         if (Number.isFinite(freshScore) && freshScore > userTrustScore) {
           userTrustScore = freshScore
           earnPerTap = getEarnPerTap(freshScore)
-          try { await supabase.from("users").update({ trust_score: freshScore }).eq("id", userId) } catch {}
+          // Persist score AND counters so any login/device restores the
+          // exact score (client max-merges this snapshot with new activity).
+          // Caps mirror /api/user-trust so stored values always score sanely.
+          const snap = {
+            timeMs: Math.min(Math.max(0, Math.floor(Number(t?.timeMs) || 0)), 30 * 24 * 60 * 60 * 1000),
+            referralCount: Math.max(0, Math.floor(Number(verified.referralCount) || 0)),
+            navCount: Math.min(Math.max(0, Math.floor(Number(t?.navCount) || 0)), 10000),
+            payCount: Math.max(0, Math.floor(Number(verified.payCount) || 0)),
+            payAmount: 0,
+            taskCount: Math.max(0, Math.floor(Number(verified.taskCount) || 0)),
+            tapCount: Math.min(Math.max(0, Math.floor(Number(t?.tapCount) || 0)), 10000),
+            lastTimeAwarded: 0,
+            bonus: 0,
+          }
+          try { await supabase.from("users").update({ trust_score: freshScore, trust_meta: snap }).eq("id", userId) } catch {
+            try { await supabase.from("users").update({ trust_score: freshScore }).eq("id", userId) } catch {}
+          }
           console.log(`[tap/accrue] Fresh verified rate for ${userId}: score=${freshScore}, earnPerTap=₦${earnPerTap}`)
         }
       } catch {}

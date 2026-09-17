@@ -40,7 +40,7 @@ const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").
 import { getBankDetails } from "@/lib/bank-details";
 import { readyUnseenCount, refreshPendingStatuses, listActivePendings } from "@/lib/pending-withdrawals";
 import { BottomNav } from "@/components/bottom-nav";
-import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, getEarnPerTap, TRUST_TIME_KEY } from "@/lib/trust-score";
+import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, getEarnPerTap, hydrateTrustFromServer, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
 import {
   ensurePushRegistrationIntegrity,
@@ -1986,6 +1986,16 @@ export default function DashboardPage() {
 
         setUserData(updatedUser);
         // No write-back POST of inflated total — server is authoritative.
+        // Trust restores here exactly like balance (server snapshot merged
+        // with local activity — never moves backwards).
+        try {
+          const tm = (data as any)?.trust_meta;
+          if (tm && typeof tm === "object") {
+            const merged = hydrateTrustFromServer(tm);
+            setTrustScore(computeScore(merged));
+            setTrustMeta({ ...merged });
+          }
+        } catch {}
       } catch (error) {
         console.error("[Dashboard] Error fetching user balance:", error);
         // Prefer most recent client-side stored value when network or server fails

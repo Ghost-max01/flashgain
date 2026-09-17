@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
 import { persistUserSession, restoreUserSessionFromCookie } from "@/lib/session-client";
+import { hydrateTrustFromServer } from "@/lib/trust-score";
 
 const SAFE_USER_COLUMNS =
   "id,name,email,referral_code,password_hash,password_salt,referred_by,created_at,balance,referral_balance,referral_count,trust_score";
@@ -144,6 +145,13 @@ export default function LoginPage() {
       try {
         localStorage.setItem("tivexx-just-authenticated", "1");
         localStorage.setItem("tivexx-auth-time", Date.now().toString());
+      } catch {}
+
+      // Trust restores on login exactly like balance: max-merge the server
+      // snapshot with any local activity (never moves backwards).
+      try {
+        const tm = (result as any)?.trustMeta;
+        if (tm && typeof tm === "object") hydrateTrustFromServer(tm);
       } catch {}
 
       // Track user session in database

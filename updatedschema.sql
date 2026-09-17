@@ -6,6 +6,13 @@
 -- ============================================================
 
 -- ------------------------------------------------------------
+-- 0) users.trust_meta — lets the trust score persist across logins
+--    and devices exactly like balance (server snapshot of the
+--    counters; the app max-merges it with local activity).
+-- ------------------------------------------------------------
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS trust_meta jsonb DEFAULT '{}'::jsonb;
+
+-- ------------------------------------------------------------
 -- 1) user_timers: per-type rows (claim / auto_<plan> / tap_refill)
 --    The app stores claim timers AND push-reminder timers in this table,
 --    one row per (user, type). Today the table only allows ONE row per
