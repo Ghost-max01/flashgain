@@ -37,6 +37,16 @@ export function GuidedOnboarding({ open, onClose }: { open: boolean; onClose: ()
   // stay hidden. The fixed overlay still covers the screen per step.
   useEffect(() => { if (open) setIdx(0); }, [open]);
 
+  // The 1/7 tour is showing: onboarding popups are done, so the bottom nav
+  // may appear from here onwards (BottomNav hides while the flag is set).
+  useEffect(() => {
+    if (!open) return;
+    try {
+      localStorage.removeItem("tivexx-onboarding-active");
+      window.dispatchEvent(new Event("tivexx:onboarding-changed"));
+    } catch {}
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     function update() {

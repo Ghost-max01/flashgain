@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  ArrowLeft, ClipboardList, Users, Banknote, ShoppingBag, Clock, CheckCircle2,
+  ArrowLeft, ClipboardList, Users, Banknote, ShoppingBag, Clock, CheckCircle2, Gift,
 } from "lucide-react"
 import { safeParse } from "@/lib/safe-storage"
 import { loadTaskLedger } from "@/lib/task-ledger"
@@ -18,7 +18,8 @@ type Tab = "all" | "referrals" | "tasks" | "withdrawals" | "purchases"
 
 interface Row {
   id: string
-  tab: Exclude<Tab, "all">
+  // "welcome" + "claims" are All-tab-only rows (never get their own tab).
+  tab: Exclude<Tab, "all"> | "welcome" | "claims"
   title: string
   sub: string
   amount: number // +credit / -debit
@@ -26,6 +27,9 @@ interface Row {
   date: number
   pendingId?: string // tap-to-resume/complete (pending withdrawals only)
 }
+
+// Max rows rendered per tab (and per All view) — newest first.
+const MAX_ROWS = 50
 
 const TASK_KEYS = [
   "tivexx-completed-tasks",
@@ -59,14 +63,14 @@ export default function HistoryPage() {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>("all")
   const [userId, setUserId] = useState("")
-  const [referralCount, setReferralCount] = useState(0)
-  const [approvedCount, setApprovedCount] = useState(0)
+  const [refRecents, setRefRecents] = useState<{ id: string; amount: number; date: number; approved: boolean }[]>([])
   const [refWithdrawn, setRefWithdrawn] = useState<{ id: string; amount: number; date: string }[]>([])
   const [taskRows, setTaskRows] = useState<Row[]>([])
+  const [claimRows, setClaimRows] = useState<Row[]>([])
+  const [welcomeRow, setWelcomeRow] = useState<Row | null>(null)
   const [pendings, setPendings] = useState<PendingWithdrawal[]>([])
   const [completedW, setCompletedW] = useState<{ id: string; reference: string; amount: number; date: number; label: string }[]>([])
   const [purchases, setPurchases] = useState<Row[]>([])
-  const [selectedDetail, setSelectedDetail] = useState<Row | null>(null)
   const [, setTick] = useState(0)
 
   // Deep link: /history?tab=withdrawals (dashboard mail badge)
@@ -100,21 +104,17 @@ export default function HistoryPage() {
         }
       }
       const dated: Row[] = ledger.map((r) => ({
-        id: `ledger-${r.id}`, tab: "tasks", title: "Task Reward",
-        sub: `${prettyTaskLabel(r.label)} · ${fmtDate(new Date(r.date).getTime())}`,
+        id: `ledger-${r.id}`, tab: "tasks", title: "Task Earning",
+        sub: `${fmtDate(new Date(r.date).getTime())}`,
         amount: r.amount, status: "credited", date: new Date(r.date).getTime() || Date.now(),
       }))
       const legacy: Row[] = legacyIds.map((id) => ({
-        id: `legacy-${id}`, tab: "tasks", title: "Task Reward",
-        sub: `${prettyTaskLabel(id)} · Completed earlier`,
+        id: `legacy-${id}`, tab: "tasks", title: "Task Earning",
+        sub: `Completed earlier`,
         amount: 1000, status: "credited", date: 0,
       }))
-      const all = [...dated, ...legacy].sort((a, b) => b.date - a.date)
-      const total = all.length
-      setTaskRows(all.map((r, i) => ({
-        ...r,
-        sub: `Task #${total - i} · ${r.sub}`,
-      })))
+      const all = [...dated, ...legacy].sort((a, b) => b.date - a.date).slice(0, MAX_ROWS)
+      setTaskRows(all)
     } catch {}
 
     // ── Referrals ──
@@ -131,12 +131,53 @@ export default function HistoryPage() {
     if (uid) {
       fetch(`/api/referral-stats?userId=${encodeURIComponent(uid)}&t=${Date.now()}`)
         .then((r) => r.json()).then((d) => {
-          if (d?.success) {
-            setReferralCount(Number(d.referral_count || 0))
-            setApprovedCount(Number(d.approved_count || 0))
+          if (d?.success && Array.isArray((d as any).recent)) {
+            setRefRecents(
+              ((d as any).recent as any[])
+                .filter((x) => x && (x.id || x.date))
+                .map((x: any) => ({
+                  id: String(x.id || `${x.date}-${x.amount}`),
+                  amount: Number(x.amount || 0),
+                  date: Number(x.date || 0),
+                  approved: (x as any).approved === true,
+                }))
+                .sort((a, b) => b.date - a.date)
+                .slice(0, MAX_ROWS),
+            )
           }
         }).catch(() => {})
     }
+
+    // ── Welcome bonus: always the OLDEST entry (sinks to the bottom, drops
+    // off once 50 newer transactions exist). Date 0 when unknown = bottom.
+    try {
+      const wb = safeParse<any>(localStorage.getItem("tivexx-welcome-bonus"), null)
+      const at = Number(wb?.at) || 0
+      setWelcomeRow({
+        id: "welcome-bonus", tab: "welcome", title: "Welcome Bonus",
+        sub: at ? `Sign-up bonus · ${fmtDate(at)}` : "Sign-up bonus · Account creation",
+        amount: 5000, status: "credited", date: at,
+      })
+    } catch {}
+
+    // ── Dashboard claims (tap earnings stay out — too many to list) ──
+    try {
+      const tx = safeParse<any[]>(localStorage.getItem("tivexx-transactions"), [])
+      const rows: Row[] = (Array.isArray(tx) ? tx : [])
+        .filter((t) => t && Number(t.amount) > 0)
+        .map((t: any, i: number) => ({
+          id: `claim-${String(t.id ?? i)}`,
+          tab: "claims" as const,
+          title: "Claim Reward",
+          sub: `${fmtDate(new Date(t.date || Date.now()).getTime())}`,
+          amount: Number(t.amount),
+          status: "credited" as const,
+          date: new Date(t.date || Date.now()).getTime() || 0,
+        }))
+        .sort((a, b) => b.date - a.date)
+        .slice(0, MAX_ROWS)
+      setClaimRows(rows)
+    } catch {}
 
     // ── Withdrawals: pending + completed store + server rows ──
     const refreshW = () => {
@@ -160,7 +201,7 @@ export default function HistoryPage() {
                 date: new Date(w.created_at || w.date || Date.now()).getTime(),
                 label: `Withdrawal ${w.status || ""}`.trim(),
               }))
-            setCompletedW([...done, ...extra].sort((a, b) => b.date - a.date))
+            setCompletedW([...done, ...extra].sort((a, b) => b.date - a.date).slice(0, MAX_ROWS))
           }).catch(() => setCompletedW(done))
       } else {
         setCompletedW(done)
@@ -194,7 +235,21 @@ export default function HistoryPage() {
           date: Number(tapPay.at) || Date.now(),
         })
       }
-      setPurchases(rows.sort((a, b) => b.date - a.date))
+      // Completed auto-tap / upgrade purchases (recorded at Paystack callback)
+      const donePay = safeParse<any[]>(localStorage.getItem("tivexx-completed-purchases"), [])
+      if (Array.isArray(donePay)) {
+        for (const p of donePay) {
+          if (!p || Number(p?.amount) <= 0) continue
+          rows.push({
+            id: `done-pay-${String(p?.reference || p?.at || Math.random())}`,
+            tab: "purchases", title: `Purchase — ${String(p?.label || `Auto-tap ${p?.planId || ""}`)}`.slice(0, 40),
+            sub: `${fmtDate(Number(p?.at) || Date.now())}`,
+            amount: -Math.abs(Number(p?.amount)), status: "paid",
+            date: Number(p?.at) || Date.now(),
+          })
+        }
+      }
+      setPurchases(rows.sort((a, b) => b.date - a.date).slice(0, MAX_ROWS))
     } catch {}
 
     return () => { clearInterval(id); clearInterval(id2); }
@@ -202,12 +257,15 @@ export default function HistoryPage() {
 
   const referralRows: Row[] = useMemo(() => {
     const rows: Row[] = []
-    const earned = approvedCount * 500
-    if (approvedCount > 0 || referralCount > 0) {
+    // Individual referrals with exact time (server recents, newest first).
+    for (const r of refRecents) {
       rows.push({
-        id: "ref-earned", tab: "referrals", title: "Referral Earnings",
-        sub: `${approvedCount} approved × ₦500${referralCount > approvedCount ? ` · ${referralCount - approvedCount} pending` : ""}`,
-        amount: earned, status: "credited", date: Date.now(),
+        id: `ref-${r.id}`, tab: "referrals",
+        title: r.approved ? "Referral Earning" : "Referral Pending",
+        sub: r.date ? `${fmtDate(r.date)}${r.approved ? "" : " · activates at Beginner"}` : "Pending",
+        amount: r.approved ? r.amount : 0,
+        status: r.approved ? "credited" : "pending",
+        date: r.date,
       })
     }
     for (const w of refWithdrawn) {
@@ -217,8 +275,8 @@ export default function HistoryPage() {
         amount: -Math.abs(w.amount), status: "withdrawn", date: new Date(w.date).getTime() || 0,
       })
     }
-    return rows
-  }, [approvedCount, referralCount, refWithdrawn])
+    return rows.sort((a, b) => b.date - a.date).slice(0, MAX_ROWS)
+  }, [refRecents, refWithdrawn])
 
   const withdrawalRows: Row[] = useMemo(() => {
     const rows: Row[] = []
@@ -241,12 +299,16 @@ export default function HistoryPage() {
         sub: fmtDate(c.date), amount: c.amount, status: "credited", date: c.date,
       })
     }
-    return rows.sort((a, b) => b.date - a.date)
+    return rows.sort((a, b) => b.date - a.date).slice(0, MAX_ROWS)
   }, [pendings, completedW])
 
+  // All = everything merged, newest first, max 50. Welcome bonus is the
+  // oldest entry so it sinks to the bottom and drops off past 50.
   const allRows = useMemo(
-    () => [...referralRows, ...taskRows, ...withdrawalRows, ...purchases].sort((a, b) => b.date - a.date),
-    [referralRows, taskRows, withdrawalRows, purchases],
+    () => [...referralRows, ...taskRows, ...withdrawalRows, ...purchases, ...claimRows, ...(welcomeRow ? [welcomeRow] : [])]
+      .sort((a, b) => b.date - a.date)
+      .slice(0, MAX_ROWS),
+    [referralRows, taskRows, withdrawalRows, purchases, claimRows, welcomeRow],
   )
 
   const counts = {
@@ -299,6 +361,7 @@ export default function HistoryPage() {
   }
 
   const RowIcon = ({ row }: { row: Row }) => {
+    if (row.tab === "welcome") return <Gift className="h-5 w-5 text-amber-300" />
     if (row.tab === "referrals") return <Users className="h-5 w-5 text-emerald-300" />
     if (row.tab === "withdrawals") return <Banknote className="h-5 w-5 text-emerald-300" />
     if (row.tab === "purchases") return <ShoppingBag className="h-5 w-5 text-emerald-300" />
@@ -358,20 +421,6 @@ export default function HistoryPage() {
                       <StatusLine row={row} />
                     </span>
                   </button>
-                ) : row.tab === "purchases" ? (
-                  <button onClick={() => setSelectedDetail(row)} className="hs-card w-full text-left">
-                    <span className="hs-ico"><RowIcon row={row} /></span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-black text-white">{row.title}</span>
-                      <span className="block text-[11px] text-white/55 mt-0.5">{row.sub}</span>
-                    </span>
-                    <span className="text-right shrink-0">
-                      <span className="block text-sm font-black text-white/85">
-                        −₦{Math.abs(row.amount).toLocaleString()}
-                      </span>
-                      <StatusLine row={row} />
-                    </span>
-                  </button>
                 ) : (
                   <div className="hs-card">
                     <span className="hs-ico"><RowIcon row={row} /></span>
@@ -380,8 +429,8 @@ export default function HistoryPage() {
                       <span className="block text-[11px] text-white/55 mt-0.5">{row.sub}</span>
                     </span>
                     <span className="text-right shrink-0">
-                      <span className={`block text-sm font-black ${row.amount < 0 ? "text-white/85" : "text-emerald-300"}`}>
-                        {row.amount < 0 ? `−₦${Math.abs(row.amount).toLocaleString()}` : `+₦${row.amount.toLocaleString()}`}
+                      <span className={`block text-sm font-black ${row.amount < 0 ? "text-white/85" : row.amount > 0 ? "text-emerald-300" : "text-white/50"}`}>
+                        {row.amount < 0 ? `−₦${Math.abs(row.amount).toLocaleString()}` : row.amount > 0 ? `+₦${row.amount.toLocaleString()}` : "₦0"}
                       </span>
                       <StatusLine row={row} />
                     </span>
@@ -392,18 +441,6 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
-
-      {selectedDetail && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setSelectedDetail(null)}>
-          <div className="max-w-sm w-full rounded-3xl border border-white/10 bg-[#0b1f18] p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="text-sm font-black text-white">{selectedDetail.title}</div>
-            <div className="text-[11px] text-white/55 mt-1">{selectedDetail.sub}</div>
-            <div className="mt-3 text-lg font-black text-white/90">−₦{Math.abs(selectedDetail.amount).toLocaleString()}</div>
-            <div className="mt-1"><StatusLine row={selectedDetail} /></div>
-            <button onClick={() => setSelectedDetail(null)} className="mt-4 w-full rounded-full bg-emerald-500 py-3 text-sm font-black text-[#052e1b]">Close</button>
-          </div>
-        </div>
-      )}
 
       <BottomNav />
 

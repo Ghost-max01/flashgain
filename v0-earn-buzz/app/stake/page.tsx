@@ -6,25 +6,52 @@ import { Sparkles, Zap, Trophy, Users, Flame, Crown, ShieldCheck, Timer, Coins, 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { safeParse } from "@/lib/safe-storage";
+import { creditForWin, forcedSessionOutcome } from "@/lib/spin-economy";
 
 const STAKE_TIERS = [
   { pct: 20, label: "20%", desc: "Conservative" },
   { pct: 30, label: "30%", desc: "Balanced" },
   { pct: 40, label: "40%", desc: "Aggressive" },
 ]
-const MULTIPLIER = 2 // every win is ×2 — nothing more or less
 const STAKE_TIERS_MAP: Record<number, (typeof STAKE_TIERS)[number]> = {}
 STAKE_TIERS.forEach(t => { STAKE_TIERS_MAP[t.pct] = t })
 
-// Spin & Win — 30% win = 3 wins / 10 segments. ALL wins pay ×2 (nothing more or less).
+// Win credit mirrors the server exactly (see lib/spin-economy.ts).
+
+// Session history (rolling 24h, server-synced after every settle).
+function readStakeSession(): number[] {
+  try {
+    const arr = safeParse<any>(localStorage.getItem("stake_outcomes"), [])
+    if (!Array.isArray(arr)) return []
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    return arr
+      .map((r) => ({ w: Number((r as any)?.w) === 1 ? 1 : 0, at: Number((r as any)?.at) || 0 }))
+      .filter((r) => r.at > cutoff)
+      .map((r) => r.w)
+  } catch { return [] }
+}
+
+// Session rule lives in lib/spin-economy.ts (shared with the server).
+
+function recordStakeSession(today: number[] | null, fallbackWin: boolean) {
+  try {
+    const arr = Array.isArray(today) && today.length
+      ? today.map((w) => ({ w: w ? 1 : 0, at: Date.now() }))
+      : [...readStakeSession().map((w) => ({ w, at: Date.now() })), { w: fallbackWin ? 1 : 0, at: Date.now() }].slice(-10)
+    localStorage.setItem("stake_outcomes", JSON.stringify(arr.slice(-10)))
+  } catch {}
+}
+
+// Spin & Win — 30% win = 3 wins / 10 segments. Wins pay ×1 (stake + half
+// profit) or ×2 (stake + full profit) — never times-2-only.
 const SPIN_SEGMENTS = [
-  { label: "WIN ×2", win: true, amount: 2, color: "#10b981" },
+  { label: "WIN ×1", win: true, amount: 1, color: "#10b981" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
   { label: "WIN ×2", win: true, amount: 2, color: "#f59e0b" },
   { label: "LOSE", win: false, amount: 0, color: "#334155" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
   { label: "LOSE", win: false, amount: 0, color: "#334155" },
-  { label: "WIN ×2", win: true, amount: 2, color: "#06b6d4" },
+  { label: "WIN ×1", win: true, amount: 1, color: "#06b6d4" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
   { label: "LOSE", win: false, amount: 0, color: "#334155" },
   { label: "LOSE", win: false, amount: 0, color: "#1e293b" },
@@ -67,7 +94,7 @@ export default function StakeWinPage() {
         const baseName = NIGERIAN_NAMES[nameIdx]
         const suffix = ["***", "**", "*", ""][Math.floor(Math.random() * 4)]
         const staked = Math.floor(Math.random() * (400000 - 200000) + 200000)
-        const won = staked * 2 // every win is ×2 — nothing more or less
+        const won = Math.random() < 0.5 ? Math.floor((staked * 3) / 2) : staked * 2 // ×1 or ×2 winners
         const agoMin = Math.floor(Math.random() * 28 + 2)
         names.push({
           name: baseName + " " + suffix,
@@ -93,8 +120,9 @@ export default function StakeWinPage() {
     return () => { clearInterval(id); clearInterval(t2) }
   }, [])
 
-  const win = Math.floor(amount * MULTIPLIER)
-  const profit = win - amount
+  // Wins pay ×1 (stake + half profit) or ×2 (stake + full profit).
+  const winMax = amount * 2
+  const winMin = Math.floor((amount * 3) / 2)
   const fmtTime = (ms: number) => {
     const s = Math.floor(ms/1000)
     const m = Math.floor(s/60)
@@ -106,6 +134,9 @@ export default function StakeWinPage() {
   const [rotation, setRotation] = useState(0)
   const [spinResult, setSpinResult] = useState<(typeof SPIN_SEGMENTS)[number] | null>(null)
   const [showSpinResult, setShowSpinResult] = useState(false)
+  // Server settlement truth (credited amount + multiplier + outcome) — the
+  // banner/toast render from THIS, never from local estimates.
+  const [settleInfo, setSettleInfo] = useState<{ credited: number; multiplier: number; corrected: boolean; outcome: "win" | "loss" } | null>(null)
   const [spins, setSpins] = useState(0)
   // Per-tier 24h cooldown: Record< tierPct, expiryTimestamp > — per-user via localStorage (per-browser), per-tier timers
   const [spinCooldowns, setSpinCooldowns] = useState<Record<number, number>>({})
@@ -114,6 +145,8 @@ export default function StakeWinPage() {
   // Spin session state - prevents leaving until all available spins used
   const [spinSessionActive, setSpinSessionActive] = useState(false)
   const [showSpinCompleteModal, setShowSpinCompleteModal] = useState(false)
+  // "You have to play" interstitial when backing out mid-session.
+  const [showStayModal, setShowStayModal] = useState(false)
   const [availableTiers, setAvailableTiers] = useState<number[]>([])
   // Exceeded spins modal - shows when user tries to enter after all 3 spins used
   const [showExceededModal, setShowExceededModal] = useState(false)
@@ -262,10 +295,13 @@ export default function StakeWinPage() {
     // 20% tier: 70% win chance
     // 30% tier: 70% win chance
     // 40% tier: 30% win chance
-    // Win amounts are tracked server-side to guarantee one of the 3 daily spins is a win.
+    // Session rule overrides everything: after two straight wins force LOSE,
+    // after two straight losses force WIN (the server enforces the same rule
+    // from its own history — money always settles on server truth).
     const tierWinRates: Record<number, number> = { 20: 0.70, 30: 0.70, 40: 0.30 }
     const userWinRate = tierWinRates[tierPct] || 0.5
-    const userPickedWinningTier = Math.random() < userWinRate
+    const forced = forcedSessionOutcome(readStakeSession())
+    const userPickedWinningTier = forced === null ? Math.random() < userWinRate : forced === 1
 
     // Set 24h cooldown for THIS tier (per-tier timer, max 3 spins/day naturally)
     const newCooldowns: Record<number, number> = { ...spinCooldowns, [tierPct]: now + 24 * 60 * 60 * 1000 }
@@ -292,6 +328,7 @@ export default function StakeWinPage() {
     // result keeps the banner honest (never shows a stale WIN/LOSE).
     setSpinning(true)
     setSpinResult(null)
+    setSettleInfo(null)
     setShowSpinResult(false)
     setRotation(total)
     // One id per spin so a replay/double-submit can never credit twice.
@@ -349,11 +386,12 @@ export default function StakeWinPage() {
             toast({ title: "Sign in to keep your winnings", variant: "destructive" })
             return
           }
-          const winAmt = landed.win ? spinStake * landed.amount : 0
+          const mult = landed.win ? (landed.amount === 1 ? 1 : 2) : 0
+          const credit = landed.win ? creditForWin(spinStake, mult as 1 | 2) : 0
           const res = await fetch("/api/stake/result", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: uid, spinId: spinIdRef.current, stake: spinStake, winAmount: winAmt }),
+            body: JSON.stringify({ userId: uid, spinId: spinIdRef.current, stake: spinStake, multiplier: mult, winAmount: credit }),
           })
           const j = await res.json().catch(() => ({}))
           if (!res.ok || !j?.success) {
@@ -365,10 +403,17 @@ export default function StakeWinPage() {
             const raw2 = localStorage.getItem("tivexx-user")
             if (raw2) { const u2 = JSON.parse(raw2); u2.balance = newBal; localStorage.setItem("tivexx-user", JSON.stringify(u2)) }
           } catch {}
-          if (landed.win) {
-            toast({ title: `You won ₦${winAmt.toLocaleString()}! 🎉`, description: `${landed.label} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}% has ${Math.round(userWinRate * 100)}% win chance` })
+          // Server truth wins: outcome/multiplier/credited come from the
+          // response (it enforces the payout formula + session rule).
+          const outcome = j.outcome === "win" ? "win" : "loss"
+          const srvMult = outcome === "win" ? (Number(j.multiplier) === 2 ? 2 : 1) : 0
+          const credited = outcome === "win" ? creditForWin(spinStake, srvMult as 1 | 2) : 0
+          try { recordStakeSession(Array.isArray(j.today) ? j.today : null, outcome === "win") } catch {}
+          setSettleInfo({ credited, multiplier: srvMult, corrected: j.corrected === true, outcome })
+          if (outcome === "win") {
+            toast({ title: `You won ₦${credited.toLocaleString()}! 🎉`, description: `WIN ×${srvMult} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}%${j.corrected ? " (server-settled)" : ""}` })
           } else {
-            toast({ title: `Better luck next time!`, description: `Tier ${tierPct}% has ${Math.round(userWinRate * 100)}% win chance. Try again in 24 hours!` })
+            toast({ title: `Better luck next time!`, description: `Lost ₦${spinStake.toLocaleString()} stake — tier ${tierPct}%.${j.corrected ? " (server-settled)" : ""} Try again in 24 hours!` })
           }
         } catch (e: any) {
           toast({ title: "Spin could not be recorded", description: e?.message || "Balance unchanged — try again.", variant: "destructive" })
@@ -381,28 +426,32 @@ export default function StakeWinPage() {
     const minStake = balance > 0 ? Math.floor(balance * 0.2) : 500
     if (amount < minStake) return toast({ title: `Minimum stake is ₦${minStake.toLocaleString()}`, variant: "destructive" })
     if (amount > balance) return toast({ title: "Insufficient balance", description: `You have ₦${balance.toLocaleString()}`, variant: "destructive" })
-    toast({ title: `Staked ₦${amount.toLocaleString()} 🎯`, description: `Potential win ₦${win.toLocaleString()} — draw in ${fmtTime(nextDrawMs)}` })
+    toast({ title: `Staked ₦${amount.toLocaleString()} 🎯`, description: `Win ×1 → ₦${winMin.toLocaleString()} • Win ×2 → ₦${winMax.toLocaleString()} — draw in ${fmtTime(nextDrawMs)}` })
   }
 
-  // Prevent leaving page during active spin session
+  // Lock the session: backing out mid-session (system back / browser back)
+  // re-arms this page and shows "you have to play" instead of leaving.
+  // Closing the tab (beforeunload) still warns via the browser prompt.
   useEffect(() => {
     if (!spinSessionActive) return
+    try { window.history.pushState({ spinLock: true }, "", window.location.href) } catch {}
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       e.returnValue = "You have spins remaining. Complete them before leaving."
       return e.returnValue
     }
     window.addEventListener("beforeunload", handleBeforeUnload)
-    // Block router navigation
-    const handleRouteChange = () => {
+    const handlePopState = () => {
       if (spinSessionActive && !showSpinCompleteModal) {
-        window.location.reload() // Force reload to prevent navigation
+        // Cancel the back-out: stay on this page and say so.
+        try { window.history.pushState({ spinLock: true }, "", window.location.href) } catch {}
+        setShowStayModal(true)
       }
     }
-    window.addEventListener("popstate", handleRouteChange)
+    window.addEventListener("popstate", handlePopState)
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload)
-      window.removeEventListener("popstate", handleRouteChange)
+      window.removeEventListener("popstate", handlePopState)
     }
   }, [spinSessionActive, showSpinCompleteModal])
 
@@ -442,7 +491,7 @@ export default function StakeWinPage() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
                 <div className="text-[10px] tracking-widest font-black text-white/50">MULTIPLIER</div>
-                <div className="text-lg font-black text-amber-300">×{MULTIPLIER}</div>
+                <div className="text-lg font-black text-amber-300">×1–×2</div>
               </div>
               <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
                 <div className="text-[10px] tracking-widest font-black text-white/50">WINNERS / HR</div>
@@ -528,8 +577,8 @@ export default function StakeWinPage() {
             </div>
             <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/20 px-4 flex flex-col justify-center text-center min-w-[124px]">
               <div className="text-[10px] tracking-widest font-black text-white/60">YOU COULD WIN</div>
-              <div className="text-lg font-black text-amber-300">₦{win.toLocaleString()}</div>
-              <div className="text-[11px] font-bold text-emerald-300">+{profit.toLocaleString()} profit</div>
+              <div className="text-lg font-black text-amber-300">₦{winMin.toLocaleString()}–₦{winMax.toLocaleString()}</div>
+              <div className="text-[11px] font-bold text-emerald-300">×1 or ×2 of stake back</div>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -543,11 +592,11 @@ export default function StakeWinPage() {
             </div>
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 py-2">
               <div className="text-[10px] font-black tracking-widest text-amber-300">PAYOUT</div>
-              <div className="text-sm font-black text-amber-300">₦{win.toLocaleString()}</div>
+              <div className="text-sm font-black text-amber-300">₦{winMin.toLocaleString()}–₦{winMax.toLocaleString()}</div>
             </div>
           </div>
           <Button onClick={onStake} className="w-full mt-4 rounded-full hh-btn-primary font-black text-base py-6 shadow-[0_10px_30px_rgba(16,185,129,0.35)]">
-            <Zap className="h-5 w-5 mr-2" /> Stake ₦{amount.toLocaleString()} — Win ₦{win.toLocaleString()}
+            <Zap className="h-5 w-5 mr-2" /> Stake ₦{amount.toLocaleString()} — Win up to ₦{winMax.toLocaleString()}
           </Button>
           {/* Thumb-zone design text — commented out per request: next element after Stake→Win button is now 20%/30%/40% pills */}
           {/* <p className="text-center text-[11px] text-white/50 mt-2">Thumb-zone design • 1 tap to stake • instant settlement</p> */}
@@ -616,8 +665,8 @@ export default function StakeWinPage() {
           <div className="mt-2 text-[11px] font-bold text-white/50">Stake ₦{spinStake.toLocaleString()} • Spins {spins} • Max 3/day (one per tier)</div>
           {showSpinResult && spinResult && (
             <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
-              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{(spinStake * spinResult.amount).toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, winning tier varies each spin</div>}
-              <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${(spinStake * spinResult.amount - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
+              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{(settleInfo ? settleInfo.credited : creditForWin(spinStake, (spinResult.amount || 2) as 1 | 2)).toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, winning tier varies each spin</div>}
+              <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${((settleInfo ? settleInfo.credited : creditForWin(spinStake, (spinResult.amount || 2) as 1 | 2)) - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
             </div>
           )}
         </div>
@@ -649,6 +698,37 @@ export default function StakeWinPage() {
 
         <div className="text-center text-[11px] text-white/40 pb-2">18+ • Stake responsibly • Provably fair • Terms apply</div>
       </div>
+
+      {/* Stay-and-play guard: backing out mid-session lands here instead. */}
+      {showStayModal && spinSessionActive && !showSpinCompleteModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full text-center">
+            <div className="hh-popup-header flex flex-col items-center gap-2">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 flex items-center justify-center">
+                <AlertTriangle className="h-7 w-7 text-amber-400" />
+              </div>
+              <h2 className="text-xl font-black text-white tracking-tight">You have to play 🎯</h2>
+            </div>
+            <p className="text-sm text-white/80 mt-2 leading-relaxed">
+              You still have <span className="font-black text-amber-300">{availableTiers.length} spin{availableTiers.length === 1 ? "" : "s"} left</span> today. Finish {availableTiers.length === 1 ? "it" : "them"} first — your tiers reset in 24 hours.
+            </p>
+            <button
+              onClick={() => setShowStayModal(false)}
+              className="hh-popup-btn hh-popup-btn-confirm w-full mt-6"
+            >
+              Stay & Play →
+            </button>
+            {balance < 200 && (
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="w-full mt-2 text-xs text-white/40 underline"
+              >
+                Balance too low to play — leave anyway
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Spin Complete Modal */}
       {showSpinCompleteModal && (
@@ -707,7 +787,7 @@ export default function StakeWinPage() {
           <div className="rounded-[20px] bg-white/5 backdrop-blur-xl border border-white/10 p-2 flex gap-2">
             <div className="flex-1 rounded-full bg-black/30 border border-white/10 px-4 py-3 flex items-center justify-between">
               <span className="text-sm font-black">Stake {STAKE_TIERS_MAP[getTierForStake(amount)]?.label || "Custom"} ₦{amount.toLocaleString()}</span>
-              <span className="text-sm font-black text-amber-300">→ Win ₦{win.toLocaleString()}</span>
+              <span className="text-sm font-black text-amber-300">→ Win up to ₦{winMax.toLocaleString()}</span>
             </div>
             <Button
               onClick={doSpin}

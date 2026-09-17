@@ -19,6 +19,32 @@ const ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
   const [unreadChats, setUnreadChats] = useState(0);
+  // Onboarding gate: fresh signups must finish the popup flow first — the
+  // nav stays hidden until the guided tour (1/7) opens and clears the flag.
+  // Existing accounts (no flag, or tour already shown once) always see it.
+  const [onboardingActive, setOnboardingActive] = useState(false);
+
+  const checkOnboarding = () => {
+    try {
+      if (localStorage.getItem("tivexx-guided-v2-shown") || localStorage.getItem("tivexx-guided-shown")) {
+        setOnboardingActive(false);
+        return;
+      }
+      setOnboardingActive(localStorage.getItem("tivexx-onboarding-active") === "1");
+    } catch { setOnboardingActive(false); }
+  };
+
+  useEffect(() => {
+    checkOnboarding();
+    window.addEventListener("storage", checkOnboarding);
+    window.addEventListener("tivexx:onboarding-changed", checkOnboarding as EventListener);
+    window.addEventListener("focus", checkOnboarding);
+    return () => {
+      window.removeEventListener("storage", checkOnboarding);
+      window.removeEventListener("tivexx:onboarding-changed", checkOnboarding as EventListener);
+      window.removeEventListener("focus", checkOnboarding);
+    };
+  }, []);
 
   // Unread support-chat badge (local-first; cleared when /chats is opened).
   useEffect(() => {
@@ -44,7 +70,9 @@ export function BottomNav() {
       <div className="bv-bottom-nav">
         {ITEMS.map(({ href, label, Icon, match }) => {
           const active = match.some((m) => pathname === m || pathname?.startsWith(m + "/"));
-          return (
+  if (onboardingActive) return null;
+
+  return (
             <Link key={href} href={href} className={`bv-nav-item${active ? " bv-nav-active" : ""}`}>
               <span className="relative">
                 <Icon className="h-5 w-5" />

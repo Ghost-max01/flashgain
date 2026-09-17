@@ -89,6 +89,17 @@ function CallbackInner() {
               }
               // Store proof that this plan was paid
               localStorage.setItem(`auto_tap_paid_${planId}`, reference)
+              // Completed-purchase receipt for History → Purchases tab.
+              try {
+                const seenKey = `paystack_ref_${reference}_purchase`
+                if (!localStorage.getItem(seenKey)) {
+                  const list = safeParse<any[]>(localStorage.getItem("tivexx-completed-purchases"), [])
+                  const arr: any[] = Array.isArray(list) ? list : []
+                  arr.unshift({ planId, label: `Auto-tap ${planId}`, amount: Number((pending as any)?.amount || (metadata as any)?.amount || 0), at: Date.now(), reference })
+                  localStorage.setItem("tivexx-completed-purchases", JSON.stringify(arr.slice(0, 200)))
+                  localStorage.setItem(seenKey, "1")
+                }
+              } catch {}
               localStorage.removeItem("pending_auto_tap_payment")
             }
           } catch {}

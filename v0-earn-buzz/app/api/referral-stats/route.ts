@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     try {
       const r = await supabase
         .from("referrals")
-        .select("referred_id, amount, processed, consumed")
+        .select("id, referred_id, amount, processed, consumed, created_at")
         .eq("referrer_id", userId)
         .limit(2000)
       if (r.error) throw r.error
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
     } catch {
       const r2 = await supabase
         .from("referrals")
-        .select("referred_id, amount, processed")
+        .select("id, referred_id, amount, processed, created_at")
         .eq("referrer_id", userId)
         .limit(2000)
       if (r2.error) throw r2.error
@@ -92,6 +92,7 @@ export async function GET(request: Request) {
         pending_count: 0,
         approved_count: 0,
         pending_balance: 0,
+        recent: [],
       })
     }
 
@@ -99,6 +100,12 @@ export async function GET(request: Request) {
     let approvedCount = 0
     let pendingCount = totalCount
     let referralBalance = 0
+    // Individual dated rows for History (latest 50, newest first).
+    let recent: { id: string; amount: number; date: number; approved: boolean }[] = []
+    const toMs = (v: any) => {
+      const t = new Date(v || 0).getTime()
+      return Number.isFinite(t) ? t : 0
+    }
 
     try {
       const { data: referredUsers } = await supabase
@@ -113,25 +120,43 @@ export async function GET(request: Request) {
       let approved = 0
       let pending = 0
       let approvedSum = 0
+      const list: typeof recent = []
       for (const r of allRefs as any[]) {
         const sc = scoreMap.get(r.referred_id) ?? 0
-        if (sc >= 30) {
+        const isApproved = sc >= 30
+        if (isApproved) {
           approved++
           // Normalize legacy ₦10,000 rows down to the ₦500 tier.
           approvedSum += Math.min(Number(r.amount || 500), 500)
         } else {
           pending++
         }
+        list.push({
+          id: String(r.id || r.referred_id || ""),
+          amount: isApproved ? Math.min(Number(r.amount || 500), 500) : 0,
+          date: toMs((r as any).created_at),
+          approved: isApproved,
+        })
       }
       approvedCount = approved
       pendingCount = pending
       referralBalance = approvedSum
+      recent = list.sort((a, b) => b.date - a.date).slice(0, 50)
     } catch {
       // Fallback to processed flag if trust lookup fails
       const approvedRows = (allRefs as any[]).filter((r) => r.processed === true)
       approvedCount = approvedRows.length
       pendingCount = totalCount - approvedCount
       referralBalance = approvedRows.reduce((s, r) => s + Number(r.amount || 500), 0)
+      recent = (allRefs as any[])
+        .map((r: any) => ({
+          id: String(r.id || r.referred_id || ""),
+          amount: r.processed === true ? Math.min(Number(r.amount || 500), 500) : 0,
+          date: toMs(r.created_at),
+          approved: r.processed === true,
+        }))
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 50)
     }
 
     // referral_count = total (immediate count), referral_balance = approved only
@@ -143,6 +168,7 @@ export async function GET(request: Request) {
       pending_count: pendingCount,
       approved_count: approvedCount,
       pending_balance: pendingCount * 500,
+      recent,
     })
   } catch (error) {
     console.error("referral-stats error:", error)
@@ -154,6 +180,7 @@ export async function GET(request: Request) {
       pending_count: 0,
       approved_count: 0,
       pending_balance: 0,
+      recent: [],
     })
   }
 }

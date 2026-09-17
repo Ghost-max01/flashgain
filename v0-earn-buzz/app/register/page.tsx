@@ -105,10 +105,9 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreed) {
-      setError("Please agree to the Support Policy, Payment Policy and Privacy Policy to continue.");
-      return;
-    }
+    // Agreement auto-ticks on Continue — creating an account is never
+    // blocked by the checkbox; pressing Continue counts as agreement.
+    if (!agreed) setAgreed(true);
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -170,6 +169,12 @@ export default function RegisterPage() {
       try {
         localStorage.setItem("tivexx-just-authenticated", "1");
         localStorage.setItem("tivexx-auth-time", Date.now().toString());
+        // Fresh accounts stay inside the onboarding popups: the bottom nav
+        // stays hidden until the guided tour (1/7) opens. Cleared there.
+        localStorage.setItem("tivexx-onboarding-active", "1");
+        // Welcome-bonus receipt for History (always the oldest entry).
+        localStorage.setItem("tivexx-welcome-bonus", JSON.stringify({ amount: 5000, at: Date.now() }));
+        window.dispatchEvent(new Event("tivexx:onboarding-changed"));
       } catch {}
 
       router.push("/setup-bank");
@@ -305,8 +310,11 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Referral Code Input */}
-              <div className="hh-form-group relative">
+              {/* Referral Code Input — hidden (not deleted): the referrer ID
+                  already shows in the header alert above, and a visible box
+                  confuses users into thinking they must fill it. Value logic
+                  and auto-fill still work exactly as before. */}
+              <div className="hh-form-group relative" style={{ display: "none" }} aria-hidden="true">
                 <Input
                   type="text"
                   placeholder="Referral Code (Auto-filled)"
@@ -351,8 +359,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 className="hh-submit-btn w-full"
-                disabled={loading || !agreed || password.length < 8}
-                title={!agreed ? "Please agree to the policies to continue" : undefined}
+                disabled={loading || password.length < 8}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -379,7 +386,7 @@ export default function RegisterPage() {
                 </Link>
               </p>
               <p className="text-center text-xs text-white/40 mt-3">
-                Get instant ₦5,000 bonus + earn ₦500 per referral
+                Get instant ₦5,000 bonus upon sign up
               </p>
             </div>
           </div>
