@@ -139,18 +139,43 @@ async function subscribeRejection(res: Response, hasToken: boolean): Promise<str
   let body = ""
   try {
     const txt = await res.text()
-    body = String(txt || "").replace(/\s+/g, " ").slice(0, 120)
+    body = String(txt || "").replace(/\s+/g, " ").slice(0, 160)
   } catch {}
   let detail = ""
+  let authHint = ""
   try {
     const j = JSON.parse(body)
     detail = String((j as any)?.error || "")
+    authHint = String((j as any)?.auth || "")
   } catch {
     detail = body
   }
+  if (res.status === 401) {
+    // Server tells us exactly which branch rejected: stale/missing token
+    // vs nothing sent at all.
+    if (authHint === "token-invalid" || (hasToken && /unauthorized/i.test(detail))) return "bad-token"
+    return "no-token"
+  }
   detail = detail.slice(0, 100)
-  if (res.status === 401 && !hasToken) return "no-token"
   return `subscribe-rejected:${res.status}${detail ? `:${detail}` : ""}`
+}
+
+// Verifies the server's save proof: re-reads showed the row under OUR uid.
+// A bare HTTP 200 is not trusted — the whole "saved but server shows none"
+// class of bug hides behind it. Pre-proof servers (no proof key) keep the
+// legacy trust behavior so rollouts never break.
+// Returns the exact reason to record; "saved-ok:*" means success.
+async function confirmSubscriptionSave(res: Response, uid: string, channel: "fcm" | "webpush"): Promise<string> {
+  try {
+    const j = await res.json().catch(() => null)
+    if (!j || typeof j !== "object" || !("proof" in (j as any))) return `saved-ok:${channel}`
+    const savedUid = String((j as any)?.proof?.savedUserId || "")
+    if (savedUid && savedUid === uid) return `saved-ok:${channel}`
+    if (savedUid) return "saved-wrong-uid"
+    return "saved-unverified"
+  } catch {
+    return `saved-ok:${channel}`
+  }
 }
 
 // ─── Service Worker Registration ─────────────────────────────────────────────
@@ -235,8 +260,9 @@ async function registerIOSWebPush(uid: string): Promise<boolean> {
     } catch {}
 
     console.log("[notification-service] iOS Web Push subscription saved")
-    setPushError("saved-ok:webpush")
-    return true
+    const confirmed = await confirmSubscriptionSave(res, uid, "webpush")
+    setPushError(confirmed)
+    return confirmed.startsWith("saved-ok")
   } catch (error) {
     setPushError(classifyError(error))
     console.error("[notification-service] iOS Web Push subscription failed:", error)
@@ -287,8 +313,9 @@ export async function registerNativeWebPush(uid: string): Promise<boolean> {
       localStorage.setItem("tivexx-notification-registered-at", Date.now().toString())
     } catch {}
     console.log("[notification-service] Native Web Push subscription saved")
-    setPushError("saved-ok:webpush")
-    return true
+    const confirmed = await confirmSubscriptionSave(res, uid, "webpush")
+    setPushError(confirmed)
+    return confirmed.startsWith("saved-ok")
   } catch (error) {
     setPushError(classifyError(error))
     console.error("[notification-service] Native Web Push subscription failed:", error)
@@ -355,11 +382,20 @@ async function registerFCMPush(uid: string): Promise<boolean> {
     } catch {}
 
     console.log("[notification-service] FCM token saved")
-    setPushError("saved-ok:fcm")
-    return true
+    const confirmed = await confirmSubscriptionSave(res, uid, "fcm")
+    setPushError(confirmed)
+    return confirmed.startsWith("saved-ok")
   } catch (error) {
-    setPushError(classifyError(error))
-    console.error("[notification-service] FCM registration failed:", error)
+    const kind = classifyError(error)
+    setPushError(kind)
+    // Missing Firebase config is EXPECTED (legacy channel, optional) — the
+    // flow continues to native Web Push right after. Log it quietly so it
+    // doesn't look like the failure; real FCM errors still log as errors.
+    if (kind === "missing-firebase-config") {
+      console.warn("[notification-service] FCM skipped (no Firebase config) — continuing with native Web Push")
+    } else {
+      console.error("[notification-service] FCM registration failed:", error)
+    }
     return false
   }
 }
@@ -416,7 +452,7 @@ export async function registerForFCM(uid: string): Promise<boolean> {
 // traced to its exact cause on the device itself. The marker proves which
 // build is running (stale builds show an older marker).
 
-export const PUSH_BUILD_MARKER = "push-2026-09-17g"
+export const PUSH_BUILD_MARKER = "push-2026-09-17h"
 
 export type PushDiagRow = { key: string; label: string; ok: boolean; detail: string }
 

@@ -25,9 +25,15 @@ export async function POST(req: NextRequest) {
     const payload = (await req.json()) as NotificationSubscribePayload
     const uid = (payload as any)?.uid ? String((payload as any).uid) : "";
     if (!uid) return NextResponse.json({ success: false, error: "Missing uid" }, { status: 400 });
-    // require ownership: Supabase JWT match OR login-issued notify token
+    // require ownership: Supabase JWT match OR login-issued notify token.
+    // The auth branch is echoed back (no secrets) so the device can tell
+    // "no token sent" apart from "token rejected" without guessing.
+    const presentedToken = typeof (payload as any)?.notifyToken === "string" && (payload as any).notifyToken ? true : false;
     if (!(await isOwner(req, uid, (payload as any)?.notifyToken))) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized", auth: presentedToken ? "token-invalid" : "no-token-sent" },
+        { status: 401 },
+      );
     }
     // validate endpoint/token length
     if ((payload as any).type === "fcm") {
@@ -52,9 +58,35 @@ export async function POST(req: NextRequest) {
     } catch {}
     const result = await saveNotificationSubscription(payload)
 
+    // Save proof: re-read what was just written so the device can verify
+    // the row exists under its own uid (catches write/read divergence).
+    // Only non-sensitive identifiers are echoed back — never tokens/keys.
+    let proof: { savedUserId: string | null; rowId: number | string | null } = { savedUserId: null, rowId: null }
+    try {
+      const admin: any = getSupabaseAdmin()
+      if ((payload as any).type === "fcm") {
+        const token = String((payload as any).token || "")
+        const { data } = await admin
+          .from("notification_fcm_tokens")
+          .select("id,user_id")
+          .eq("token", token)
+          .maybeSingle()
+        if (data) proof = { savedUserId: String((data as any).user_id ?? ""), rowId: (data as any).id ?? null }
+      } else {
+        const endpoint = String((payload as any)?.subscription?.endpoint || "")
+        const { data } = await admin
+          .from("notification_webpush_subscriptions")
+          .select("id,user_id")
+          .eq("endpoint", endpoint)
+          .maybeSingle()
+        if (data) proof = { savedUserId: String((data as any).user_id ?? ""), rowId: (data as any).id ?? null }
+      }
+    } catch {}
+
     return NextResponse.json({
       success: true,
       ...result,
+      proof,
     })
   } catch (error) {
     console.error("[api/subscribe]", error)
