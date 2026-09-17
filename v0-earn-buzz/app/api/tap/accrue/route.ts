@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { getEarnPerTap } from "@/lib/trust-score-core"
 import { recomputeScore } from "@/app/api/user-trust/route"
@@ -211,6 +211,17 @@ export async function POST(req: NextRequest) {
     if (newBalance === null) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
     }
+    // ── Hobby-plan survival: opportunistic due-reminder flush ──
+    // Vercel Hobby runs the scheduler only daily, so pushes can't wait for
+    // it. ~10% of successful accrues flush up to 10 due rows AFTER this
+    // response (after() never delays the user; failures are swallowed).
+    // Same shared routine as /api/timer/cron — one source, kneaded together.
+    try {
+      if (Math.random() < 0.10) {
+        const { flushDueNotifications } = await import("@/lib/notifications/notify-due")
+        after(() => flushDueNotifications(supabase, { limit: 10, logTag: "accrue-piggyback" }).catch(() => {}))
+      }
+    } catch {}
     return NextResponse.json({ success: true, newBalance, creditedTaps: creditTaps, creditedAmount: amount, earnPerTap })
   } catch (e: any) {
     console.error("tap accrue error:", e)

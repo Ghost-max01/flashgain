@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/timer/cron",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 7 * * *"
     }
   ],
   "headers": [

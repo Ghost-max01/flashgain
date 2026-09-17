@@ -28,21 +28,26 @@ Firebase (`NEXT_PUBLIC_FIREBASE_*`) is only needed for the legacy FCM channel.
 Native Web Push (VAPID) works without it on Android/desktop/iOS-PWA and is
 registered automatically alongside FCM.
 
-## 2. Scheduler (delivers auto-finish + refill + claim alerts while offline)
+## 2. Delivery without a frequent scheduler (Hobby-safe, 3 layers, one routine)
 
-`GET/POST /api/timer/cron` scans `user_timers` for due, un-notified rows and
-pushes per-type messages (claim / auto_* / tap_refill), marking rows notified
-only on real delivery (failed rows retry next run).
+Vercel Hobby allows only **daily** crons, so pushes can't wait for a
+scheduler. All three layers below call the same shared routine
+(`flushDueNotifications` in `lib/notifications/notify-due.ts`) — one source,
+kneaded together:
 
-- Vercel Cron is pre-wired in `v0-earn-buzz/vercel.json` (`*/5 * * * *`).
-  It needs `CRON_SECRET` set (same value as the `Authorization: Bearer …`
-  header Vercel sends — configure it under Project → Settings → Cron Jobs
-  if your plan supports 5-minute intervals).
-- No scheduler / Hobby plan? Use any free external cron (e.g. cron-job.org)
-  hitting `https://<domain>/api/timer/cron` every 5 minutes with header
-  `Authorization: Bearer <CRON_SECRET>`.
-- While any user has the app open, the dashboard also pings the cron for its
-  own due rows every ~60s, so foreground users are covered with no scheduler.
+1. **Daily backstop cron** — pre-wired in `v0-earn-buzz/vercel.json`
+   (`0 7 * * *`, Hobby-legal). Catches anything still pending once a day.
+   Needs `CRON_SECRET` set (same value Vercel sends as
+   `Authorization: Bearer …`; configure under Project → Settings → Cron Jobs).
+2. **Traffic piggyback (the real worker)** — ~10% of successful tap accrues
+   flush up to 10 due rows *after* the response (`after()`, never delays the
+   user). Whenever anyone is active, due pushes land within minutes.
+3. **Foreground self-ping** — the dashboard asks the cron to flush its own
+   due rows every ~60s while open.
+
+No scheduler / want 5-minute precision? Point any free external cron
+(e.g. cron-job.org) at `GET https://<domain>/api/timer/cron` every 5 minutes
+with header `Authorization: Bearer <CRON_SECRET>` — same endpoint, same routine.
 
 ## 3. Database
 
