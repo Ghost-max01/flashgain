@@ -247,3 +247,20 @@ CREATE TRIGGER on_user_trust_promotion AFTER UPDATE OF trust_score ON public.use
 -- 'public.user_timers'::regclass;  (expect user_timers_user_type_unique,
 -- and NO single-column user_id unique)
 -- ============================================================
+
+-- ============================================================
+-- VERCEL ENV VARS (not SQL — copy 1-by-1 into Vercel Dashboard →
+-- Settings → Environment Variables; strip the leading "-- ").
+-- Firebase web app: notification-ad522. Add these, then REDEPLOY
+-- (client keys bake in at build time — they do nothing until redeploy).
+-- ============================================================
+-- NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDYS_FG-vPETOBYgmfYgQqX6c3ZCNlLp00
+-- NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=notification-ad522.firebaseapp.com
+-- NEXT_PUBLIC_FIREBASE_PROJECT_ID=notification-ad522
+-- NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=notification-ad522.firebasestorage.app
+-- NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=660568140877
+-- NEXT_PUBLIC_FIREBASE_APP_ID=1:660568140877:web:7c10092582c82bb50d8004
+-- FIREBASE_PROJECT_ID=notification-ad522
+-- FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@notification-ad522.iam.gserviceaccount.com
+-- FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC8dsE6o6KqCNPJ\nU/FxKYZvOyz9sU5hl4sJcyxbb7MnfKvaTDL7wSoZk+Vy/X8prxCdgLF5xH+qU9KP\nrfU2XXZJrMFedMJf/7iXWoVI11qlwJMpaC/yZbTDlXHdCrLG9gn4Ohu5EeHq3QBO\n0hgz/Jk8KLw+AbNKE9m+xMt7fE+/IqVIOIkBhOpdxPwgXuA0STkbzaeZ7l9MIC/v\nYkdaGR+vjBBmDD/EHqiH6CBukQ0kkJvQskin1yeI3bm6oA/qsWbyVpBIbrJ7Kzb9\n6QkNC5m6jeIiIKusEi06VTlPHGt0Fpl9a6CEzVgFIkOcIkpc1VXM1B/DKedTX9c+\nZP5Rk2sfAgMBAAECggEABa5QuctH8ncspyN0IjSdvEmc3BLVqYRvaPwDSMhPrq+H\n4J8uZD9Y3QeDwZkZlbCUwCKqduCw9nnrXXBhdV+Q2ryt4YKEf29OaaWNYfo33co1\nxWhCFbzyG3ksQvz5EZ1GBKj/v+7lj/ZUdYvItfx1xAX4Uqgrdt6tUB5Pgevn3XuJ\nFa3D7OGFBztZ6jSSiyn1bFfdIpgz8Ee6A//w7/dlWyZx9vlonvVHCEyucUNvY8Jo\n2lWvjqVnqOmMgaHki+M9oyHlP4oN20n9qGl3aUmFJd1eHKDMwo7xPaHNDrzsyqyl\nneGnXuQOTYdxIAyY1aX5y7MtO0kICAhw/Lm3v0laXQKBgQDuREqf+PtDlXLvbNht\n2VV0KtJNTiLg46hIN3HTHfgOCn42j+LW7e7q2+k93QOHwfV2foh3UIfpoLQtlNvb\nfn5D9NBdxpdnJI5nhkKKxaCDuKFDVGOokZ3pe4y1bJL5PI2GUf9uI64ElWtRi0Io\nAxzpFAqPEUx54Mq3vjkk3lxjEwKBgQDKfZEMIfGoPXuxZkrvDXVpBlOaxW8HYls6\nXa/tedWbdHwM1vSntC7Vw+B3JdEUv5xtVwSTSlsPNtwQj/n13EFz7yLBIGq2qDUl\nuG2P/+UZ2GO217pevXLuFAvgRpSm0QoryZ0l7uaKoS9xIKgJsnKVlXp2ATQEBRWr\n0n9fP6BNRQKBgAlbqUqrLsMyxXbd4Yo+9PpBDE14+im3B07+znuqO6nhg5+E+zXR\n1oZm6LxDR/Y3CfsDcTyubwggBbOcmx3909u7a8ujFyM37lfmkAp/RJSn1b2dPOTM\nA1W+QoKFpyge1rgl1FBxGk6Xx8VGIO0NYj9NSDTiSwymZY/d6sSl7x79AoGAVgVL\n1iyhXYhpAK7lDHLaOvieEbTn+uoUuVHNiAPm87hjbozuuEO6VcN1mwgsrzTLPkPm\nRLAkyOzURhDz7jdYcujXCdY8n0YL9e9IVBEwgW9ExQsWOGMg7PUFKoyxX8CUIo/u\nu4um0qOw5M0rtZriRJuQv4q5Ty/dyfWNeKgt8EUCgYEA3q6WLma5RFk7sbn8WDPj\nvSiIut0HrPOzf8I8+Q8V3Hc08wUERGFgqIRqzSPmsy7K2Q4Oq/pBFhyO0kz/YhY2\n9iOUudl0tFqr6h4bOCyywA4JUqyQIoqJtUn5MKpSkHFyj0Z5EZo4eZLaYsaIvTHy\nMNuDmFWMLaOcorfZN6haHdY=\n-----END PRIVATE KEY-----\n
+-- (measurementId G-6X1E3MRDV4 is analytics-only — the app doesn't use it.)

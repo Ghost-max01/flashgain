@@ -14,12 +14,12 @@ try {
 
   if (typeof firebase !== "undefined" && firebase.apps && !firebase.apps.length) {
     firebase.initializeApp({
-      apiKey: "AIzaSyAXHBpjh7TfRHoOdxduMaxbACLmKhc10Ts",
-      authDomain: "basework-76679.firebaseapp.com",
-      projectId: "basework-76679",
-      storageBucket: "basework-76679.firebasestorage.app",
-      messagingSenderId: "776150811852",
-      appId: "1:776150811852:web:f0c69a11487993e5cd6e69",
+      apiKey: "AIzaSyDYS_FG-vPETOBYgmfYgQqX6c3ZCNlLp00",
+      authDomain: "notification-ad522.firebaseapp.com",
+      projectId: "notification-ad522",
+      storageBucket: "notification-ad522.firebasestorage.app",
+      messagingSenderId: "660568140877",
+      appId: "1:660568140877:web:7c10092582c82bb50d8004",
     })
   }
 
