@@ -52,14 +52,10 @@ export function getNotifyToken(): string | null {
   }
 }
 
-// ─── One-time token mint for pre-token sessions ────────────────────────────
-// Sessions created before token issuance (and fresh devices) have no
-// notifyToken, so subscribe/status get 401. This verifies the account
-// password ONCE server-side and merges the issued token into tivexx-user
-// (persisted automatically) — no logout/login needed.
-export async function mintNotifyToken(uid: string, password: string): Promise<boolean> {
-  if (typeof window === "undefined") return false
-  if (!uid || !password) return false
+// Returns the minted token on success, null on failure (reason in getLastPushError()).
+export async function mintNotifyToken(uid: string, password: string): Promise<string | null> {
+  if (typeof window === "undefined") return null
+  if (!uid || !password) return null
   try {
     const res = await fetch("/api/notify/token", {
       method: "POST",
@@ -69,8 +65,12 @@ export async function mintNotifyToken(uid: string, password: string): Promise<bo
     const j = await res.json().catch(() => ({} as any))
     const token = typeof j?.notifyToken === "string" && j.notifyToken ? j.notifyToken : null
     if (!res.ok || !j?.success || !token) {
-      setPushError(res.status === 429 ? "token-rate-limited" : "token-rejected")
-      return false
+      setPushError(
+        res.status === 429 ? "token-rate-limited"
+        : res.status === 500 ? "token-server-error"
+        : "token-rejected",
+      )
+      return null
     }
     try {
       const raw = localStorage.getItem("tivexx-user")
@@ -79,14 +79,14 @@ export async function mintNotifyToken(uid: string, password: string): Promise<bo
       const { persistUserSession } = await import("@/lib/session-client")
       persistUserSession(u)
     } catch {
-      return false
+      return null
     }
     setPushError(null)
-    return true
+    return token
   } catch (error) {
     console.error("[notification-service] mintNotifyToken failed:", error)
     setPushError("register-failed")
-    return false
+    return null
   }
 }
 

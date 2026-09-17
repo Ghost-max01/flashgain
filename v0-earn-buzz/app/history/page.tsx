@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  ArrowLeft, ClipboardList, Users, Banknote, ShoppingBag, Clock, CheckCircle2, Gift,
+  ArrowLeft, ClipboardList, Users, Banknote, ShoppingBag, Clock, CheckCircle2, Gift, Trophy, XCircle,
 } from "lucide-react"
 import { safeParse } from "@/lib/safe-storage"
 import { loadTaskLedger } from "@/lib/task-ledger"
@@ -18,12 +18,12 @@ type Tab = "all" | "referrals" | "tasks" | "withdrawals" | "purchases"
 
 interface Row {
   id: string
-  // "welcome" + "claims" are All-tab-only rows (never get their own tab).
-  tab: Exclude<Tab, "all"> | "welcome" | "claims"
+  // "welcome" + "claims" + "spin" are All-tab-only rows (never get their own tab).
+  tab: Exclude<Tab, "all"> | "welcome" | "claims" | "spin"
   title: string
   sub: string
   amount: number // +credit / -debit
-  status: "credited" | "pending" | "ready" | "withdrawn" | "paid"
+  status: "credited" | "pending" | "ready" | "withdrawn" | "paid" | "lost"
   date: number
   pendingId?: string // tap-to-resume/complete (pending withdrawals only)
 }
@@ -67,6 +67,7 @@ export default function HistoryPage() {
   const [refWithdrawn, setRefWithdrawn] = useState<{ id: string; amount: number; date: string }[]>([])
   const [taskRows, setTaskRows] = useState<Row[]>([])
   const [claimRows, setClaimRows] = useState<Row[]>([])
+  const [spinRows, setSpinRows] = useState<Row[]>([])
   const [welcomeRow, setWelcomeRow] = useState<Row | null>(null)
   const [pendings, setPendings] = useState<PendingWithdrawal[]>([])
   const [completedW, setCompletedW] = useState<{ id: string; reference: string; amount: number; date: number; label: string }[]>([])
@@ -158,6 +159,72 @@ export default function HistoryPage() {
         sub: at ? `Sign-up bonus · ${fmtDate(at)}` : "Sign-up bonus · Account creation",
         amount: 5000, status: "credited", date: at,
       })
+    } catch {}
+
+    // ── Spin & Win: local receipts + server backfill (deduped) ──
+    // Win = two rows (stake out, credit in) so balances reconcile; loss = one.
+    const buildSpinRows = (local: any[], server: any[]): Row[] => {
+      const rows: Row[] = []
+      const pushSpin = (stake: number, credited: number, mult: number, outcome: string, at: number, tag: string) => {
+        const d = at || 0
+        const sub = d ? fmtDate(d) : "Completed earlier"
+        if (outcome === "win") {
+          rows.push({
+            id: `spin-win-${tag}`, tab: "spin", title: `Spin Win ×${mult === 2 ? 2 : 1}`,
+            sub, amount: credited, status: "credited", date: d,
+          })
+          rows.push({
+            id: `spin-stake-${tag}`, tab: "spin", title: "Spin Stake",
+            sub, amount: -Math.abs(stake), status: "paid", date: d,
+          })
+        } else {
+          rows.push({
+            id: `spin-loss-${tag}`, tab: "spin", title: "Spin Loss",
+            sub, amount: -Math.abs(stake), status: "lost", date: d,
+          })
+        }
+      }
+      const seen: { stake: number; outcome: string; at: number }[] = []
+      for (const [i, s] of (Array.isArray(local) ? local : []).entries()) {
+        if (!s || Number(s?.stake) <= 0) continue
+        const stake = Math.floor(Number(s.stake))
+        const outcome = (s as any).outcome === "win" ? "win" : "loss"
+        const credited = outcome === "win" ? Math.max(0, Math.floor(Number((s as any).credited) || 0)) : 0
+        const mult = Number((s as any).multiplier) === 2 ? 2 : 1
+        const at = Number((s as any).at) || 0
+        seen.push({ stake, outcome, at })
+        pushSpin(stake, credited, mult, outcome, at, `loc-${at}-${stake}-${i}`)
+      }
+      for (const [i, s] of (Array.isArray(server) ? server : []).entries()) {
+        if (!s || Number(s?.stake) <= 0) continue
+        const stake = Math.floor(Number(s.stake))
+        const outcome = (s as any).outcome === "win" ? "win" : "loss"
+        const at = Number((s as any).at) || 0
+        // Dedupe against local receipts (same stake+outcome within 2 minutes).
+        const dup = seen.some((l) => l.stake === stake && l.outcome === outcome && Math.abs(l.at - at) < 120000)
+        if (dup) continue
+        seen.push({ stake, outcome, at })
+        pushSpin(
+          stake,
+          outcome === "win" ? Math.max(0, Math.floor(Number((s as any).credited) || 0)) : 0,
+          Number((s as any).multiplier) === 2 ? 2 : 1,
+          outcome, at, `srv-${at}-${stake}-${i}`,
+        )
+      }
+      return rows.sort((a, b) => b.date - a.date).slice(0, MAX_ROWS)
+    };
+    try {
+      const localStakes = safeParse<any[]>(localStorage.getItem("stake_history"), [])
+      setSpinRows(buildSpinRows(localStakes, []))
+      if (uid) {
+        fetch(`/api/stake/history?userId=${encodeURIComponent(uid)}&t=${Date.now()}`)
+          .then((r) => r.json()).then((d) => {
+            if (d?.success && Array.isArray((d as any).spins)) {
+              const cur = safeParse<any[]>(localStorage.getItem("stake_history"), [])
+              setSpinRows(buildSpinRows(cur, (d as any).spins))
+            }
+          }).catch(() => {})
+      }
     } catch {}
 
     // ── Dashboard claims (tap earnings stay out — too many to list) ──
@@ -305,10 +372,10 @@ export default function HistoryPage() {
   // All = everything merged, newest first, max 50. Welcome bonus is the
   // oldest entry so it sinks to the bottom and drops off past 50.
   const allRows = useMemo(
-    () => [...referralRows, ...taskRows, ...withdrawalRows, ...purchases, ...claimRows, ...(welcomeRow ? [welcomeRow] : [])]
+    () => [...referralRows, ...taskRows, ...withdrawalRows, ...purchases, ...claimRows, ...spinRows, ...(welcomeRow ? [welcomeRow] : [])]
       .sort((a, b) => b.date - a.date)
       .slice(0, MAX_ROWS),
-    [referralRows, taskRows, withdrawalRows, purchases, claimRows, welcomeRow],
+    [referralRows, taskRows, withdrawalRows, purchases, claimRows, spinRows, welcomeRow],
   )
 
   const counts = {
@@ -356,12 +423,14 @@ export default function HistoryPage() {
     if (row.status === "credited") return <span className="hs-status hs-credited"><CheckCircle2 className="h-3 w-3" /> Credited</span>
     if (row.status === "withdrawn") return <span className="hs-status hs-credited"><CheckCircle2 className="h-3 w-3" /> Withdrawn</span>
     if (row.status === "paid") return <span className="hs-status hs-credited"><CheckCircle2 className="h-3 w-3" /> Paid</span>
+    if (row.status === "lost") return <span className="hs-status hs-lost"><XCircle className="h-3 w-3" /> Lost</span>
     if (row.status === "ready") return <span className="hs-status hs-ready"><CheckCircle2 className="h-3 w-3" /> Ready — tap to complete</span>
     return <span className="hs-status hs-pending"><Clock className="h-3 w-3" /> Pending</span>
   }
 
   const RowIcon = ({ row }: { row: Row }) => {
     if (row.tab === "welcome") return <Gift className="h-5 w-5 text-amber-300" />
+    if (row.tab === "spin") return <Trophy className="h-5 w-5 text-amber-300" />
     if (row.tab === "referrals") return <Users className="h-5 w-5 text-emerald-300" />
     if (row.tab === "withdrawals") return <Banknote className="h-5 w-5 text-emerald-300" />
     if (row.tab === "purchases") return <ShoppingBag className="h-5 w-5 text-emerald-300" />
@@ -456,6 +525,7 @@ export default function HistoryPage() {
         .hs-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 800; margin-top: 2px; }
         .hs-credited { color: #6ee7b7; }
         .hs-pending { color: #fbbf24; }
+        .hs-lost { color: #f87171; }
         .hs-ready { color: #fdba74; }
       `}</style>
     </div>

@@ -49,6 +49,7 @@ import {
   showLocalNotification,
   getSubscriptionStatus,
   getLastPushError,
+  mintNotifyToken,
   scheduleReminder,
   pingDueNotifications,
 } from "@/services/notification-service";
@@ -1670,10 +1671,16 @@ export default function DashboardPage() {
     setMintingToken(true);
     setMintMsg("");
     try {
-      const { mintNotifyToken } = await import("@/services/notification-service");
-      const minted = await mintNotifyToken(uid, confirmPw);
-      if (!minted) {
-        setMintMsg("Password didn't match — try again, or log out and back in.");
+      const token = await mintNotifyToken(uid, confirmPw);
+      if (!token) {
+        const reason = getLastPushError() || "";
+        setMintMsg(
+          reason === "token-rate-limited"
+            ? "Too many tries — wait an hour, or log out and back in."
+            : reason === "token-server-error"
+              ? "Server hiccup — try again in a minute."
+              : "That didn't match — try your login password or user ID, or log out and back in.",
+        );
         return;
       }
       // Merge the fresh token into live state (persisted to storage already).

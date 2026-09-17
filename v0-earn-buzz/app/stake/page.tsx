@@ -412,6 +412,17 @@ export default function StakeWinPage() {
           const srvMult = outcome === "win" ? (Number(j.multiplier) === 2 ? 2 : 1) : 0
           const credited = outcome === "win" ? creditForWin(spinStake, srvMult as 1 | 2) : 0
           try { recordStakeSession(Array.isArray(j.today) ? j.today : null, outcome === "win") } catch {}
+          // Local receipt for History → All (server backfill merges by stake+time).
+          try {
+            const sh = safeParse<any>(localStorage.getItem("stake_history"), [])
+            const arr = Array.isArray(sh) ? sh : []
+            arr.unshift({
+              spinId: spinIdRef.current, stake: spinStake,
+              credited: outcome === "win" ? credited : 0,
+              multiplier: srvMult, outcome, at: Date.now(),
+            })
+            localStorage.setItem("stake_history", JSON.stringify(arr.slice(0, 200)))
+          } catch {}
           setSettleInfo({ credited, multiplier: srvMult, corrected: j.corrected === true, outcome })
           if (outcome === "win") {
             toast({ title: `You won ₦${credited.toLocaleString()}! 🎉`, description: `WIN ×${srvMult} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}%${j.corrected ? " (server-settled)" : ""}` })

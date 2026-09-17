@@ -44,18 +44,28 @@ export async function POST(req: NextRequest) {
 
     const { data: user } = await supabase
       .from("users")
-      .select("id,password,password_hash,password_salt")
+      .select("id,password,password_hash,password_salt,referral_code")
       .eq("id", userId)
       .maybeSingle()
 
+    // Verified EXACTLY like /api/login: hash, plaintext, or referral-code
+    // credential. (Many users log in with their referral code / user ID as
+    // the password, so password-only checks would lock them out here.)
+    // Note: a mint token only ever subscribes a device to THIS uid's pushes
+    // — strictly less privilege than the full login the same credential buys.
     let ok = false
     if (user) {
       if ((user as any)?.password_hash) {
         try {
           ok = sha256Hex(((user as any)?.password_salt || "") + password) === (user as any).password_hash
         } catch {}
-      } else if (typeof (user as any)?.password === "string") {
+      } else if (typeof (user as any)?.password === "string" && (user as any).password) {
         ok = (user as any).password === password
+      }
+      if (!ok) {
+        const normalizedInput = password.trim().toUpperCase()
+        const normalizedCode = String((user as any)?.referral_code || "").toUpperCase()
+        if (normalizedInput.length > 0 && normalizedInput === normalizedCode) ok = true
       }
     }
     if (!ok) {
