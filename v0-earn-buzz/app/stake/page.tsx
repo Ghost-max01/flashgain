@@ -160,10 +160,13 @@ export default function StakeWinPage() {
     return () => { if (exhaustedTimerRef.current) clearTimeout(exhaustedTimerRef.current) }
   }, [])
 
-  // Detect user interaction while waiting for 10s to show popup — trigger popup early on any interaction
+  // After the 3rd-spin result shows: 10s of inactivity OR any press/tap/
+  // scroll/key on this page brings up the Spins Complete popup.
+  // NOTE: listeners attach once on mount and read the refs LIVE inside the
+  // handler — a ref flip (timer armed after the 3rd spin) does not re-run
+  // effects, so gating on the ref OUTSIDE (empty-deps early return) would
+  // silently never attach them.
   useEffect(() => {
-    if (!isTimerActiveRef.current) return
-
     const handleInteraction = () => {
       if (exhaustedTimerRef.current && isTimerActiveRef.current) {
         clearTimeout(exhaustedTimerRef.current)
