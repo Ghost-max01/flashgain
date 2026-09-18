@@ -11,6 +11,15 @@ import { BottomNav } from "@/components/bottom-nav";
 export default function VerifyMePage() {
   const router = useRouter()
   const [tickVisible, setTickVisible] = useState(false)
+  const timersRef = useRef<number[]>([])
+  useEffect(() => {
+    return () => {
+      // cleanup any pending timeouts
+      timersRef.current.forEach((id) => clearTimeout(id))
+    }
+  }, [])
+
+  const [showOpayWarning, setShowOpayWarning] = useState(false)
 
   useEffect(() => {
     // Show tick after 1 second
@@ -171,6 +180,9 @@ export default function VerifyMePage() {
 
       {/* Bottom Navigation */}
       <BottomNav />
+
+      {/* Opay Warning Popup */}
+      {showOpayWarning && <OpayWarningPopup onClose={() => setShowOpayWarning(false)} />}
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */
