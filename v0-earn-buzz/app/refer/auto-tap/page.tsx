@@ -90,16 +90,20 @@ function AutoTapReferContent() {
 
   useEffect(() => {
     if (!userData) return;
-    try {
-      const mapRaw = localStorage.getItem("auto_tap_ref_code");
-      const map = safeParse(mapRaw, {});
-      let code = map[planId];
-      if (!code) { const base=(userData.referral_code||userData.id||"USER").toString().slice(-4); code=`${base}-AUTO-${planId}-${Math.random().toString(36).slice(2,6).toUpperCase()}`; map[planId]=code; localStorage.setItem("auto_tap_ref_code", JSON.stringify(map)); }
-      setAutoRefCode(code);
-      const cnt=localStorage.getItem(`auto_ref_count_${planId}`);
-      if(cnt) setAutoRefCount(Number(cnt));
-      fetch(`/api/referral-stats?userId=${userData.id}&t=${Date.now()}`).then(r=>r.json()).then(d=>{ if(typeof d.referral_count==="number") setAutoRefCount(d.referral_count); }).catch(()=>{});
-    } catch {}
+    // Isolated per-plan count: ONLY signups stamped with this plan at
+    // registration (?autoTapPlan=). Normal referrals never leak in; each
+    // plan starts from zero on its own. (Same option accumulates.)
+    let cancelled = false;
+    const loadPlanCount = () => {
+      fetch(`/api/referral-stats?userId=${userData.id}&plan=${encodeURIComponent(planId)}&t=${Date.now()}`)
+        .then(r=>r.json())
+        .then(d=>{ if (!cancelled && typeof d?.plan_count === "number") setAutoRefCount(d.plan_count); })
+        .catch(()=>{});
+    };
+    setAutoRefCount(0);
+    loadPlanCount();
+    const id = setInterval(loadPlanCount, 30000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [userData, planId]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#050d14]"><div className="text-center"><div className="relative w-16 h-16 mx-auto mb-4"><div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div><div className="absolute inset-2 rounded-full border-2 border-emerald-400/50 animate-ping" style={{animationDelay:"0.3s"}}></div><div className="absolute inset-4 rounded-full bg-emerald-500/20 animate-pulse"></div></div><p className="text-emerald-400 text-sm font-medium tracking-widest uppercase">Loading</p></div></div>;
@@ -121,7 +125,7 @@ function AutoTapReferContent() {
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
       <div className="hh-bubbles-container" aria-hidden="true">{[...Array(12)].map((_, i)=>(<div key={i} className={`hh-bubble hh-bubble-${i+1}`}></div>))}</div>
       <div className="hh-mesh-overlay" aria-hidden="true"></div>
-      <div className="sticky top-0 z-10 hh-header"><div className="max-w-md mx-auto px-6 pt-8 pb-4"><div className="flex items-center justify-between"><div className="flex items-center"><Link href="/dashboard"><button className="hh-back-btn"><ArrowLeft className="h-5 w-5" /></button></Link><div className="ml-3"><h1 className="hh-title">Refer & Earn</h1><p className="hh-subtitle">Invite friends, earn rewards</p></div></div><div className="hh-reward-badge"><Sparkles className="h-4 w-4 text-amber-300" /><span>each ₦5k</span></div></div></div></div>
+      <div className="sticky top-0 z-10 hh-header"><div className="max-w-md mx-auto px-6 pt-8 pb-4"><div className="flex items-center justify-between"><div className="flex items-center"><Link href="/dashboard"><button className="hh-back-btn"><ArrowLeft className="h-5 w-5" /></button></Link><div className="ml-3"><h1 className="hh-title">Tiered Referral</h1><p className="hh-subtitle">Refer to unlock auto tap</p></div></div><div className="hh-reward-badge"><Sparkles className="h-4 w-4 text-amber-300" /><span>each ₦5k</span></div></div></div></div>
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
         {/* Hero — identical to Refer & Earn */}
         <div className="hh-card hh-card-hero hh-entry-1 relative overflow-hidden">
@@ -166,9 +170,9 @@ function AutoTapReferContent() {
 
         {/* Auto Tap Referral — stops above How It Works (no How It Works below) */}
         <div className="hh-card hh-entry-3 border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-amber-500/10">
-          <div className="flex items-center gap-2 mb-3"><div className="hh-icon-ring"><Users className="h-4 w-4 text-emerald-300" /></div><span className="text-xs font-black tracking-widest text-emerald-300">AUTO TAP REFERRAL — {plan.need} REQUIRED</span><span className="ml-auto text-[11px] font-bold text-white/60">{planId}</span></div>
+          <div className="flex items-center gap-2 mb-3"><div className="hh-icon-ring"><Users className="h-4 w-4 text-emerald-300" /></div><span className="text-xs font-black tracking-widest text-emerald-300">TIERED REFERRAL — {plan.need} REQUIRED</span><span className="ml-auto text-[11px] font-bold text-white/60">{planId}</span></div>
           <h3 className="text-base font-black text-white">Referral — {plan.need} referrals</h3>
-          <p className="text-xs text-white/60 mt-1">New tracking link will be generated for this plan. Referrals from this link count toward this plan AND your total. Max ₦{plan.maxEarn.toLocaleString()} when unlocked.</p>
+          <p className="text-xs text-white/60 mt-1">Only signups from THIS plan&apos;s link count here (from zero). They also count to your normal total. Max ₦{plan.maxEarn.toLocaleString()} when unlocked.</p>
           <div className="mt-4"><div className="flex items-center justify-between text-xs mb-1"><span className="text-white/60">Progress</span><span className="font-mono font-bold text-white">{autoRefCount}/{plan.need}</span></div><div className="hh-progress-track"><div className="hh-progress-fill" style={{ width: `${pct}%` }}></div></div></div>
           <div className="mt-4 bg-black/30 rounded-xl p-2.5 border border-white/10"><div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1">Your Auto Tap referral link</div><div className="text-xs font-mono text-white break-all">{autoLink || "generating..."}</div></div>
           <div className="grid grid-cols-3 gap-2 mt-3">

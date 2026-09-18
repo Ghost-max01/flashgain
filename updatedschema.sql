@@ -54,6 +54,15 @@ CREATE INDEX IF NOT EXISTS idx_user_timers_due ON public.user_timers(notified, t
 ALTER TABLE public.referrals ADD COLUMN IF NOT EXISTS consumed boolean DEFAULT false;
 
 -- ------------------------------------------------------------
+-- 2b) referrals.plan — which auto-tap plan link produced this referral
+--     ('24h' | '2d' | '3d' | '1w', NULL = normal referral page).
+--     Each plan page counts ONLY its own plan rows (from zero);
+--     normal totals still include every row regardless of plan.
+-- ------------------------------------------------------------
+ALTER TABLE public.referrals ADD COLUMN IF NOT EXISTS plan text;
+CREATE INDEX IF NOT EXISTS idx_referrals_plan ON public.referrals(referrer_id, plan);
+
+-- ------------------------------------------------------------
 -- 3) transactions ledger (tap/spin/paystack/deposit rows).
 --    reference MUST be unique — replay protection depends on it.
 -- ------------------------------------------------------------

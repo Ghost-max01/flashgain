@@ -1,44 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-const PER_REFERRAL = 500;
+import { verifyNotifyToken } from "@/lib/notifications/notify-auth";
+import { computeApproved, PER_REFERRAL } from "@/lib/referral-approved";
 
 export async function POST(req: NextRequest){
   try{
-    const { userId, amount } = await req.json();
+    const { userId, amount, notifyToken } = await req.json();
     if(!userId || amount === undefined || amount === null) return NextResponse.json({error:"Missing"}, {status:400});
     const amt = Number(amount);
-    // (a) require JWT ownership (user-balance pattern)
+    // (a) require ownership: Supabase JWT match OR login-issued notify token
+    // (the app has no Supabase Auth session, so JWT alone would 401 everyone).
+    let owned = false;
     try{
       const supaAuth = await createClient();
       const { data: { user } } = await supaAuth.auth.getUser();
-      if(!user || user.id !== String(userId)) return NextResponse.json({error:"Unauthorized"}, {status:401});
-    } catch { return NextResponse.json({error:"Unauthorized"}, {status:401}); }
+      if(user && user.id === String(userId)) owned = true;
+    } catch {}
+    if (!owned) {
+      try { if (verifyNotifyToken(notifyToken, userId)) owned = true; } catch {}
+    }
+    if(!owned) return NextResponse.json({error:"Unauthorized"}, {status:401});
     // (d) validate amount scale
     if(!Number.isFinite(amt) || amt <= 0 || amt % PER_REFERRAL !== 0){
       return NextResponse.json({error:"Amount must be a positive multiple of ₦500"}, {status:400});
     }
     const supabase: any = getSupabaseAdmin?.();
     if(!supabase) return NextResponse.json({error:"Server error"}, {status:500});
-    // (b) compute approved from trust>=30 via admin client (normalize legacy 10000 → 500 via min)
-    const { data: allRefs } = await supabase.from("referrals").select("id, referred_id, amount, consumed, created_at").eq("referrer_id", userId).order("created_at", { ascending: true }).limit(2000);
-    const rows = (allRefs as any[]) || [];
-    let approvedRows: any[] = [];
-    if(rows.length > 0){
-      const ids = rows.map((r:any)=> r.referred_id).filter(Boolean);
-      let scoreMap = new Map<string, number>();
-      if(ids.length){
-        const { data: referredUsers } = await supabase.from("users").select("id, trust_score").in("id", ids);
-        scoreMap = new Map((referredUsers||[]).map((u:any)=> [u.id, Number(u.trust_score||0)]));
-      }
-      for(const r of rows){
-        if(r.consumed === true) continue;
-        if((scoreMap.get(r.referred_id) ?? 0) >= 30) approvedRows.push(r);
-      }
-    }
-    const approvedCount = approvedRows.length;
-    const approvedBalance = approvedCount * PER_REFERRAL;
+    // (b) approved balance from the single shared helper (same math as airtime).
+    const { approvedCount, approvedBalance, approvedRows } = await computeApproved(supabase, String(userId));
     if(amt > approvedBalance){
       return NextResponse.json({error: `Insufficient approved balance. Approved: ₦${approvedBalance}, pending not withdrawable until friends reach Beginner (30+)`}, {status:400});
     }
@@ -66,6 +56,11 @@ export async function POST(req: NextRequest){
     }
     try{ await supabase.from("referral_withdraws").insert({ user_id: userId, amount: amt, type: "referral", status: "success", meta: { approvedBalance, consumed: consumeIds.length } }); } catch {}
     try{ await supabase.from("withdrawals").insert({ user_id: userId, amount: amt, method: "bank", status: "pending", source: "referral" }); } catch {}
+    // First-ever ₦500 withdrawal consumes the one-time VIP slot (airtime or
+    // cash — whichever happens first), so the minimum becomes ₦10,000 after.
+    if (!vipRedeemed && amt === 500) {
+      try { await supabase.from("users").update({ vip_redeemed: true, referral_vip_balance: 0 }).eq("id", userId); } catch {}
+    }
     // (f) return new available
     const newAvailable = approvedBalance - amt;
     const newApprovedCount = approvedCount - need;

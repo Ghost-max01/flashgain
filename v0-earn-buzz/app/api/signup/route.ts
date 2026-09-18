@@ -8,7 +8,11 @@ import { issueNotifyToken } from "@/lib/notifications/notify-auth"
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin()
-    const { name, email, password, referralCode: bodyRef } = await request.json()
+    const { name, email, password, referralCode: bodyRef, autoTapPlan: bodyPlan } = await request.json()
+    // Auto-tap plan attribution: stamped on the referral row so each plan
+    // page counts ONLY its own link's signups (from zero). Anything else is
+    // treated as a normal referral (plan stays NULL).
+    const autoTapPlan = ["24h", "2d", "3d", "1w"].includes(String(bodyPlan || "")) ? String(bodyPlan) : null
     // Fallback to pending_ref cookie if body didn't send it (direct link -> register -> signup)
     let referralCode = bodyRef
     if (!referralCode) {
@@ -160,11 +164,22 @@ export async function POST(request: NextRequest) {
     //    until referred user reaches Beginner (trust_score >=30). DB trigger handles it;
     //    referrals row inserted as pending (processed=false) if trust <30.
     if (referrerId) {
-      await supabase.from("referrals").insert({
+      const referralRow: Record<string, unknown> = {
         referrer_id: referrerId,
         referred_id: userId,
         amount: 500, // 500 naira — withdrawable only after referred hits Beginner 30
-      })
+      }
+      if (autoTapPlan) (referralRow as any).plan = autoTapPlan
+      try {
+        await supabase.from("referrals").insert(referralRow)
+      } catch (e: any) {
+        // plan column predates some DBs — retry without it rather than fail signup.
+        if (autoTapPlan && /plan|column|schema/i.test(String((e as any)?.message || e || ""))) {
+          const { plan: _dropped, ...bare } = referralRow as any
+          void _dropped
+          await supabase.from("referrals").insert(bare)
+        } else throw e
+      }
     }
 
     // Offline-push token (see /api/login): fresh accounts can subscribe

@@ -58,6 +58,29 @@ export async function GET(request: Request) {
 
     const user = { referral_code: userCode }
 
+    // Per-plan count for Tiered Referral pages (?plan=24h|2d|3d|1w): counts
+    // ONLY referrals stamped with that plan at signup — normal referrals
+    // never leak in, and each plan starts from zero on its own.
+    const planFilter = searchParams.get("plan")
+    if (planFilter) {
+      if (!["24h", "2d", "3d", "1w"].includes(planFilter)) {
+        return NextResponse.json({ success: true, plan: planFilter, plan_count: 0 })
+      }
+      try {
+        const { data: planRows, error: planErr } = await supabase
+          .from("referrals")
+          .select("id")
+          .eq("referrer_id", userId)
+          .eq("plan", planFilter)
+          .limit(2000)
+        if (planErr) throw planErr
+        return NextResponse.json({ success: true, plan: planFilter, plan_count: (planRows || []).length })
+      } catch {
+        // plan column predates some DBs (or no rows yet) → honest zero.
+        return NextResponse.json({ success: true, plan: planFilter, plan_count: 0 })
+      }
+    }
+
     // Fetch all referrals for this referrer (paginate up to 2000 for now).
     // Exclude consumed (already-withdrawn) rows so a withdrawal isn't undone
     // by the next recompute; fall back if the 008 migration isn't applied yet.

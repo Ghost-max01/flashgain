@@ -78,6 +78,20 @@ function ReferContent() {
   const [approvedCount, setApprovedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const isWithdrawing = useRef(false);
+  const [showAirtimeForm, setShowAirtimeForm] = useState(false);
+  // referral-withdraw airtime popup (10k+; doubles as first-₦500 VIP airtime)
+  const [showAirPopup, setShowAirPopup] = useState(false);
+  const [apNetwork, setApNetwork] = useState("MTN");
+  const [apPhone, setApPhone] = useState("");
+  const [apMsg, setApMsg] = useState("");
+  const [apLoading, setApLoading] = useState(false);
+  const [apClientRef, setApClientRef] = useState("");
+  const getAuth = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem("tivexx-user") || "null");
+      return { uid: u?.id || u?.userId || "", notifyToken: (u as any)?.notifyToken || undefined };
+    } catch { return { uid: "", notifyToken: undefined }; }
+  };
 
   const referralMessages = [
     "Join FlashGain9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
@@ -516,21 +530,60 @@ function ReferContent() {
 
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
-        {/* VIP Welcome ₦500 — own airtime withdrawal, one-time */}
+        {/* First ₦500 — withdraw as airtime or cash, one time only */}
         {!vip.redeemed ? (
           <div className="hh-card hh-entry-0 relative overflow-hidden border-amber-400/30 bg-gradient-to-br from-amber-500/15 via-emerald-500/10 to-[#0d1f2d]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center"><Smartphone className="h-5 w-5 text-white" /></div>
                 <div>
-                  <div className="text-sm font-black text-white">VIP Welcome ₦500</div>
-                  <div className="text-[11px] text-white/60">Convert to airtime instantly — first login only</div>
+                  <div className="text-sm font-black text-white">Withdraw Airtime</div>
+                  <div className="text-[11px] text-white/60">First ₦500 — one time only, airtime or cash</div>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">VIP</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">₦500</span>
             </div>
+            <div className="grid grid-cols-1 gap-2 mt-3">
+              <button onClick={() => setShowAirtimeForm((v) => !v)} className="w-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 text-black font-black py-3 text-sm">
+                Withdraw as airtime
+              </button>
+              <button disabled={vipLoading} onClick={async () => {
+                setVipMsg(""); setVipLoading(true);
+                try {
+                  const { uid, notifyToken } = getAuth();
+                  if (!uid) throw new Error("Login first");
+                  const bd = (() => { try { return JSON.parse(localStorage.getItem("bank_details") || "null"); } catch { return null; } })();
+                  if (!bd) { window.location.href = "/setup-bank"; return; }
+                  const available = Number(userData?.referral_balance ?? (approvedCount || 0) * 500);
+                  if (available < 500) { setVipMsg("A minimum of ₦500 required"); return; }
+                  isWithdrawing.current = true;
+                  try {
+                    const res = await fetch("/api/referral-withdraw", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, amount: 500, notifyToken }) });
+                    const j = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(j.error || "Withdraw failed");
+                    const next = { available: 0, redeemed: true, phone: "", network: "", date: new Date().toISOString(), history: [...vip.history, { phone: "bank", network: "BANK", date: new Date().toISOString(), status: "success", amount: 500 }] };
+                    saveVip(next); setVip(next);
+                    try {
+                      const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
+                      prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random() * 1e9)}`, amount: 500, date: new Date().toISOString() });
+                      localStorage.setItem("tivexx-referral-withdrawals", JSON.stringify(prev.slice(0, 200)));
+                    } catch {}
+                    const nb = Number(j.referral_balance ?? j.available ?? 0);
+                    const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
+                    setAnimatedEarnings(nb);
+                    setUserData((prev: any) => prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
+                    setApprovedCount(nac);
+                    setVipMsg("₦500 sent to your bank ✓");
+                  } finally { isWithdrawing.current = false; }
+                } catch (e: any) { setVipMsg(e.message || "Failed"); }
+                setVipLoading(false);
+              }} className="w-full rounded-full bg-emerald-600 text-white font-black py-3 text-sm disabled:opacity-50">
+                {vipLoading ? "Sending..." : "Withdraw as cash"}
+              </button>
+            </div>
+            {showAirtimeForm && (
             <div className="mt-3 rounded-2xl bg-black/30 border border-white/10 p-3">
-              <div className="text-xs font-bold text-white/70 mb-2">Your VIP balance: <span className="text-amber-300 font-black">₦500</span> • separate from referrals</div>
+              <div className="text-xs font-bold text-white/70 mb-2">Your first-withdrawal balance: <span className="text-amber-300 font-black">₦500</span> • one-time only</div>
               <div className="grid grid-cols-2 gap-2">
                 <select value={vipNetwork} onChange={e=> setVipNetwork(e.target.value)} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-bold text-white outline-none">
                   <option className="text-black" value="MTN">MTN</option>
@@ -565,11 +618,12 @@ function ReferContent() {
                   saveVip(next); setVip(next); setVipMsg("Airtime sent to "+vipPhone+" ✓");
                 }catch(e:any){ setVipMsg(e.message||"Failed"); }
                 setVipLoading(false);
-              }} className="w-full mt-3 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 text-black font-black py-3 text-sm disabled:opacity-50">
-                {vipLoading ? "Sending..." : "Convert ₦500 to Airtime →"}
+              }} className={`w-full mt-3 rounded-full font-black py-3 text-sm ${!vipLoading && vipPhone.length===11 ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40"}`}>
+                {vipLoading ? "Sending..." : "Withdraw ₦500 Airtime →"}
               </button>
               <div className="text-[11px] text-white/50 text-center mt-2">One-time only. After this, referral withdrawal minimum is <b className="text-white">₦10,000</b> (20 referrals).</div>
             </div>
+            )}
           </div>
         ) : (
           <div className="hh-card border-emerald-500/20 bg-emerald-500/5">
@@ -642,28 +696,38 @@ function ReferContent() {
               </div>
               <div className="text-[11px] text-white/50 mt-1">✅ Approved = friend reached Beginner (Trust 30+). Pending referrals don't pay yet.</div>
             </div>
-            {/* Referral withdraw — separate from main, min 10k after VIP */}
+            {/* Referral withdraw — airtime or cash, min 10k after first ₦500 */}
             {(() => {
               const min = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
               // Server truth: referral_balance is approved-only once loaded; fall back to approvedCount*500 pre-load
               const avail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
               const canWithdraw = avail >= min;
+              const openAirPopup = () => {
+                try {
+                  const r = (typeof crypto !== "undefined" && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+                  setApClientRef(r);
+                } catch { setApClientRef(`${Date.now()}-${Math.floor(Math.random() * 1e9)}`); }
+                setApMsg(""); setShowAirPopup(true);
+              };
               return (
-                <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 flex items-center justify-between">
-                  <div>
+                <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <div className="mb-2">
                     <div className="text-xs font-black text-white">Referral Withdraw</div>
-                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{avail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(VIP 500)"}</div>
+                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{avail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(first ₦500)"}</div>
                   </div>
-                  <button disabled={!canWithdraw} onClick={async ()=>{
-                    const u = JSON.parse(localStorage.getItem("tivexx-user")||"null");
-                    const uid = u?.id || u?.userId;
+                  <div className="grid grid-cols-1 gap-2">
+                    <button disabled={!canWithdraw} onClick={openAirPopup} className={`w-full rounded-full font-black py-2.5 text-sm ${canWithdraw ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                      Withdraw as airtime
+                    </button>
+                    <button disabled={!canWithdraw} onClick={async ()=>{
+                    const { uid, notifyToken } = getAuth();
                     if(!uid) return;
                     // simple local withdraw: require bank set
                     const bd = (()=>{ try{ return JSON.parse(localStorage.getItem("bank_details")||"null") }catch{return null}})();
                     if(!bd) { window.location.href="/setup-bank"; return; }
                     isWithdrawing.current = true;
                     try{
-                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: avail })});
+                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: avail, notifyToken })});
                       const j = await res.json();
                       if(!res.ok){ alert(j.error||"Withdraw failed"); return; }
                       alert("Referral withdrawal requested: ₦"+avail.toLocaleString());
@@ -679,14 +743,76 @@ function ReferContent() {
                       setUserData((prev:any)=> prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
                       setApprovedCount(nac);
                     } finally { isWithdrawing.current = false; }
-                  }} className={`px-4 py-2 rounded-full font-black text-sm ${canWithdraw ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
-                    {canWithdraw ? "Withdraw" : `Need ₦${min.toLocaleString()}`}
+                  }} className={`w-full rounded-full font-black py-2.5 text-sm ${canWithdraw ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                    {canWithdraw ? "Withdraw as cash" : `Need ₦${min.toLocaleString()}`}
                   </button>
+                  </div>
                 </div>
               );
             })()}
           </div>
         </div>
+
+        {/* Withdraw-as-airtime popup (same page, no navigation) */}
+        {showAirPopup && (() => {
+          const apAvail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
+          const apMin = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
+          const apCan = apAvail >= apMin && apPhone.length === 11 && !apLoading;
+          return (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => { if (!apLoading) setShowAirPopup(false); }}>
+              <div className="hh-popup max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-base font-black text-white">Withdraw as Airtime</div>
+                  <button onClick={() => { if (!apLoading) setShowAirPopup(false); }} className="text-white/50 hover:text-white font-black px-2" aria-label="Close">✕</button>
+                </div>
+                <div className="text-xs text-white/60 mb-3">Amount: <span className="text-amber-300 font-black">₦{(vip.redeemed ? apAvail : 500).toLocaleString()}</span> {vip.redeemed ? "• min ₦10,000" : "• one-time first ₦500"}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={apNetwork} onChange={(e) => setApNetwork(e.target.value)} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-bold text-white outline-none">
+                    <option className="text-black" value="MTN">MTN</option>
+                    <option className="text-black" value="GLO">GLO</option>
+                    <option className="text-black" value="AIRTEL">AIRTEL</option>
+                    <option className="text-black" value="9MOBILE">9MOBILE</option>
+                  </select>
+                  <input inputMode="numeric" placeholder="080..." value={apPhone} onChange={(e) => setApPhone(e.target.value.replace(/\D/g, "").slice(0, 11))} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-bold text-white placeholder:text-white/30 outline-none" />
+                </div>
+                {apMsg && <div className={`mt-2 text-xs font-bold ${apMsg.startsWith("Airtime sent") ? "text-emerald-300" : "text-amber-300"}`}>{apMsg}</div>}
+                <button disabled={!apCan} onClick={async () => {
+                  setApMsg(""); setApLoading(true);
+                  try {
+                    const { uid, notifyToken } = getAuth();
+                    if (!uid) throw new Error("Login first");
+                    if (!vip.redeemed) {
+                      const res = await fetch("/api/airtime", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, phone: apPhone, network: apNetwork, amount: 500 }) });
+                      const j = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(j.error || "Failed");
+                      const next = { available: 0, redeemed: true, phone: apPhone, network: apNetwork, date: new Date().toISOString(), history: [...vip.history, { phone: apPhone, network: apNetwork, date: new Date().toISOString(), status: "success", amount: 500 }] };
+                      saveVip(next); setVip(next); setShowAirtimeForm(false);
+                      setApMsg(`Airtime sent to ${apPhone} ✓`);
+                      setTimeout(() => setShowAirPopup(false), 1200);
+                    } else {
+                      const res = await fetch("/api/referral-airtime", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, notifyToken, phone: apPhone, network: apNetwork, amount: apAvail, clientRef: apClientRef }) });
+                      const j = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(j.error || "Failed");
+                      const nb = Number(j.referral_balance ?? j.available ?? 0);
+                      const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
+                      setAnimatedEarnings(nb);
+                      setUserData((prev: any) => prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
+                      setApprovedCount(nac);
+                      setApMsg(`Airtime sent to ${apPhone} ✓`);
+                      setTimeout(() => setShowAirPopup(false), 1200);
+                    }
+                  } catch (e: any) {
+                    setApMsg(`Pending — ${(e as any)?.message || "try again"}`);
+                  }
+                  setApLoading(false);
+                }} className={`w-full mt-3 rounded-full font-black py-3 text-sm ${apCan ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                  {apLoading ? "Sending..." : `Withdraw ${(vip.redeemed ? apAvail : 500).toLocaleString()} Airtime →`}
+                </button>
+                <button onClick={() => { if (!apLoading) setShowAirPopup(false); }} className="w-full mt-2 rounded-full border border-white/15 text-white font-bold py-2.5 text-sm">Close</button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Referral Link Card */}
         <div className="hh-card hh-entry-2">
@@ -823,34 +949,35 @@ function ReferContent() {
           </div>
         </div>
 
-        {/* Stats Dashboard */}
+        {/* Your Performance */}
         <div className="hh-card hh-entry-5">
           <div className="hh-section-title text-center mb-5">
             Your Performance
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="hh-stat-card hh-stat-referrals">
-              <div className="hh-stat-icon">
-                <Users className="h-5 w-5" />
+          {/* Successful — pending-box type, done icon, green count */}
+          <div className="hh-pending-card !bg-emerald-500/10 !border-emerald-500/25 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="hh-pending-icon !bg-emerald-500/15 !border-emerald-500/30">
+                <Check className="h-5 w-5 text-emerald-300" />
               </div>
-              <div className="hh-stat-content">
-                <div className="hh-stat-value text-amber-300">
-                  {userData?.referral_count || 0}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-black text-white">
+                    Successful verification
+                  </span>
+                  <span className="text-2xl font-black text-emerald-300 leading-none">
+                    {approvedCount}
+                  </span>
                 </div>
-                <div className="hh-stat-label">Successful</div>
-              </div>
-            </div>
-
-            <div className="hh-stat-card hh-stat-earned">
-              <div className="hh-stat-icon">
-                <Wallet className="h-5 w-5" />
-              </div>
-              <div className="hh-stat-content">
-                <div className="hh-stat-value text-emerald-300">
-                  {formatCurrency(userData?.referral_balance || 0)}
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs text-gray-400">
+                    Total earning
+                  </span>
+                  <span className="text-emerald-300">
+                    {formatCurrency(approvedCount * 500)}
+                  </span>
                 </div>
-                <div className="hh-stat-label">Earned</div>
               </div>
             </div>
           </div>
@@ -867,7 +994,7 @@ function ReferContent() {
                     Pending verification
                   </span>
                   <span className="text-lg font-bold text-amber-300">
-                    {userData?.pending_count || 0}
+                    {pendingCount}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
@@ -875,9 +1002,42 @@ function ReferContent() {
                     Potential earnings
                   </span>
                   <span className="text-sm font-bold text-emerald-400">
-                    {formatCurrency((userData?.pending_count || 0) * 500)}
+                    {formatCurrency(pendingCount * 500)}
                   </span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Verified Referrers */}
+        <div className="hh-card hh-entry-5">
+          <div className="flex items-center gap-3">
+            <div className="hh-pending-icon !bg-emerald-500/15 !border-emerald-500/30">
+              <Users className="h-5 w-5 text-emerald-300" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-white">Verified referrers</div>
+              <div className="flex items-end justify-between mt-1">
+                <span className="text-3xl font-black text-amber-300 leading-none">{approvedCount}</span>
+                <span className="text-emerald-300">{formatCurrency(approvedCount * 500)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Unverified Referrers */}
+        <div className="hh-card hh-entry-6">
+          <div className="flex items-center gap-3">
+            <div className="hh-pending-icon">
+              <Clock className="h-5 w-5 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-white">Unverified referrers</div>
+              <div className="text-[11px] text-white/45">Only the balance is unverified — activates at Beginner</div>
+              <div className="flex items-end justify-between mt-1">
+                <span className="text-3xl font-black text-amber-300 leading-none">{pendingCount}</span>
+                <span className="text-emerald-300">{formatCurrency(pendingCount * 500)}</span>
               </div>
             </div>
           </div>
@@ -2029,6 +2189,27 @@ function ReferContent() {
           }
         }
 
+        /* ─── POPUP (same-page modal — navy card, glowing CTA) ─── */
+        .hh-popup {
+          background: linear-gradient(135deg, #0d1f2d, #0a1628);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 24px;
+          padding: 24px;
+          box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+          animation: hh-popup-appear 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes hh-popup-appear {
+          from { opacity: 0; transform: scale(0.8) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .hh-popup-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
         /* ─── REDUCED MOTION ─── */
         @media (prefers-reduced-motion: reduce) {
           .hh-bubble,
@@ -2060,27 +2241,21 @@ function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }:
 
   useEffect(() => {
     if (!autoTapPlan) return;
-    try {
-      const mapRaw = localStorage.getItem("auto_tap_ref_code");
-      const map = safeParse(mapRaw, {});
-      let code = map[autoTapPlan];
-      if (!code) {
-        const base = (userData?.referral_code || userData?.id || "USER").toString().slice(-4);
-        code = `${base}-AUTO-${autoTapPlan}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
-        map[autoTapPlan] = code;
-        localStorage.setItem("auto_tap_ref_code", JSON.stringify(map));
-      }
-      setAutoRefCode(code);
-      const cnt = localStorage.getItem(`auto_ref_count_${autoTapPlan}`);
-      setAutoRefCount(cnt ? Number(cnt) : 0);
-      // also sync from server if available (accept UUID or referral_code)
+    // Isolated per-plan count (same rule as the Tiered Referral page):
+    // ONLY signups stamped with this plan — normal referrals never leak in.
+    let cancelled = false;
+    const loadPlanCount = () => {
       const uid = (userData as any)?.id || (userData as any)?.userId;
-      if (uid) {
-        fetch(`/api/referral-stats?userId=${uid}&t=${Date.now()}`).then(r=>r.json()).then(d=>{
-          if (typeof d.referral_count === "number") setAutoRefCount(d.referral_count);
-        }).catch(()=>{});
-      }
-    } catch {}
+      if (!uid) return;
+      fetch(`/api/referral-stats?userId=${uid}&plan=${encodeURIComponent(autoTapPlan)}&t=${Date.now()}`)
+        .then(r=>r.json())
+        .then(d=>{ if (!cancelled && typeof d?.plan_count === "number") setAutoRefCount(d.plan_count); })
+        .catch(()=>{});
+    };
+    setAutoRefCount(0);
+    loadPlanCount();
+    const id = setInterval(loadPlanCount, 30000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [autoTapPlan, userData]);
 
   if (!autoTapPlan || !plan) {

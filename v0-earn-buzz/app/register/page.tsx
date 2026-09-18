@@ -30,6 +30,10 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [agreed, setAgreed] = useState(false);
+  // Auto-tap plan attribution (?autoTapPlan=24h|2d|3d|1w on the link).
+  // Stamped on the referral row at signup so each plan page counts ONLY
+  // its own link's signups. Anything else counts as a normal referral.
+  const [autoTapPlan, setAutoTapPlan] = useState("");
   const [showPasswordReminder, setShowPasswordReminder] = useState(false);
 
   useEffect(() => {
@@ -80,6 +84,19 @@ export default function RegisterPage() {
         document.cookie = `pending_ref=${encodeURIComponent(refCode)}; path=/; max-age=${60 * 60 * 24 * 30}`;
       } catch {}
     }
+    try {
+      const plans = ["24h", "2d", "3d", "1w"];
+      const fromUrl = searchParams.get("autoTapPlan") || new URL(window.location.href).searchParams.get("autoTapPlan") || "";
+      if (plans.includes(fromUrl)) {
+        setAutoTapPlan(fromUrl);
+        try { localStorage.setItem("tivexx-pending-plan", fromUrl); } catch {}
+      } else {
+        try {
+          const kept = localStorage.getItem("tivexx-pending-plan") || "";
+          if (plans.includes(kept)) setAutoTapPlan(kept);
+        } catch {}
+      }
+    } catch {}
   }, [mounted, searchParams]);
 
   // Password reminder notification
@@ -137,6 +154,7 @@ export default function RegisterPage() {
           email,
           password,
           referralCode: effectiveRef || undefined,
+          autoTapPlan: autoTapPlan || undefined,
         }),
       });
 
@@ -166,6 +184,7 @@ export default function RegisterPage() {
       localStorage.removeItem("tivexx-welcome-popup-shown");
       try {
         localStorage.removeItem("tivexx-pending-ref");
+        localStorage.removeItem("tivexx-pending-plan");
         document.cookie = "pending_ref=; path=/; max-age=0";
       } catch {}
       // Flag for dashboard: show notification enable/status only after successful signup (not for anonymous visitors)
