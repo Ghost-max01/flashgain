@@ -160,34 +160,11 @@ export default function StakeWinPage() {
     return () => { if (exhaustedTimerRef.current) clearTimeout(exhaustedTimerRef.current) }
   }, [])
 
-  // After the 3rd-spin result shows: 10s of inactivity OR any press/tap/
-  // scroll/key on this page brings up the Spins Complete popup.
-  // NOTE: listeners attach once on mount and read the refs LIVE inside the
-  // handler — a ref flip (timer armed after the 3rd spin) does not re-run
-  // effects, so gating on the ref OUTSIDE (empty-deps early return) would
-  // silently never attach them.
-  useEffect(() => {
-    const handleInteraction = () => {
-      if (exhaustedTimerRef.current && isTimerActiveRef.current) {
-        clearTimeout(exhaustedTimerRef.current)
-        exhaustedTimerRef.current = null
-        isTimerActiveRef.current = false
-        setShowSpinCompleteModal(true)
-      }
-    }
-
-    // Add event listeners for user interactions
-    const events = ['click', 'touchstart', 'keydown', 'scroll', 'wheel']
-    events.forEach(event => {
-      window.addEventListener(event, handleInteraction, { capture: true, passive: true })
-    })
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, handleInteraction, { capture: true })
-      })
-    }
-  }, [])
+  // After the 3rd-spin result shows, the Spins Complete popup comes ONLY
+  // from: (a) 10 seconds passing, or (b) pressing the SPIN button again.
+  // Taps anywhere else do nothing — no early trigger, no reset.
+  // (The 10s timer is armed in doSpin; the 4th-press shortcut lives in the
+  // doSpin guard at the top of that function. Unmount cleanup sits above.)
 
 
   useEffect(() => {

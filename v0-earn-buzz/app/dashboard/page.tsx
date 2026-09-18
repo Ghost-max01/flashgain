@@ -2669,7 +2669,7 @@ export default function DashboardPage() {
                   <div className="hh-tap-icon-sm"><HandCoins className="h-4 w-4 text-white" /></div>
                   <span className="text-xs font-black tracking-widest text-white">TAP TO EARN</span>
                   <span className="hh-tap-badge">₦{earnPerTap}/tap</span>
-                  {autoActive && <span className="hh-auto-on-badge">Auto +₦{earnPerTap}/tap</span>}
+                  {autoActive && <span className="hh-auto-on-badge">Auto</span>}
                 </div>
                 <span className="text-[11px] font-mono font-bold text-emerald-300 flex items-center gap-1"><Sparkles className="h-3 w-3"/> +₦{tapEarned.toLocaleString()}</span>
               </div>
