@@ -113,7 +113,6 @@ function AutoTapReferContent() {
   // silently record no referral. Plan context travels via &autoTapPlan=.
   const realCode = userData?.referral_code || (userData as any)?.userId || "";
   const autoLink = origin && realCode ? `${origin}/register?ref=${encodeURIComponent(realCode)}&autoTapPlan=${encodeURIComponent(planId)}` : "";
-  const pct = Math.min(100, Math.round((autoRefCount / Math.max(1, plan.need))*100));
   const referralLink = userData?.referral_code ? `/register?ref=${userData.referral_code}` : "/register";
 
   const handleCopy = () => { if(!autoLink) return; navigator.clipboard.writeText(autoLink); setCopied(true); setTimeout(()=>setCopied(false),2000); };
@@ -131,9 +130,9 @@ function AutoTapReferContent() {
         <div className="hh-card hh-card-hero hh-entry-1 relative overflow-hidden">
           <div className="hh-orb hh-orb-1" aria-hidden="true"></div><div className="hh-orb hh-orb-2" aria-hidden="true"></div>
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4"><div className="flex items-center gap-2"><div className="hh-icon-ring"><Award className="h-5 w-5 text-amber-300" /></div><span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Referral Program</span></div><div className="hh-live-indicator"><span className="hh-live-dot"></span><span className="text-xs">Active</span></div></div>
-            <div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-gray-400 mb-1">Earn per referral</p><p className="text-3xl font-black text-white hh-fit-amount"><span className="text-sm align-top opacity-80">₦</span><span className="tracking-tight">5,000</span></p></div><div className="text-right"><p className="text-xs text-gray-400 mb-1">Potential earnings</p><div className={`transition-colors duration-300 ${isEarningsChanging ? "text-amber-200" : "text-amber-300"}`}>{formatCurrency(animatedEarnings)}</div></div></div>
-            <div className="hh-progress-mini mt-4"><div className="flex items-center justify-between text-xs mb-1"><span className="text-gray-400">Referrals</span><span className="text-white font-bold">{userData?.referral_count || 0} <span className="text-gray-500">/ ∞</span></span></div><div className="hh-progress-track"><div className="hh-progress-fill" style={{ width: `${Math.min((userData?.referral_count || 0) * 2, 100)}%` }}></div></div></div>
+            <div className="flex items-center justify-center mb-4"><div className="flex items-center gap-2"><div className="hh-icon-ring"><Users className="h-5 w-5 text-emerald-300" /></div><span className="text-xs font-black tracking-widest text-emerald-300">TIERED REFERRAL — {plan.need} REQUIRED</span></div></div>
+            <div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-gray-400 mb-1">Earn per referral</p><p className="text-3xl font-black text-white hh-fit-amount"><span className="text-sm align-top opacity-80">₦</span><span className="tracking-tight">500</span></p></div><div className="text-right"><p className="text-xs text-gray-400 mb-1">Potential earnings</p><div className={`transition-colors duration-300 ${isEarningsChanging ? "text-amber-200" : "text-amber-300"}`}>{formatCurrency(animatedEarnings)}</div></div></div>
+            <div className="hh-progress-mini mt-4"><div className="flex items-center justify-between text-xs mb-1"><span className="text-gray-400">Referrals</span><span className="text-white font-bold">{autoRefCount} / {plan.need}</span></div><div className="hh-progress-track"><div className="hh-progress-fill" style={{ width: `${Math.min(100, Math.round((autoRefCount / Math.max(1, plan.need)) * 100))}%` }}></div></div></div>
           </div>
         </div>
 
@@ -142,7 +141,8 @@ function AutoTapReferContent() {
           <div className="flex items-center justify-between mb-4"><div className="hh-section-title">Your Referral Link</div><button onClick={cycleMessage} className="hh-change-message-btn"><TrendingUp className="h-3 w-3" /><span>Change message</span></button></div>
           <div className="hh-message-bubble mb-4"><p className="text-sm text-white/90 leading-relaxed">{activeMessage}</p></div>
           <div className="space-y-3"><div className="hh-link-container"><div className="hh-link-label">Your unique link</div><div className="hh-link-value"><span className="truncate">{origin ? `${origin}${referralLink}` : "Loading..."}</span></div></div>
-            <div className="grid grid-cols-2 gap-3"><button onClick={handleCopy} className={`hh-share-btn ${copied ? "hh-share-success" : "hh-share-copy"}`}>{copied ? <><Check className="h-5 w-5" /><span>Copied!</span></> : <><Copy className="h-5 w-5" /><span>Copy Link</span></>}</button><button onClick={shareWhatsApp} className="hh-share-btn hh-share-wa"><Share2 className="h-5 w-5" /><span>Share</span></button></div>
+            <p className="text-[11px] text-white/55 leading-relaxed">Only signups from THIS plan&apos;s link count here (from zero). They also count to your normal total. Max ₦{plan.maxEarn.toLocaleString()} when unlocked.</p>
+            <div className="grid grid-cols-3 gap-2"><button onClick={handleCopy} className={`hh-share-btn flex-col !gap-1 !py-3 !text-xs font-black ${copied ? "hh-share-success" : "hh-share-copy"}`}>{copied ? <><Check className="h-4 w-4" /><span>Copied!</span></> : <><Copy className="h-4 w-4" /><span>Copy link</span></>}</button><button onClick={shareTelegram} className="hh-share-btn hh-share-tg flex-col !gap-1 !py-3 !text-xs font-black"><Send className="h-4 w-4" /><span>Telegram</span></button><button onClick={shareWhatsApp} className="hh-share-btn hh-share-wa flex-col !gap-1 !py-3 !text-xs font-black"><Share2 className="h-4 w-4" /><span>WhatsApp</span></button></div>
           </div>
         </div>
 
@@ -166,22 +166,6 @@ function AutoTapReferContent() {
           </div>
           <p className="text-[11px] text-white/40 mt-3 text-center">To use tasks or payment, go back to dashboard and choose that option.</p>
           <button onClick={()=> router.push("/dashboard")} className="w-full mt-2 rounded-full border border-white/15 text-white font-bold py-2.5 text-xs">Back to Dashboard</button>
-        </div>
-
-        {/* Auto Tap Referral — stops above How It Works (no How It Works below) */}
-        <div className="hh-card hh-entry-3 border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-amber-500/10">
-          <div className="flex items-center gap-2 mb-3"><div className="hh-icon-ring"><Users className="h-4 w-4 text-emerald-300" /></div><span className="text-xs font-black tracking-widest text-emerald-300">TIERED REFERRAL — {plan.need} REQUIRED</span><span className="ml-auto text-[11px] font-bold text-white/60">{planId}</span></div>
-          <h3 className="text-base font-black text-white">Referral — {plan.need} referrals</h3>
-          <p className="text-xs text-white/60 mt-1">Only signups from THIS plan&apos;s link count here (from zero). They also count to your normal total. Max ₦{plan.maxEarn.toLocaleString()} when unlocked.</p>
-          <div className="mt-4"><div className="flex items-center justify-between text-xs mb-1"><span className="text-white/60">Progress</span><span className="font-mono font-bold text-white">{autoRefCount}/{plan.need}</span></div><div className="hh-progress-track"><div className="hh-progress-fill" style={{ width: `${pct}%` }}></div></div></div>
-          <div className="mt-4 bg-black/30 rounded-xl p-2.5 border border-white/10"><div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1">Your Auto Tap referral link</div><div className="text-xs font-mono text-white break-all">{autoLink || "generating..."}</div></div>
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            <button onClick={handleCopy} className="hh-share-btn hh-share-copy flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-black">{copied ? <><Check className="h-4 w-4" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy</>}</button>
-            <button onClick={shareWhatsApp} className="hh-share-btn hh-share-wa flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-black"><Share2 className="h-4 w-4" /> WhatsApp</button>
-            <button onClick={shareTelegram} className="hh-share-btn hh-share-tg flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-black"><Send className="h-4 w-4" /> Telegram</button>
-          </div>
-          {autoRefCount >= plan.need ? <button onClick={()=> router.push("/dashboard")} className="w-full mt-3 rounded-full bg-emerald-500 text-white font-black py-3 text-sm">Unlock & Start Auto Tap →</button> : <p className="text-[11px] text-amber-300 mt-2 text-center">{plan.need - autoRefCount} more referral{plan.need - autoRefCount===1?"":"s"} to unlock</p>}
-          <p className="text-[11px] text-white/40 mt-2 text-center">Share WhatsApp for WhatsApp, Telegram for Telegram — each opens its app.</p>
         </div>
 
         {/* Intentionally STOP here — no How It Works, no Stats Dashboard */}

@@ -1229,8 +1229,16 @@ export default function DashboardPage() {
         }
         const m2 = JSON.parse(localStorage.getItem(AUTO_REF_LINK_KEY)||"{}");
         setAutoRefCode(m2[id]||"");
-        const cntRaw = localStorage.getItem(`auto_ref_count_${id}`);
-        setAutoRefCount(cntRaw ? Number(cntRaw) : 0);
+        // Isolated per-plan count from the server (this plan's stamped
+        // signups only — normal referrals never leak in, starts from zero).
+        try {
+          const uid2 = (userData as any)?.id || (userData as any)?.userId || "";
+          if (uid2) {
+            const r = await fetch(`/api/referral-stats?userId=${encodeURIComponent(uid2)}&plan=${encodeURIComponent(id)}&t=${Date.now()}`);
+            const j = await r.json().catch(() => ({}));
+            setAutoRefCount(typeof j?.plan_count === "number" ? j.plan_count : 0);
+          } else setAutoRefCount(0);
+        } catch { setAutoRefCount(0); }
       } catch { setAutoRefCode(""); }
       return;
     }
@@ -1290,13 +1298,18 @@ export default function DashboardPage() {
     }
     if (reqChoice==="referral") {
       const need = AUTO_REQ_REF[reqPlan];
-      const cntRaw = localStorage.getItem(`auto_ref_count_${reqPlan}`);
-      const cnt = cntRaw ? Number(cntRaw) : 0;
-      // also check total referrals
-      let totalRef = 0;
-      try { const r = await fetch(`/api/referral-stats?userId=${userData?.id||userData?.userId}`); const j=await r.json(); if(j.success) totalRef=j.referral_count||0; } catch {}
-      const effective = Math.max(cnt, totalRef);
-      if (effective < need) { toast({ title: "Requirement not met", description: `Need ${need} referrals, you have ${effective}` }); return; }
+      // Isolated per-plan count: ONLY this plan's stamped signups count
+      // (normal referrals never leak in; each plan starts from zero).
+      let planCount = 0;
+      try {
+        const uid = (userData as any)?.id || (userData as any)?.userId || "";
+        if (uid) {
+          const r = await fetch(`/api/referral-stats?userId=${encodeURIComponent(uid)}&plan=${encodeURIComponent(reqPlan)}&t=${Date.now()}`);
+          const j = await r.json().catch(() => ({}));
+          if (typeof j?.plan_count === "number") planCount = j.plan_count;
+        }
+      } catch {}
+      if (planCount < need) { toast({ title: "Requirement not met", description: `Need ${need} Tiered Referral signups for this plan — you have ${planCount}. Share THIS plan's link (each plan counts from zero).` }); return; }
     }
     if (reqChoice==="payment") {
       const need = AUTO_REQ_PAY[reqPlan];
