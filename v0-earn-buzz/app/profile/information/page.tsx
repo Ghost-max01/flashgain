@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, User, Mail, Award, CheckCircle, Copy } from "lucide-react" // Added Copy
+import { ArrowLeft, User, Mail, Award, CheckCircle, Copy, KeyRound, ChevronRight } from "lucide-react" // Added Copy
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast" // Import useToast
 
@@ -258,6 +258,21 @@ export default function ProfileInformationPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Security — change password lives here */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-1 text-gray-800">Security</h3>
+          <Link href="/profile/change-password" className="mt-3 flex items-center gap-3 rounded-xl border border-gray-100 p-3">
+            <span className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+              <KeyRound className="h-5 w-5 text-violet-600" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold text-gray-800">Change password</span>
+              <span className="block text-xs text-gray-500">Update your account password</span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-gray-300" />
+          </Link>
         </div>
 
       </div>

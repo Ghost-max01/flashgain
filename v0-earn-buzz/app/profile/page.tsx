@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Camera, User, Key, Landmark, History, HelpCircle, ChevronRight, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Camera, User, Landmark, History, HelpCircle, ChevronRight, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { loadMeta, computeScore, getLevel } from "@/lib/trust-score"
 import { safeParse } from "@/lib/safe-storage"
@@ -25,8 +25,6 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [showBeginnerPopup, setShowBeginnerPopup] = useState(false)
   const [trustScore, setTrustScore] = useState(0)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem("tivexx-user")
@@ -59,35 +57,8 @@ export default function ProfilePage() {
     return () => { try { unsub?.() } catch {} }
   }, [router])
 
-  const handleProfilePictureClick = () => fileInputRef.current?.click()
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try { e.target.value = "" } catch {}
-    // Compress now for instant preview; persist on Save so Cancel discards.
-    try {
-      const m = await import("@/lib/profile-picture")
-      const dataUrl = await m.fileToCompressedDataUrl(file)
-      setPreviewImage(dataUrl)
-    } catch {
-      const reader = new FileReader()
-      reader.onload = (event) => setPreviewImage(event.target?.result as string)
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleSaveProfilePicture = () => {
-    if (!previewImage || !userData) return
-    const updatedUser = { ...userData, profilePicture: previewImage }
-    import("@/lib/profile-picture").then((m) => {
-      try { m.saveStoredUser(updatedUser) } catch {}
-    }).catch(() => {
-      try { localStorage.setItem("tivexx-user", JSON.stringify(updatedUser)) } catch {}
-    })
-    setUserData(updatedUser)
-    setPreviewImage(null)
-  }
+  // Photo + password live inside Edit details (/profile/information).
+  const goEditDetails = () => router.push("/profile/information")
 
   // Change account number is gated at Beginner (trust score 30+).
   const handleChangeAccountNumber = () => {
@@ -110,12 +81,10 @@ export default function ProfilePage() {
     tint: string
     title: string
     sub: string
-    action: "link" | "account" | "picture"
+    action: "link" | "account"
     href?: string
   }[] = [
-    { icon: Camera, tint: "pf-tint-emerald", title: "Change profile picture", sub: "Tap to upload a new photo", action: "picture" },
-    { icon: User, tint: "pf-tint-emerald", title: "Edit details", sub: "Change your name and profile info", action: "link", href: "/profile/information" },
-    { icon: Key, tint: "pf-tint-violet", title: "Change password", sub: "Update your account password", action: "link", href: "/profile/change-password" },
+    { icon: User, tint: "pf-tint-emerald", title: "Edit details", sub: "Photo, name, info and password", action: "link", href: "/profile/information" },
     { icon: Landmark, tint: "pf-tint-amber", title: "Change account number", sub: trustScore >= 30 ? "Update your payout account" : "Reach Beginner to unlock", action: "account" },
     { icon: History, tint: "pf-tint-cyan", title: "History", sub: "Tasks, referrals, withdrawals, purchases", action: "link", href: "/history" },
     { icon: HelpCircle, tint: "pf-tint-blue", title: "Help & Support", sub: "Chat with support", action: "link", href: "/chats" },
@@ -151,7 +120,7 @@ export default function ProfilePage() {
         {/* Identity card */}
         <div className="hh-card hh-entry-1">
           <div className="flex items-center gap-4">
-            <div className="relative shrink-0 cursor-pointer" onClick={handleProfilePictureClick} title="Change profile picture">
+            <div className="relative shrink-0 cursor-pointer" onClick={goEditDetails} title="Edit details">
               {userData.profilePicture ? (
                 <img src={userData.profilePicture} alt={userData.name} className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500" />
               ) : (
@@ -171,15 +140,6 @@ export default function ProfilePage() {
               </span>
             </div>
           </div>
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-          {previewImage && (
-            <div className="mt-4 rounded-2xl bg-black/30 border border-white/10 p-3 flex items-center gap-3">
-              <img src={previewImage} alt="Preview" className="w-12 h-12 rounded-full object-cover border border-emerald-500/50" />
-              <span className="text-xs text-white/60 flex-1">New picture preview</span>
-              <Button variant="outline" onClick={() => setPreviewImage(null)} className="rounded-full border-white/15 text-white text-xs">Cancel</Button>
-              <Button onClick={handleSaveProfilePicture} className="rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-black">Save</Button>
-            </div>
-          )}
         </div>
 
         {/* Menu rows */}
@@ -199,7 +159,6 @@ export default function ProfilePage() {
               </div>
             )
             if (r.action === "link") return <Link key={r.title} href={r.href!}>{inner}</Link>
-            if (r.action === "picture") return <button key={r.title} onClick={handleProfilePictureClick} className="w-full text-left">{inner}</button>
             return <button key={r.title} onClick={handleChangeAccountNumber} className="w-full text-left">{inner}</button>
           })}
         </div>
