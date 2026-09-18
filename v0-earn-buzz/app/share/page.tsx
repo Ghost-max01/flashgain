@@ -27,7 +27,7 @@ export default function SharePage() {
       }
     } catch {}
   }, []);
-  const shareLink = origin && code ? `${origin}/register?ref=${encodeURIComponent(code)}` : (origin ? `${origin}/register` : "/register");
+  const shareLink = origin && code ? `${origin}/?ref=${encodeURIComponent(code)}` : (origin ? `${origin}/register` : "/register");
   const shareMessage =
     "Earn Buzz: Your ultimate financial companion! Manage money, buy airtime/data, get quick loans, and invest with ease. Download now!"
 

@@ -13,6 +13,28 @@ export default function HomePage() {
 
   useEffect(() => {
     const resolveSession = async () => {
+      // Referred visitor lands on the homepage first: capture + persist the
+      // referrer code (and auto-tap plan) so ANY later press that leads to
+      // signup still attributes correctly. Register reads these stores.
+      try {
+        const url0 = new URL(window.location.href);
+        const keys = ["ref", "referral", "referral_code", "code", "r"];
+        for (const k of keys) {
+          const v = url0.searchParams.get(k);
+          if (v && v.trim()) {
+            const code = v.trim().toUpperCase().replace(/\s+/g, "");
+            try {
+              localStorage.setItem("tivexx-pending-ref", code);
+              document.cookie = `pending_ref=${encodeURIComponent(code)}; path=/; max-age=${60 * 60 * 24 * 30}`;
+            } catch {}
+            break;
+          }
+        }
+        const plan = url0.searchParams.get("autoTapPlan") || "";
+        if (["24h", "2d", "3d", "1w"].includes(plan)) {
+          try { localStorage.setItem("tivexx-pending-plan", plan); } catch {}
+        }
+      } catch {}
       const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie();
       if (storedUser) {
         router.push("/dashboard");

@@ -1379,7 +1379,7 @@ export default function DashboardPage() {
     // NOTE: ?ref= must be the REAL referral_code — fake XXXX-AUTO codes never
     // resolve in signup and silently record no referral.
     const realCode = (userData as any)?.referral_code || userData?.userId || userData?.id || autoRefCode;
-    const link = `${window.location.origin}/register?ref=${realCode}`;
+    const link = `${window.location.origin}/?ref=${realCode}`;
     navigator.clipboard.writeText(link).then(()=> toast({ title:"Copied", description: link }));
   }, [autoRefCode, userData, toast]);
   // Exact time remaining for the auto-tap countdown — standard HH:MM:SS,
@@ -1671,7 +1671,7 @@ export default function DashboardPage() {
   };
 
   const copyLinkToClipboard = async () => {
-    const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${userData?.userId || "ref"}`;
+    const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/?ref=${userData?.userId || "ref"}`;
     try {
       await navigator.clipboard.writeText(referralLink);
       setCopiedLink(true);
@@ -2489,7 +2489,7 @@ export default function DashboardPage() {
               <div className="hh-browser-check-link-box">
                 <code className="text-[10px] text-white break-all">
                   {typeof window !== "undefined"
-                    ? `${window.location.origin}/register?ref=${userData?.userId || "ref"}`
+                    ? `${window.location.origin}/?ref=${userData?.userId || "ref"}`
                     : "Loading..."}
                 </code>
               </div>

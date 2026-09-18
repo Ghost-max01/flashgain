@@ -51,7 +51,7 @@ function AutoTapReferContent() {
   useEffect(() => {
     setOrigin(window.location.origin);
     setActiveMessage(referralMessages[Math.floor(Math.random() * referralMessages.length)]);
-    // Backward-compat: old links used /refer?ref=CODE — persist + forward guests to /register?ref=CODE
+    // Backward-compat: old links used /refer?ref=CODE — persist + forward guests home (/?ref=CODE)
     try {
       const keys = ["ref", "referral", "referral_code", "code", "r"];
       let incomingRef = "";
@@ -65,7 +65,7 @@ function AutoTapReferContent() {
           document.cookie = `pending_ref=${encodeURIComponent(incomingRef)}; path=/; max-age=${60 * 60 * 24 * 30}`;
         } catch {}
         const su = localStorage.getItem("tivexx-user");
-        if (!su) { router.push(`/register?ref=${encodeURIComponent(incomingRef)}`); return; }
+        if (!su) { router.push(`/?ref=${encodeURIComponent(incomingRef)}`); return; }
       }
     } catch {}
     const storedUser = localStorage.getItem("tivexx-user");
@@ -112,8 +112,8 @@ function AutoTapReferContent() {
   // users.referral_code). Fake per-plan codes (XXXX-AUTO-...) never match and
   // silently record no referral. Plan context travels via &autoTapPlan=.
   const realCode = userData?.referral_code || (userData as any)?.userId || "";
-  const autoLink = origin && realCode ? `${origin}/register?ref=${encodeURIComponent(realCode)}&autoTapPlan=${encodeURIComponent(planId)}` : "";
-  const referralLink = userData?.referral_code ? `/register?ref=${userData.referral_code}` : "/register";
+  const autoLink = origin && realCode ? `${origin}/?ref=${encodeURIComponent(realCode)}&autoTapPlan=${encodeURIComponent(planId)}` : "";
+  const referralLink = userData?.referral_code ? `/?ref=${userData.referral_code}` : "/register";
 
   const handleCopy = () => { if(!autoLink) return; navigator.clipboard.writeText(autoLink); setCopied(true); setTimeout(()=>setCopied(false),2000); };
   const shareWhatsApp = () => { const msg=`Join FlashGain9ja and help me unlock Auto Tap ${plan.label}! ${autoLink}`; window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_self"); };

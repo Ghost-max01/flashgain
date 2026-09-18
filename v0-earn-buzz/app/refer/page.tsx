@@ -272,8 +272,8 @@ function ReferContent() {
   useEffect(() => {
     setOrigin(window.location.origin);
 
-    // Backward-compat: old shared links used /refer?ref=CODE (should be /register?ref=CODE).
-    // Persist the code and send logged-out visitors to /register so attribution isn't lost.
+    // Backward-compat: old shared links used /refer?ref=CODE (now /?ref=CODE).
+    // Persist the code and send logged-out visitors home so attribution isn't lost.
     try {
       const keys = ["ref", "referral", "referral_code", "code", "r"];
       let incomingRef = "";
@@ -289,7 +289,8 @@ function ReferContent() {
       }
       const storedUserFirst = localStorage.getItem("tivexx-user");
       if (!storedUserFirst && incomingRef) {
-        router.push(`/register?ref=${encodeURIComponent(incomingRef)}`);
+        const planSuffix = autoTapPlan ? `&autoTapPlan=${encodeURIComponent(autoTapPlan)}` : "";
+        router.push(`/?ref=${encodeURIComponent(incomingRef)}${planSuffix}`);
         return;
       }
     } catch {}
@@ -391,14 +392,16 @@ function ReferContent() {
     return () => clearInterval(poll);
   }, [router]);
 
+  // Shared links land on the homepage (?ref=); the homepage persists the
+  // code and every signup CTA keeps it (register falls back to storage).
   const referralLink = userData?.referral_code
-    ? `/register?ref=${userData.referral_code}`
+    ? `/?ref=${userData.referral_code}`
     : "/register";
 
   const getFullReferralLink = () => {
     const effOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
     if (!userData?.referral_code || !effOrigin) return "";
-    return `${effOrigin}/register?ref=${userData.referral_code}`;
+    return `${effOrigin}/?ref=${userData.referral_code}`;
   };
 
   const handleCopy = () => {
@@ -2161,7 +2164,7 @@ function AutoTapReferralSection({ autoTapPlan, origin, referralLink, userData }:
   // silently record no referral. Plan context travels via &autoTapPlan=.
   const realCode = (userData as any)?.referral_code || (userData as any)?.referralCode || (userData as any)?.userId || "";
   const autoLink = origin && realCode
-    ? `${origin}/register?ref=${encodeURIComponent(realCode)}${autoTapPlan ? `&autoTapPlan=${encodeURIComponent(autoTapPlan)}` : ""}`
+    ? `${origin}/?ref=${encodeURIComponent(realCode)}${autoTapPlan ? `&autoTapPlan=${encodeURIComponent(autoTapPlan)}` : ""}`
     : `${origin}${referralLink}`;
   const done = autoRefCount;
   const need = plan.need;
