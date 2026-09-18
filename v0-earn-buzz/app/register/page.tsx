@@ -17,6 +17,8 @@ import {
   Shield,
   Gift,
   Award,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -26,6 +28,9 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Password visibility toggle (eye icon). Plain boolean — showPassword
+  // flips the input type only, nothing else.
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [referralCode, setReferralCode] = useState("");
@@ -314,17 +319,46 @@ export default function RegisterPage() {
                 />
               </div>
 
-              {/* Password Input */}
+              {/* Password Input with visibility eye.
+                  OLD (kept, commented out — restore if the eye version fails):
+                  <div className="hh-form-group">
+                    <Input
+                      type="password"
+                      placeholder="Enter Password (min 8 characters)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      className="hh-input"
+                    />
+                    {password.length > 0 && password.length < 8 && (
+                      <p className="text-xs text-amber-300 mt-2">
+                        Password must be at least 8 characters.
+                      </p>
+                    )}
+                  </div>
+              */}
               <div className="hh-form-group">
-                <Input
-                  type="password"
-                  placeholder="Enter Password (min 8 characters)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="hh-input"
-                />
+                <div className="hh-input-eye-wrap">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter Password (min 8 characters)"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="hh-input hh-input-with-eye"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    className="hh-eye-btn"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
                 {password.length > 0 && password.length < 8 && (
                   <p className="text-xs text-amber-300 mt-2">
                     Password must be at least 8 characters.
@@ -889,6 +923,43 @@ export default function RegisterPage() {
           color: white;
           font-size: 15px;
           transition: all 0.2s ease;
+        }
+
+        .hh-input-eye-wrap {
+          position: relative;
+          width: 100%;
+        }
+
+        .hh-input.hh-input-with-eye {
+          padding-right: 52px;
+        }
+
+        .hh-eye-btn {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: rgba(255, 255, 255, 0.4);
+          border-radius: 12px;
+          z-index: 1;
+          transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .hh-eye-btn:hover {
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.08);
+        }
+
+        .hh-eye-btn:active {
+          transform: translateY(-50%) scale(0.92);
         }
 
         .hh-input:focus {

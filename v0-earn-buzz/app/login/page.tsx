@@ -38,6 +38,8 @@ import {
   Sparkles,
   Mail,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -45,6 +47,9 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Password visibility toggle (eye icon). Plain boolean — showPassword
+  // flips the input type only, nothing else.
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -246,17 +251,39 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Password or User ID Input with Icon */}
+              {/* Password or User ID Input with Icon + visibility eye.
+                  OLD (kept, commented out — restore if the eye version fails):
+                  <div className="hh-input-wrapper">
+                    <Lock className="hh-input-icon" />
+                    <Input
+                      type="text"
+                      placeholder="Enter Password or User ID"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="hh-input hh-input-with-icon"
+                    />
+                  </div>
+              */}
               <div className="hh-input-wrapper">
                 <Lock className="hh-input-icon" />
                 <Input
-                  type="text"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter Password or User ID"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="hh-input hh-input-with-icon"
+                  className="hh-input hh-input-with-icon hh-input-with-eye"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  className="hh-eye-btn"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
 
               {/* Submit Button */}
@@ -726,6 +753,38 @@ export default function LoginPage() {
 
         .hh-input-with-icon {
           padding-left: 48px;
+        }
+
+        .hh-input.hh-input-with-eye {
+          padding-right: 52px;
+        }
+
+        .hh-eye-btn {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: rgba(255, 255, 255, 0.4);
+          border-radius: 12px;
+          z-index: 1;
+          transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .hh-eye-btn:hover {
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.08);
+        }
+
+        .hh-eye-btn:active {
+          transform: translateY(-50%) scale(0.92);
         }
 
         .hh-input:focus {
