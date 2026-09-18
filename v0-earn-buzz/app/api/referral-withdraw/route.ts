@@ -56,9 +56,9 @@ export async function POST(req: NextRequest){
     }
     try{ await supabase.from("referral_withdraws").insert({ user_id: userId, amount: amt, type: "referral", status: "success", meta: { approvedBalance, consumed: consumeIds.length } }); } catch {}
     try{ await supabase.from("withdrawals").insert({ user_id: userId, amount: amt, method: "bank", status: "pending", source: "referral" }); } catch {}
-    // First-ever ₦500 withdrawal consumes the one-time VIP slot (airtime or
-    // cash — whichever happens first), so the minimum becomes ₦10,000 after.
-    if (!vipRedeemed && amt === 500) {
+    // First withdrawal (airtime or cash, any amount) consumes the one-time
+    // ₦500 slot, so the minimum becomes ₦10,000 afterwards.
+    if (!vipRedeemed) {
       try { await supabase.from("users").update({ vip_redeemed: true, referral_vip_balance: 0 }).eq("id", userId); } catch {}
     }
     // (f) return new available
