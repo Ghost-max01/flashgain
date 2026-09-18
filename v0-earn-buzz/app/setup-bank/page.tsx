@@ -25,6 +25,9 @@ export default function SetupBankAfterSignupPage() {
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [bankSearchInput, setBankSearchInput] = useState("")
+  // Animated "account changed" popup (edit mode only, after a fresh save).
+  const [showChangedPopup, setShowChangedPopup] = useState(false)
+  const [changedSummary, setChangedSummary] = useState("")
 
   const filteredBanks = (() => {
     const q = bankSearchInput.trim().toLowerCase()
@@ -198,6 +201,16 @@ export default function SetupBankAfterSignupPage() {
     if (!bank || !accountNumber || !accountName) return
     // LOCK bank details — cannot be changed afterwards
     saveBankDetails({ bank, bankCode, accountNumber: accountNumber.replace(/\D/g, ""), accountName })
+    // Edit mode (change withdrawal account): celebrate with an animated
+    // success popup instead of a bare redirect.
+    if (editMode) {
+      try {
+        const digits = accountNumber.replace(/\D/g, "")
+        setChangedSummary(`${bank} •••• ${digits.slice(-4)}`)
+      } catch { setChangedSummary(bank) }
+      setShowChangedPopup(true)
+      return
+    }
     setTransitioning(true)
     setTimeout(() => {
       // router.push("/welcome") // ← splash page (commented out, kept for later)
@@ -290,8 +303,8 @@ export default function SetupBankAfterSignupPage() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="hh-title">Withdrawal Setup</h1>
-              <p className="hh-subtitle">{isLocked ? "Your payout details are secured" : "Secure your payout details"}</p>
+              <h1 className="hh-title">{editMode ? "Change withdrawal account" : "Withdrawal Setup"}</h1>
+              <p className="hh-subtitle">{editMode ? "Update your payout account" : isLocked ? "Your payout details are secured" : "Secure your payout details"}</p>
             </div>
           </div>
         </div>
@@ -470,6 +483,27 @@ export default function SetupBankAfterSignupPage() {
         </div>
       </div>
 
+      {/* Account-changed success popup (edit mode only) */}
+      {showChangedPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4 text-center">
+            <div className="hh-success-ring">
+              <svg className="hh-success-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-black text-white tracking-tight mt-4">Account changed successfully 🎉</h2>
+            <p className="text-sm text-white/60 mt-2">
+              Your withdrawal account is now<br />
+              <span className="font-black text-emerald-300">{changedSummary}</span>
+            </p>
+            <button onClick={() => router.push("/dashboard")} className="hh-popup-btn hh-popup-btn-confirm w-full mt-6">
+              Continue →
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
 
       <style jsx global>{`
@@ -560,6 +594,15 @@ export default function SetupBankAfterSignupPage() {
         @keyframes hh-btn-glow {0%,100%{box-shadow:0 6px 30px rgba(16,185,129,0.4)}50%{box-shadow:0 6px 40px rgba(16,185,129,0.6),0 0 30px rgba(16,185,129,0.3)}}
         .hh-tip-card { background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border: 1px solid rgba(16,185,129,0.2); }
         .hh-tip-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hh-popup { background: linear-gradient(135deg, #0d1f2d, #0a1628); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); animation: hh-popup-appear 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes hh-popup-appear { from { opacity: 0; transform: scale(0.8) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .hh-popup-btn { display: block; width: 100%; padding: 15px 16px; border-radius: 14px; font-weight: 800; font-size: 15px; border: none; cursor: pointer; }
+        .hh-popup-btn-confirm { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .hh-success-ring { width: 84px; height: 84px; margin: 0 auto; border-radius: 50%; background: rgba(16,185,129,0.12); border: 2px solid rgba(16,185,129,0.5); display: flex; align-items: center; justify-content: center; color: #34d399; animation: hh-success-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both, hh-success-glow 1.8s ease-in-out 0.5s infinite; }
+        .hh-success-check { width: 40px; height: 40px; stroke-dasharray: 30; stroke-dashoffset: 30; animation: hh-check-draw 0.5s ease-out 0.25s forwards; }
+        @keyframes hh-success-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes hh-check-draw { to { stroke-dashoffset: 0; } }
+        @keyframes hh-success-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 0 12px rgba(16,185,129,0), 0 0 28px rgba(52,211,153,0.45); } }
         .hh-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; max-width: 448px; margin: 0 auto; background: rgba(5,13,20,0.92); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-around; align-items: center; height: 64px; z-index: 100; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
         .hh-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #4b5563; text-decoration: none; font-size: 11px; font-weight: 600; transition: color 0.2s, transform 0.2s; padding: 8px 16px; border-radius: 12px; }
         .hh-nav-item:hover { color: #10b981; transform: translateY(-2px); }
