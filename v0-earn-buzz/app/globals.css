@@ -317,3 +317,21 @@ select:focus,
     max-width: none !important;
   }
 }
+
+/* ── Global zoom lock: no pinch / double-tap / ctrl-wheel zoom ── */
+html {
+  touch-action: pan-x pan-y; /* 1-finger scroll only — no pinch-zoom gesture */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+body {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
+  /* Prevent iOS Safari auto-zoom on focus + double-tap zoom */
+  -webkit-tap-highlight-color: transparent;
+}
+/* iOS auto-zooms inputs with font-size <16px — keep at 16px to stay unzoomed */
+input, select, textarea {
+  font-size: 16px !important;
+}

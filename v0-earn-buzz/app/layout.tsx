@@ -1,9 +1,10 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import PageShell from "@/components/PageShell"
+import { NoPinchZoom } from "@/components/no-pinch-zoom"
 import { NotificationHelperTools } from "@/components/notification-helper-tools"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 import { ServiceWorkerUpdater } from "@/components/service-worker-updater"
@@ -42,6 +43,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -51,6 +60,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#ea580c" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json?v=20260318" />
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png?v=20260318" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=20260318" />
@@ -60,6 +70,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <NoPinchZoom />
           <ClientCrashGuard />
           <ServiceWorkerUpdater />
           <PageShell exclude={["/dashboard"]}>

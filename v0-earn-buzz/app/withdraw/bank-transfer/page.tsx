@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState, Suspense, useEffect, useRef } from "react"
-import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmark, Hash, User2 } from "lucide-react"
+import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmark, Hash, User2, Upload } from "lucide-react"
 import { OpayWarningPopup } from "@/components/opay-warning-popup"
 import Link from "next/link"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
@@ -28,6 +28,10 @@ function PayKeyPaymentContent() {
   const [showOpayWarning, setShowOpayWarning] = useState<boolean>(true)
   // Modified: State to track if reference ID text was copied
   const [copiedRefId, setCopiedRefId] = useState(false)
+  // Receipt upload gates the confirm button (same-size box below Reference ID)
+  const [receiptName, setReceiptName] = useState<string | null>(null)
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const receiptInputRef = useRef<HTMLInputElement | null>(null)
   const timersRef = useRef<number[]>([])
 
   useEffect(() => {
@@ -68,7 +72,20 @@ function PayKeyPaymentContent() {
     setTimeout(() => setCopiedField(null), 2000)
   }
 
+  const handleReceiptFile = (e: { target: HTMLInputElement }) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try { e.target.value = "" } catch {}
+    if (!file.type.startsWith("image/")) return
+    try {
+      if (receiptUrl) URL.revokeObjectURL(receiptUrl)
+      setReceiptUrl(URL.createObjectURL(file))
+      setReceiptName(file.name)
+    } catch {}
+  }
+
   const handleConfirmPayment = () => {
+    if (!receiptName) return
     const rawAmount = String(amount).replace(/[^0-9.-]/g, "")
     const params = new URLSearchParams({ fullName, amount: rawAmount, method: "Bank Transfer" })
     router.push(`/paykeys/confirmation?${params.toString()}`)
@@ -215,10 +232,37 @@ function PayKeyPaymentContent() {
           </div>
         </div>
 
-        {/* Confirm Button */}
+        {/* Receipt Upload — same size as the Reference ID box above */}
+        <div className="hh-card hh-entry-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="hh-icon-ring-small">
+                <Upload className="h-3 w-3" />
+              </div>
+              <span className="text-sm text-white/60 truncate">{receiptName || "Upload Receipt"}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {receiptUrl && (
+                <img src={receiptUrl} alt="Receipt" className="w-6 h-6 rounded object-cover border border-emerald-500/40" />
+              )}
+              <button
+                onClick={() => receiptInputRef.current?.click()}
+                className="hh-copy-btn-small"
+                aria-label="Upload receipt"
+                title="Upload receipt"
+              >
+                {receiptName ? <Check className="h-3 w-3 text-emerald-400" /> : <Upload className="h-3 w-3" />}
+              </button>
+            </div>
+          </div>
+          <input ref={receiptInputRef} type="file" accept="image/*" className="hidden" onChange={handleReceiptFile} aria-label="Upload receipt" />
+        </div>
+
+        {/* Confirm Button — grey until a receipt is attached */}
         <button
           onClick={handleConfirmPayment}
-          className="hh-proceed-btn hh-proceed-active w-full hh-entry-6"
+          disabled={!receiptName}
+          className={`hh-proceed-btn w-full hh-entry-6 ${receiptName ? "hh-proceed-active" : "hh-proceed-disabled"}`}
         >
           I have made this bank Transfer
         </button>
@@ -623,6 +667,13 @@ function PayKeyPaymentContent() {
 
         .hh-proceed-active:active {
           transform: scale(0.98);
+        }
+
+        .hh-proceed-disabled {
+          background: rgba(255, 255, 255, 0.05);
+          color: rgba(255, 255, 255, 0.3);
+          cursor: not-allowed;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         @keyframes hh-btn-glow {

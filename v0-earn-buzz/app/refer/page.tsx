@@ -79,10 +79,17 @@ function ReferContent() {
   const [apMsg, setApMsg] = useState("");
   const [apLoading, setApLoading] = useState(false);
   const [apClientRef, setApClientRef] = useState("");
+  const [cashBusy, setCashBusy] = useState(false);
+  const [cashMsg, setCashMsg] = useState("");
+  const [cashClientRef, setCashClientRef] = useState("");
   const getAuth = () => {
     try {
       const u = JSON.parse(localStorage.getItem("tivexx-user") || "null");
-      return { uid: u?.id || u?.userId || "", notifyToken: (u as any)?.notifyToken || undefined };
+      // Server needs the users.id UUID — never send the public referral_code
+      // (u.userId) as userId or approved-balance lookups return 0.
+      const rawId = (u?.id || "") as string;
+      const looksUuid = typeof rawId === "string" && rawId.includes("-") && rawId.length >= 32;
+      return { uid: looksUuid ? rawId : (typeof rawId === "string" ? rawId : ""), notifyToken: (u as any)?.notifyToken || undefined };
     } catch { return { uid: "", notifyToken: undefined }; }
   };
 
@@ -590,7 +597,14 @@ function ReferContent() {
               const min = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
               // Server truth: referral_balance is approved-only once loaded; fall back to approvedCount*500 pre-load
               const avail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
-              const canWithdraw = avail >= min;
+              // First-time users own a one-time ₦500 VIP slot even with 0
+              // approved referrals — cash must stay enabled for it (airtime
+              // already does via /api/airtime).
+              const isVipCash = !vip.redeemed && avail < 500;
+              const withdrawAmount = isVipCash ? 500 : avail;
+              const displayAvail = !vip.redeemed ? Math.max(avail, 500) : avail;
+              const canWithdraw = vip.redeemed ? avail >= min : !cashBusy;
+              const cashDisabled = cashBusy || (vip.redeemed ? avail < min : false);
               const openAirPopup = () => {
                 try {
                   const r = (typeof crypto !== "undefined" && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
@@ -602,28 +616,64 @@ function ReferContent() {
                 <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
                   <div className="mb-2">
                     <div className="text-xs font-black text-white">Referral Withdraw</div>
-                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{avail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(first ₦500)"}</div>
+                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{displayAvail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(first ₦500)"}</div>
+                    {cashMsg && <div className={`mt-1 text-[11px] font-bold ${cashMsg.startsWith("Referral withdrawal") ? "text-emerald-300" : "text-amber-300"}`}>{cashMsg}</div>}
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <button disabled={!canWithdraw} onClick={openAirPopup} className={`w-full rounded-full font-black py-2.5 text-sm ${canWithdraw ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
                       Withdraw as airtime
                     </button>
-                    <button disabled={!canWithdraw} onClick={async ()=>{
+                    <button disabled={cashDisabled} onClick={async ()=>{
                     const { uid, notifyToken } = getAuth();
-                    if(!uid) return;
-                    // simple local withdraw: require bank set
-                    const bd = (()=>{ try{ return JSON.parse(localStorage.getItem("bank_details")||"null") }catch{return null}})();
+                    if(!uid) { setCashMsg("Please log out and log back in, then try again"); return; }
+                    // Bank check — setup-bank stores under "tivexx-bank-details"
+                    // (lib/bank-details.ts); legacy "bank_details" kept as fallback.
+                    // The old check read ONLY "bank_details", so it always missed
+                    // and bounced users to /setup-bank (looked "not working").
+                    const bd = (()=>{
+                      try{
+                        const a = localStorage.getItem("tivexx-bank-details");
+                        if(a){ const p = JSON.parse(a); if(p?.bank && p?.accountNumber) return p; }
+                        const b = localStorage.getItem("bank_details");
+                        if(b){ const p = JSON.parse(b); if(p && (p?.bank || p?.accountNumber || p?.account_name)) return p; }
+                        const u = JSON.parse(localStorage.getItem("tivexx-user")||"null");
+                        if((u as any)?.bankDetails?.accountNumber) return (u as any).bankDetails;
+                        return null;
+                      }catch{return null}
+                    })();
                     if(!bd) { window.location.href="/setup-bank"; return; }
-                    isWithdrawing.current = true;
+                    if(isWithdrawing.current || cashBusy) return;
+                    isWithdrawing.current = true; setCashBusy(true); setCashMsg("");
                     try{
-                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: avail, notifyToken })});
-                      const j = await res.json();
-                      if(!res.ok){ alert(j.error||"Withdraw failed"); return; }
-                      alert("Referral withdrawal requested: ₦"+avail.toLocaleString());
+                      // Re-read server truth right before debit so a stale card
+                      // can't send more than the approved balance.
+                      let amt = withdrawAmount;
+                      try{
+                        const s = await fetch(`/api/referral-stats?userId=${encodeURIComponent(uid)}&t=${Date.now()}`);
+                        const sj = await s.json().catch(()=>({}));
+                        if(s.ok && typeof sj?.referral_balance === "number"){
+                          const fresh = Number(sj.referral_balance) || 0;
+                          setUserData((prev:any)=> prev ? { ...prev, referral_balance: fresh, approved_count: Number(sj.approved_count ?? prev.approved_count), pending_count: Number(sj.pending_count ?? 0), referral_count: Number(sj.referral_count ?? prev.referral_count) } : prev);
+                          setApprovedCount(Number(sj.approved_count ?? approvedCount));
+                          setPendingCount(Number(sj.pending_count ?? 0));
+                          amt = (!vip.redeemed && fresh < 500) ? 500 : fresh;
+                        }
+                      } catch {}
+                      let ref = cashClientRef;
+                      if(!ref){
+                        try { ref = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random()*1e9)}`; }
+                        catch { ref = `${Date.now()}-${Math.floor(Math.random()*1e9)}`; }
+                        setCashClientRef(ref);
+                      }
+                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: amt, notifyToken, clientRef: ref })});
+                      const j = await res.json().catch(()=>({}));
+                      if(!res.ok){ setCashMsg(j.error||"Withdraw failed — try again"); setCashClientRef(""); return; }
+                      setCashMsg("Referral withdrawal requested: ₦"+Number(amt).toLocaleString());
+                      setCashClientRef("");
                       // Local mirror for Profile → History → Referrals tab.
                       try {
                         const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
-                        prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random()*1e9)}`, amount: avail, date: new Date().toISOString() });
+                        prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random()*1e9)}`, amount: amt, date: new Date().toISOString() });
                         localStorage.setItem("tivexx-referral-withdrawals", JSON.stringify(prev.slice(0, 200)));
                       } catch {}
                       const nb = Number(j.referral_balance ?? j.available ?? 0);
@@ -636,9 +686,9 @@ function ReferContent() {
                         const next = { available: 0, redeemed: true, phone: "", network: "", date: new Date().toISOString(), history: [...vip.history] };
                         saveVip(next); setVip(next);
                       }
-                    } finally { isWithdrawing.current = false; }
-                  }} className={`w-full rounded-full font-black py-2.5 text-sm ${canWithdraw ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
-                    {canWithdraw ? "Withdraw as cash" : `Need ₦${min.toLocaleString()}`}
+                    } finally { isWithdrawing.current = false; setCashBusy(false); }
+                  }} className={`w-full rounded-full font-black py-2.5 text-sm ${!cashDisabled ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                    {cashBusy ? "Processing..." : (canWithdraw ? "Withdraw as cash" : `Need ₦${min.toLocaleString()}`)}
                   </button>
                   </div>
                 </div>
@@ -651,7 +701,9 @@ function ReferContent() {
         {showAirPopup && (() => {
           const apAvail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
           const apMin = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
-          const apCan = apAvail >= apMin && apPhone.length === 11 && !apLoading;
+          // First-time VIP airtime is a fixed ₦500 one-time slot — allowed even
+          // with 0 approved referrals (mirrors the cash fix above).
+          const apCan = (!vip.redeemed || apAvail >= apMin) && apPhone.length === 11 && !apLoading;
           return (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => { if (!apLoading) setShowAirPopup(false); }}>
               <div className="hh-popup max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>

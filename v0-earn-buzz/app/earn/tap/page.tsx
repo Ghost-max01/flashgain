@@ -1080,7 +1080,7 @@ export default function TapAndEarnPage() {
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10 rounded-full">
                   <div className="rounded-full bg-red-600/90 border-4 border-red-400 px-6 py-3 text-center animate-pulse" style={{ animationDuration: "2s", boxShadow: "0 0 40px rgba(239,68,68,0.6)" }}>
                     <div className="text-white font-black text-xl">⚠ TOO FAST</div>
-                    <div className="text-white/80 text-xs mt-1">Slow down! Tap again in a moment</div>
+                    <div className="text-white/80 text-xs mt-1">Slow down, Two taps per seconds.</div>
                   </div>
                 </div>
               )}

@@ -3,23 +3,12 @@
 import { ShieldCheck, ArrowRight, UserCheck, CreditCard, CheckCircle, ArrowLeft, Home, Gamepad2, User, Sparkles, Award } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { OpayWarningPopup } from "@/components/opay-warning-popup"
-import { useRef } from "react"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav";
 
 export default function VerifyMePage() {
   const router = useRouter()
   const [tickVisible, setTickVisible] = useState(false)
-  const timersRef = useRef<number[]>([])
-  useEffect(() => {
-    return () => {
-      // cleanup any pending timeouts
-      timersRef.current.forEach((id) => clearTimeout(id))
-    }
-  }, [])
-
-  const [showOpayWarning, setShowOpayWarning] = useState(false)
 
   useEffect(() => {
     // Show tick after 1 second
@@ -30,18 +19,15 @@ export default function VerifyMePage() {
   }, [])
 
   const handleProceed = () => {
-    // Modified: Show Opay warning, then navigate after 4 seconds with 10s interval enforcement
-    setShowOpayWarning(true)
-    const t = window.setTimeout(() => {
-      setShowOpayWarning(false)
-      if (typeof window !== "undefined") {
-        window.location.href = "/withdraw/bank-transfer"
-      } else {
-        router.push("/withdraw/bank-transfer")
-      }
-    }, 6000) // Show popup for 4 seconds before navigation
-    // ensure timer is cleared if component unmounts
-    timersRef.current.push(t)
+    // Navigate on the FIRST press (guard double-taps). The Opay warning
+    // popup shows on the next page (bank-transfer shows it on arrival).
+    if ((handleProceed as any)._navigating) return
+    ;(handleProceed as any)._navigating = true
+    try {
+      window.location.href = "/withdraw/bank-transfer"
+    } catch {
+      router.push("/withdraw/bank-transfer")
+    }
   }
 
   return (
@@ -180,9 +166,6 @@ export default function VerifyMePage() {
 
       {/* Bottom Navigation */}
       <BottomNav />
-
-      {/* Opay Warning Popup */}
-      {showOpayWarning && <OpayWarningPopup onClose={() => setShowOpayWarning(false)} />}
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */
