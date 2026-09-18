@@ -124,7 +124,7 @@ function AutoTapReferContent() {
     <div className="hh-root min-h-screen pb-28 relative overflow-hidden">
       <div className="hh-bubbles-container" aria-hidden="true">{[...Array(12)].map((_, i)=>(<div key={i} className={`hh-bubble hh-bubble-${i+1}`}></div>))}</div>
       <div className="hh-mesh-overlay" aria-hidden="true"></div>
-      <div className="sticky top-0 z-10 hh-header"><div className="max-w-md mx-auto px-6 pt-8 pb-4"><div className="flex items-center justify-between"><div className="flex items-center"><Link href="/dashboard"><button className="hh-back-btn"><ArrowLeft className="h-5 w-5" /></button></Link><div className="ml-3"><h1 className="hh-title">Tiered Referral</h1><p className="hh-subtitle">Refer to unlock auto tap</p></div></div><div className="hh-reward-badge"><Sparkles className="h-4 w-4 text-amber-300" /><span>each ₦5k</span></div></div></div></div>
+      <div className="sticky top-0 z-10 hh-header"><div className="max-w-md mx-auto px-6 pt-8 pb-4"><div className="flex items-center justify-between"><div className="flex items-center"><Link href="/dashboard"><button className="hh-back-btn"><ArrowLeft className="h-5 w-5" /></button></Link><div className="ml-3"><h1 className="hh-title">Tiered Referral</h1><p className="hh-subtitle">Refer to unlock auto tap</p></div></div><div className="hh-reward-badge"><Sparkles className="h-4 w-4 text-amber-300" /><span>each ₦500</span></div></div></div></div>
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
         {/* Hero — identical to Refer & Earn */}
         <div className="hh-card hh-card-hero hh-entry-1 relative overflow-hidden">

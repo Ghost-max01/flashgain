@@ -906,39 +906,6 @@ function ReferContent() {
           </div>
         </div>
 
-        {/* Verified Referrers */}
-        <div className="hh-card hh-entry-5">
-          <div className="flex items-center gap-3">
-            <div className="hh-pending-icon !bg-emerald-500/15 !border-emerald-500/30">
-              <Users className="h-5 w-5 text-emerald-300" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-black text-white">Verified referrers</div>
-              <div className="flex items-end justify-between mt-1">
-                <span className="text-3xl font-black text-amber-300 leading-none">{approvedCount}</span>
-                <span className="text-emerald-300">{formatCurrency(approvedCount * 500)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Unverified Referrers */}
-        <div className="hh-card hh-entry-6">
-          <div className="flex items-center gap-3">
-            <div className="hh-pending-icon">
-              <Clock className="h-5 w-5 text-amber-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-black text-white">Unverified referrers</div>
-              <div className="text-[11px] text-white/45">Only the balance is unverified — activates at Beginner</div>
-              <div className="flex items-end justify-between mt-1">
-                <span className="text-3xl font-black text-amber-300 leading-none">{pendingCount}</span>
-                <span className="text-emerald-300">{formatCurrency(pendingCount * 500)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Pro Tip */}
         <div className="hh-card hh-tip-card hh-entry-6">
           <div className="flex items-start gap-3">
