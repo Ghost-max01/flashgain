@@ -1846,6 +1846,21 @@ export default function DashboardPage() {
       color: "text-purple-400",
       bgColor: "",
     },
+    {
+      name: "Channel",
+      emoji: "📢",
+      link: "https://t.me/flashgain9janews",
+      external: true,
+      color: "text-amber-400",
+      bgColor: "",
+    },
+    {
+      name: "Q&A",
+      emoji: "❓",
+      link: "/qa",
+      color: "text-emerald-400",
+      bgColor: "",
+    },
   ];
 
   useEffect(() => {
@@ -2827,17 +2842,7 @@ export default function DashboardPage() {
         <div data-tour="quick-actions" className="hh-card hh-entry-4">
           <div className="hh-section-title">Quick Actions</div>
           <div className="space-y-3 mt-3">
-            {/* Flashgain9ja channel banner — full-width, flat, above Daily Tasks & Loans */}
-            <a href="https://t.me/flashgain9janews" className="block w-full mb-3 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 p-3 flex items-center gap-3 hover:from-amber-500/15 hover:via-orange-500/15 hover:to-amber-500/15 transition cursor-pointer">
-              <span className="text-2xl">📢</span>
-              <div className="flex-1">
-                <div className="text-sm font-bold text-white">FlashGain 9ja Channel</div>
-                <div className="text-xs text-amber-300/80">Join for daily updates &amp; exclusive bonuses</div>
-              </div>
-              <span className="text-xs font-black text-amber-300 bg-amber-500/20 px-2 py-1 rounded-full">Join</span>
-            </a>
-
-            {/* Main 2-column grid for first 4 items */}
+            {/* Main 2-column grid: Daily Tasks, Loans, Channel, Q&A — all same hh-action-card design */}
             <div className="grid grid-cols-2 gap-3">
               {menuItems.map((item, idx) => {
                 const Icon = item.icon;
