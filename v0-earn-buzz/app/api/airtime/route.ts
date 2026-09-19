@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buyAirtime } from "@/lib/vtugate";
 
 const VALID_NETWORKS = ["MTN", "GLO", "AIRTEL", "9MOBILE"] as const;
+const VIP_AMOUNT = 500;
 
-// Paystack Bills requires amount in kobo
-const AMOUNT_KOBO = 500 * 100;
-
-// helper: map network to Paystack bill code if needed - Paystack Bills uses codes like BIL099 etc
-// We attempt generic airtime bill first, then fall back to provider-specific code if Paystack demands it.
-function networkCode(network: string): string {
-  const n = network.toUpperCase();
-  // These are example BIL codes — Paystack dashboard -> Bills -> biller codes. Adjust if your dashboard shows different codes.
-  if (n === "MTN") return "BIL108"; // MTN airtime
-  if (n === "GLO") return "BIL109";
-  if (n === "AIRTEL") return "BIL110";
-  if (n === "9MOBILE") return "BIL111";
-  return "BIL099";
-}
+// POST /api/airtime { userId, phone, network, amount:500 }
+// One-time VIP welcome airtime, paid via VTUgate.
+// Provider FIRST: vip_redeemed is set ONLY after VTUgate confirms.
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { phone, network, amount } = body || {};
     let userId = String(body?.userId || body?.user_id || "").trim();
-    // Resolve userId from JWT ownership — reject mismatch; fallback to body only with no session.
     try {
       const { createClient } = await import("@/lib/supabase/server");
       const supabaseAuth = await createClient();
@@ -35,7 +25,7 @@ export async function POST(req: NextRequest) {
       }
     } catch {}
     if (!userId || !phone || !network) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    if (Number(amount) !== 500) return NextResponse.json({ error: "VIP airtime is exactly ₦500" }, { status: 400 });
+    if (Number(amount) !== VIP_AMOUNT) return NextResponse.json({ error: "VIP airtime is exactly ₦500" }, { status: 400 });
 
     const digits = String(phone).replace(/\D/g, "");
     if (!/^0[789][01][0-9]{8}$/.test(digits)) return NextResponse.json({ error: "Invalid Nigerian phone (11 digits, starts 070/080/081/090)" }, { status: 400 });
@@ -43,7 +33,6 @@ export async function POST(req: NextRequest) {
 
     const supabase: any = (() => { try { return getSupabaseAdmin?.(); } catch { return null; } })();
 
-    // server-side idempotency: already redeemed?
     if (supabase) {
       try {
         const { data: userRow } = await supabase.from("users").select("vip_redeemed, referral_vip_balance").eq("id", userId).maybeSingle();
@@ -51,104 +40,11 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || "";
-    if (!PAYSTACK_KEY) {
-      return NextResponse.json({ error: "Paystack not configured on server (PAYSTACK_SECRET_KEY missing). Add it on Vercel and redeploy." }, { status: 500 });
-    }
-
-    // --- REAL PAYSTACK BILLS CALL — real debit from your Paystack balance ---
-    // Docs: POST https://api.paystack.co/bill  (Bills Payment) — requires Bills enabled on your Paystack account.
-    // If Bills is not enabled, Paystack returns 400/403 with message — we surface it and DO NOT mark redeemed (so tracking stays honest).
-    const reference = `FG-VIP-${userId.slice(0, 8)}-${Date.now()}`;
-    const code = networkCode(network);
-
-    // Paystack Bills payload — amount in kobo, customer = phone
-    const billPayload: any = {
-      customer: digits,
-      amount: AMOUNT_KOBO,
-      code,
-      // Some Paystack bills setups require these; harmless if ignored:
-      country: "NG",
-      recurrence: "One Time",
-      reference,
-    };
-
-    // Also try generic type field for airtime if your biller expects it
-    // Keep reference unique per attempt for tracking.
-
-    let paystackRes: Response | null = null;
-    let paystackJson: any = null;
-    let lastError = "";
-
-    // Primary endpoint: /bill
-    try {
-      paystackRes = await fetch("https://api.paystack.co/bill", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${PAYSTACK_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify(billPayload),
-      });
-      paystackJson = await paystackRes.json().catch(() => null);
-    } catch (e: any) {
-      lastError = e?.message || "network error to Paystack /bill";
-    }
-
-    // Fallback: some accounts expose /bills (plural)
-    if (!paystackRes || !paystackRes.ok) {
-      const errMsg = paystackJson?.message || lastError || `Paystack /bill failed (${paystackRes?.status})`;
-      // If it's clearly "not enabled" or 404, try plural endpoint once
-      const shouldTryPlural = paystackRes?.status === 404 || /not found|route|bills.*enable/i.test(errMsg);
-      if (shouldTryPlural) {
-        try {
-          paystackRes = await fetch("https://api.paystack.co/bills", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${PAYSTACK_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify(billPayload),
-          });
-          paystackJson = await paystackRes.json().catch(() => null);
-        } catch (e: any) {
-          lastError = e?.message || lastError;
-        }
-      }
-    }
-
-    // Determine success — ONLY mark redeemed if Paystack confirms
-    const isSuccess = !!(paystackRes && paystackRes.ok && paystackJson && (paystackJson.status === true || paystackJson.status === "success"));
-    const dataStatus = paystackJson?.data?.status || paystackJson?.data?.data?.status || "";
-
-    if (!isSuccess) {
-      const msg = paystackJson?.message || paystackJson?.data?.message || lastError || "Paystack Bills rejected the request";
-      const hint =
-        /bills?.*not.*enable|enable.*bills|not.*whitelisted|permission/i.test(msg)
-          ? " Your Paystack account needs Bills/Airtime enabled. Contact Paystack support to enable Bills, or the charge won't debit. Tracking is NOT marked successful until Paystack returns success."
-          : "";
-      console.error("[airtime] Paystack debit failed", { status: paystackRes?.status, paystackJson, digits, code });
-      return NextResponse.json({ error: msg + hint, paystack: paystackJson, statusCode: paystackRes?.status || 500 }, { status: 400 });
-    }
-
-    // Retry-safe: ONLY mark vip_redeemed AFTER provider confirms success.
-    // Pending/failed → do NOT set redeemed; return retryable so the client can poll/retry.
-    const providerRef: string = paystackJson?.data?.reference || paystackJson?.data?.id || paystackJson?.data?.data?.reference || reference;
-    const rawStatus: string = String(dataStatus || "").toLowerCase();
-    const providerStatus: string = rawStatus || "accepted";
-
-    const confirmed = rawStatus === "success" || rawStatus === "successful" || rawStatus === "delivered" || rawStatus === "completed";
-    if (!confirmed) {
-      // Track pending attempt without redeeming (best-effort log).
-      try {
-        if (supabase) {
-          await supabase.from("referral_withdraws").insert({
-            user_id: userId,
-            amount: 500,
-            type: "vip_airtime",
-            status: "pending",
-            meta: { phone: digits, network: String(network).toUpperCase(), providerRef, providerStatus, paystackResponse: paystackJson?.data || paystackJson },
-          } as any);
-        }
-      } catch {}
-      return NextResponse.json(
-        { success: false, retryable: true, reference: providerRef, status: providerStatus || "pending", message: "Provider has not confirmed delivery yet — retry or poll status.", paystack: paystackJson?.data || paystackJson },
-        { status: 202 },
-      );
+    // --- REAL VTUGATE CALL — debits your VTUgate wallet ---
+    const vt = await buyAirtime({ phone: digits, network: String(network), amount: VIP_AMOUNT });
+    if (!vt.ok) {
+      const vtf: any = vt;
+      return NextResponse.json({ error: `${vtf.error} (nothing was deducted from your balance)`, provider: vtf.raw || null }, { status: 400 });
     }
 
     // --- ONLY on verified provider success do we mark redeemed and track ---
@@ -157,23 +53,23 @@ export async function POST(req: NextRequest) {
         await supabase.from("users").update({ vip_redeemed: true, referral_vip_balance: 0 }).eq("id", userId);
         await supabase.from("referral_withdraws").insert({
           user_id: userId,
-          amount: 500,
+          amount: VIP_AMOUNT,
           type: "vip_airtime",
           status: "success",
-          meta: { phone: digits, network: String(network).toUpperCase(), providerRef, providerStatus, paystackResponse: paystackJson?.data || paystackJson },
+          meta: { phone: digits, network: String(network).toUpperCase(), providerRef: vt.externalRef, transactionId: vt.transactionId, provider: "vtugate", providerResponse: vt.raw },
         } as any);
       }
     } catch (e) {
       console.error("[airtime] post-success DB log failed", e);
-      // don't fail the request — debit already happened, return reference so user can track
     }
 
     return NextResponse.json({
       success: true,
-      reference: providerRef,
-      status: providerStatus,
-      message: "Airtime sent — debited from Paystack. Reference tracked.",
-      paystack: paystackJson?.data || paystackJson,
+      reference: vt.externalRef,
+      transactionId: vt.transactionId,
+      status: "success",
+      message: "Airtime sent via VTUgate. Reference tracked.",
+      provider: "vtugate",
     });
   } catch (e: any) {
     console.error("[airtime] exception", e);

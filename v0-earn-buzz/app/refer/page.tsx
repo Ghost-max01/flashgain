@@ -665,10 +665,10 @@ function ReferContent() {
                         catch { ref = `${Date.now()}-${Math.floor(Math.random()*1e9)}`; }
                         setCashClientRef(ref);
                       }
-                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: amt, notifyToken, clientRef: ref })});
+                      const res = await fetch("/api/referral-withdraw",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, amount: amt, notifyToken, clientRef: ref, accountNumber: String((bd as any)?.accountNumber || (bd as any)?.account_number || "").replace(/\D/g, ""), bankCode: String((bd as any)?.bankCode || (bd as any)?.bank_code || ""), accountName: String((bd as any)?.accountName || (bd as any)?.account_name || "") })});
                       const j = await res.json().catch(()=>({}));
                       if(!res.ok){ setCashMsg(j.error||"Withdraw failed — try again"); setCashClientRef(""); return; }
-                      setCashMsg("Referral withdrawal requested: ₦"+Number(amt).toLocaleString());
+                      setCashMsg(`Paid ₦${Number(amt).toLocaleString()} to your bank ✓ Ref: ${String(j.reference || j.transferCode || "").slice(0, 24)}`);
                       setCashClientRef("");
                       // Local mirror for Profile → History → Referrals tab.
                       try {

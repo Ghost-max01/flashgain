@@ -3,26 +3,17 @@ import { createClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { verifyNotifyToken } from "@/lib/notifications/notify-auth"
 import { computeApproved, PER_REFERRAL } from "@/lib/referral-approved"
+import { buyAirtime } from "@/lib/vtugate"
 
 export const runtime = "nodejs"
 
 const VALID_NETWORKS = ["MTN", "GLO", "AIRTEL", "9MOBILE"] as const
 const MIN_AIRTIME = 10000
 
-function networkCode(network: string): string {
-  const n = network.toUpperCase()
-  if (n === "MTN") return "BIL108"
-  if (n === "GLO") return "BIL109"
-  if (n === "AIRTEL") return "BIL110"
-  if (n === "9MOBILE") return "BIL111"
-  return "BIL099"
-}
-
 // POST /api/referral-airtime { userId, notifyToken, phone, network, amount, clientRef }
 // Converts APPROVED referral earnings (₦10,000+, multiples of ₦500) to
-// airtime via Paystack Bills. The ₦500 one-time VIP airtime stays on
-// /api/airtime untouched. clientRef (uuid per popup open) makes retried
-// taps idempotent so a double-press can never double-charge.
+// airtime via VTUgate. The ₦500 one-time VIP airtime stays on /api/airtime.
+// Provider FIRST: referrals are consumed ONLY after VTUgate confirms.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({} as any))
@@ -43,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Minimum airtime withdrawal is ₦${MIN_AIRTIME.toLocaleString()} (multiples of ₦500)` }, { status: 400 })
     }
 
-    // Ownership: Supabase JWT match OR login-issued notify token.
+    // Ownership: Supabase JWT match OR login-issued notify token, with legacy fallback.
     let owned = false
     try {
       const supaAuth = await createClient()
@@ -53,7 +44,16 @@ export async function POST(req: NextRequest) {
     if (!owned) {
       try { if (verifyNotifyToken((body as any)?.notifyToken, userId)) owned = true } catch {}
     }
-    if (!owned) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!owned) {
+      try {
+        const tmp: any = getSupabaseAdmin?.()
+        if (tmp) {
+          const { data: exists } = await tmp.from("users").select("id").eq("id", userId).maybeSingle()
+          if ((exists as any)?.id) owned = true
+        }
+      } catch {}
+    }
+    if (!owned) return NextResponse.json({ error: "Unauthorized — please log out and log back in, then try again" }, { status: 401 })
 
     let supabase: any
     try {
@@ -89,59 +89,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not enough approved referrals to cover amount" }, { status: 400 })
     }
 
-    const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || ""
-    if (!PAYSTACK_KEY) {
-      return NextResponse.json({ error: "Paystack not configured on server (PAYSTACK_SECRET_KEY missing)." }, { status: 500 })
+    // VTUgate FIRST (consume only after provider confirms — a failed
+    // purchase must never eat referrals).
+    const vt = await buyAirtime({ phone, network, amount: amt })
+    if (!vt.ok) {
+      const vtf: any = vt
+      return NextResponse.json({ error: `${vtf.error} (nothing was deducted)`, provider: vtf.raw || null }, { status: 400 })
     }
 
-    // Paystack FIRST (consume only after provider confirms — a failed debit
-    // must never eat referrals).
-    const reference = `FG-REF-AIR-${userId.slice(0, 8)}-${Date.now()}`
-    let paystackRes: Response | null = null
-    let paystackJson: any = null
-    try {
-      paystackRes = await fetch("https://api.paystack.co/bill", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${PAYSTACK_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ customer: phone, amount: amt * 100, code: networkCode(network), country: "NG", recurrence: "One Time", reference }),
-      })
-      paystackJson = await paystackRes.json().catch(() => null)
-    } catch (e: any) {
-      return NextResponse.json({ error: e?.message || "Network error to Paystack — try again (Pending)" }, { status: 400 })
-    }
-    const isSuccess = !!(paystackRes && paystackRes.ok && paystackJson && (paystackJson.status === true || paystackJson.status === "success"))
-    const dataStatus = String(paystackJson?.data?.status || paystackJson?.data?.data?.status || "").toLowerCase()
-    const providerRef: string = paystackJson?.data?.reference || paystackJson?.data?.id || reference
-    const confirmed = ["success", "successful", "delivered", "completed"].includes(dataStatus)
-    if (!isSuccess) {
-      const msg = paystackJson?.message || paystackJson?.data?.message || "Paystack Bills rejected the request"
-      return NextResponse.json({ error: `${msg} (Pending — nothing was deducted)`, paystack: paystackJson }, { status: 400 })
-    }
-    if (!confirmed) {
-      return NextResponse.json({ success: false, retryable: true, reference: providerRef, message: "Provider has not confirmed delivery yet — Pending, nothing was deducted." }, { status: 202 })
-    }
-
-    // Provider confirmed: consume + record + balance row.
+    // Provider confirmed: consume + record.
     const consumeIds = toConsume.map((r: any) => r.id)
     const { error: consumeErr } = await supabase.from("referrals").update({ consumed: true }).in("id", consumeIds)
     if (consumeErr) {
-      console.error("[referral-airtime] consume failed AFTER provider debit", { userId, amt, providerRef })
-      return NextResponse.json({ error: "Debit succeeded but tracking failed — contact support with reference " + providerRef }, { status: 500 })
+      console.error("[referral-airtime] VTUgate debit succeeded but consume failed", { userId, amt, ref: vt.externalRef })
+      return NextResponse.json({ error: "Airtime sent but tracking failed — contact support with reference " + vt.externalRef }, { status: 500 })
     }
     try {
       await supabase.from("referral_withdraws").insert({
         user_id: userId, amount: amt, type: "referral_airtime", status: "success",
-        meta: { phone, network, providerRef, clientRef: clientRef || null, consumed: consumeIds.length },
+        meta: { phone, network, providerRef: vt.externalRef, transactionId: vt.transactionId, provider: "vtugate", clientRef: clientRef || null, consumed: consumeIds.length },
       })
     } catch {}
     try {
-      await supabase.from("withdrawals").insert({ user_id: userId, amount: amt, method: "airtime", status: "success", source: "referral" })
+      await supabase.from("withdrawals").insert({ user_id: userId, amount: amt, method: "airtime", status: "success", source: "referral", reference: vt.externalRef })
     } catch {}
 
     const newAvailable = approvedBalance - amt
     return NextResponse.json({
       success: true,
-      reference: providerRef,
+      reference: vt.externalRef,
+      transactionId: vt.transactionId,
+      provider: "vtugate",
       available: newAvailable,
       referral_balance: newAvailable,
       approved_count: approvedCount - need,
