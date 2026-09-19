@@ -117,7 +117,7 @@ export function timerMessage(timerType: unknown): { title: string; body: string;
   if (kind === "tap_refill") {
     return {
       title: "⚡ Energy refilled!",
-      body: "Your 100 taps are back — open Tap & Earn and keep earning.",
+      body: "Your energy is now filled, Dive in to make more money 💴",
       clickUrl: "/earn/tap",
     };
   }

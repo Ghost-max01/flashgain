@@ -82,6 +82,11 @@ function ReferContent() {
   const [cashBusy, setCashBusy] = useState(false);
   const [cashMsg, setCashMsg] = useState("");
   const [cashClientRef, setCashClientRef] = useState("");
+  // Withdraw confirm gate (airtime + cash): warns that withdrawn referrals
+  // disappear from the withdrawal count. Persisted opt-out.
+  const WD_ACK_KEY = "tivexx-refer-withdraw-ack";
+  const [showWdConfirm, setShowWdConfirm] = useState<null | "airtime" | "cash">(null);
+  const [wdDontShow, setWdDontShow] = useState(false);
   const getAuth = () => {
     try {
       const u = JSON.parse(localStorage.getItem("tivexx-user") || "null");
@@ -612,18 +617,7 @@ function ReferContent() {
                 } catch { setApClientRef(`${Date.now()}-${Math.floor(Math.random() * 1e9)}`); }
                 setApMsg(""); setShowAirPopup(true);
               };
-              return (
-                <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2">
-                    <div className="text-xs font-black text-white">Referral Withdraw</div>
-                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{displayAvail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(first ₦500)"}</div>
-                    {cashMsg && <div className={`mt-1 text-[11px] font-bold ${cashMsg.startsWith("Referral withdrawal") ? "text-emerald-300" : "text-amber-300"}`}>{cashMsg}</div>}
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    <button disabled={!canWithdraw} onClick={openAirPopup} className={`w-full rounded-full font-black py-2.5 text-sm ${canWithdraw ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
-                      Withdraw as airtime
-                    </button>
-                    <button disabled={cashDisabled} onClick={async ()=>{
+              const doCashWithdraw = async ()=>{
                     const { uid, notifyToken } = getAuth();
                     if(!uid) { setCashMsg("Please log out and log back in, then try again"); return; }
                     // Bank check — setup-bank stores under "tivexx-bank-details"
@@ -687,11 +681,70 @@ function ReferContent() {
                         saveVip(next); setVip(next);
                       }
                     } finally { isWithdrawing.current = false; setCashBusy(false); }
-                  }} className={`w-full rounded-full font-black py-2.5 text-sm ${!cashDisabled ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                  };
+              // Confirm gate: warns that withdrawn referrals leave the count.
+              // Skipped once the user ticks "don't show again".
+              const requestWithdraw = (kind: "airtime" | "cash") => {
+                setCashMsg("");
+                try {
+                  if (localStorage.getItem(WD_ACK_KEY) === "1") {
+                    if (kind === "airtime") openAirPopup();
+                    else void doCashWithdraw();
+                    return;
+                  }
+                } catch {}
+                setWdDontShow(false);
+                setShowWdConfirm(kind);
+              };
+              const confirmWithdraw = () => {
+                const kind = showWdConfirm;
+                try { if (wdDontShow) localStorage.setItem(WD_ACK_KEY, "1"); } catch {}
+                setShowWdConfirm(null);
+                if (kind === "airtime") openAirPopup();
+                else if (kind === "cash") void doCashWithdraw();
+              };
+              return (
+              <>
+                <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <div className="mb-2">
+                    <div className="text-xs font-black text-white">Referral Withdraw</div>
+                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{displayAvail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(first ₦500)"}</div>
+                    {cashMsg && <div className={`mt-1 text-[11px] font-bold ${cashMsg.startsWith("Paid") ? "text-emerald-300" : "text-amber-300"}`}>{cashMsg}</div>}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <button disabled={!canWithdraw} onClick={() => requestWithdraw("airtime")} className={`w-full rounded-full font-black py-2.5 text-sm ${canWithdraw ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
+                      Withdraw as airtime
+                    </button>
+                    <button disabled={cashDisabled} onClick={() => requestWithdraw("cash")} className={`w-full rounded-full font-black py-2.5 text-sm ${!cashDisabled ? "bg-emerald-500 text-white" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
                     {cashBusy ? "Processing..." : (canWithdraw ? "Withdraw as cash" : `Need ₦${min.toLocaleString()}`)}
                   </button>
                   </div>
                 </div>
+                {/* Withdraw confirm — warns the count drops after payout */}
+                {showWdConfirm && (
+                  <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setShowWdConfirm(null)}>
+                    <div className="hh-popup max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="text-center text-4xl mb-2">⚠️</div>
+                      <div className="text-base font-black text-white text-center">Before you withdraw</div>
+                      <p className="text-xs text-white/70 text-center leading-relaxed mt-2">
+                        After this withdrawal, the referral{withdrawAmount === 500 ? "" : "s"} will <span className="text-amber-300 font-black">disappear from your withdrawal count</span> and available balance. This cannot be undone.
+                      </p>
+                      <button onClick={() => setWdDontShow((v) => !v)} className="flex items-center justify-center gap-2 mt-3 w-full" aria-pressed={wdDontShow}>
+                        <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${wdDontShow ? "border-emerald-400" : "border-white/30"}`}>
+                          {wdDontShow && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
+                        </span>
+                        <span className="text-[11px] text-white/60">I understand, don&apos;t show again</span>
+                      </button>
+                      <button onClick={confirmWithdraw} className="w-full mt-3 rounded-full font-black py-3 text-sm bg-emerald-500 text-white">
+                        I understand
+                      </button>
+                      <button onClick={() => setShowWdConfirm(null)} className="w-full mt-2 rounded-full border border-white/15 text-white font-bold py-2.5 text-sm">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
               );
             })()}
           </div>
@@ -789,54 +842,66 @@ function ReferContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <button
-                disabled={!getFullReferralLink()}
-                onClick={handleCopy}
-                className={`hh-share-btn ${copied ? "hh-share-success" : "hh-share-copy"} ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-5 w-5" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-5 w-5" />
-                    <span>Copy Link</span>
-                  </>
-                )}
-              </button>
+              <div>
+                <button
+                  disabled={!getFullReferralLink()}
+                  onClick={handleCopy}
+                  className={`hh-share-btn w-full ${copied ? "hh-share-success" : "hh-share-copy"} ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-5 w-5" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-5 w-5" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </button>
+                <div className="hh-btn-sub">link only</div>
+              </div>
 
-              <button
-                disabled={!getFullReferralLink()}
-                onClick={shareWhatsApp}
-                className={`hh-share-btn hh-share-wa ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <Share2 className="h-5 w-5" />
-                <span>Share</span>
-              </button>
+              <div>
+                <button
+                  disabled={!getFullReferralLink()}
+                  onClick={shareWhatsApp}
+                  className={`hh-share-btn hh-share-wa w-full ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <Share2 className="h-5 w-5" />
+                  <span>Share</span>
+                </button>
+                <div className="hh-btn-sub">link only</div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Quick Share Buttons */}
         <div className="grid grid-cols-2 gap-3 hh-entry-3">
-          <button
-            disabled={!getFullReferralLink()}
-            onClick={shareWhatsApp}
-            className={`hh-action-btn hh-action-green ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <span className="hh-action-icon">📱</span>
-            <span>WhatsApp</span>
-          </button>
-          <button
-            disabled={!getFullReferralLink()}
-            onClick={shareTelegram}
-            className={`hh-action-btn hh-action-blue ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <span className="hh-action-icon">✈️</span>
-            <span>Telegram</span>
-          </button>
+          <div>
+            <button
+              disabled={!getFullReferralLink()}
+              onClick={shareWhatsApp}
+              className={`hh-action-btn hh-action-green w-full ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <span className="hh-action-icon">📱</span>
+              <span>WhatsApp</span>
+            </button>
+            <div className="hh-btn-sub">(text + link)</div>
+          </div>
+          <div>
+            <button
+              disabled={!getFullReferralLink()}
+              onClick={shareTelegram}
+              className={`hh-action-btn hh-action-blue w-full ${!getFullReferralLink() ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <span className="hh-action-icon">✈️</span>
+              <span>Telegram</span>
+            </button>
+            <div className="hh-btn-sub">(text + link)</div>
+          </div>
         </div>
 
         {/* Auto Tap Referral — separate page/section above How It Works */}
@@ -1505,6 +1570,15 @@ function ReferContent() {
           color: #10b981;
           margin-bottom: 4px;
           font-weight: 600;
+        }
+
+        /* Tiny caption under share buttons: link only vs (text + link) */
+        .hh-btn-sub {
+          font-size: 11px;
+          color: #10b981;
+          font-weight: 600;
+          text-align: center;
+          margin-top: 4px;
         }
 
         .hh-link-value {

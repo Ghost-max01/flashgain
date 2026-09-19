@@ -1008,7 +1008,9 @@ export default function DashboardPage() {
         : delta * (earnPerTapRef.current || TAP_EARN_PER);
       setTapEarned((p) => p + creditedAuto);
       setBalance(j.newBalance);
-      setAnimatedBalance(j.newBalance);
+      // NOTE: do NOT setAnimatedBalance here — the [balance] tween below
+      // counts animatedBalance up to balance, so auto credits animate the
+      // same way manual taps do. Snapping both kills the animation.
       // CREDIT MOMENT: fly the SERVER-confirmed per-tap rate (one item per
       // credited tap) on the exact tick the balance increases. The countdown
       // FX stays emoji-only, so amounts never show before they are paid.
