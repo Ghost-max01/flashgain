@@ -131,6 +131,8 @@ export default function DashboardPage() {
   // Server inbox feed (push ↔ inbox sync): pushes land here too, cross-device.
   const [inboxFeed, setInboxFeed] = useState<any[]>([]);
   const [inboxFeedUnread, setInboxFeedUnread] = useState(0);
+  const [boochatJoined, setBoochatJoined] = useState(false);
+  const [boochatPartnerName, setBoochatPartnerName] = useState("");
   const refreshInboxFeed = useCallback(async (uid: string) => {
     if (!uid) return;
     try {
@@ -139,6 +141,8 @@ export default function DashboardPage() {
       if (d && (d as any).success && Array.isArray((d as any).items)) {
         setInboxFeed((d as any).items.slice(0, 50));
         setInboxFeedUnread(Number((d as any).unread || 0));
+        try { setBoochatJoined(Boolean((d as any).boochatJoined)); } catch {}
+        try { setBoochatPartnerName(String((d as any).partnerName || "")); } catch {}
       }
     } catch {}
   }, []);
@@ -3110,6 +3114,25 @@ export default function DashboardPage() {
                     </div>
                   </button>
                 ))}
+                {/* Boochat Join card: shows when user hasn't joined the partner channel */}
+                {!boochatJoined && (
+                  <div className="w-full rounded-2xl border border-emerald-500/20 bg-emerald-500/6 p-3 mb-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-white truncate">Join {boochatPartnerName || "our"} channel to receive notifications and updates</div>
+                        <div className="text-xs text-white/55 mt-1">Get announcements and direct messages from the channel.</div>
+                      </div>
+                      <div className="shrink-0">
+                        <button
+                          onClick={() => { setShowInbox(false); try { window.location.href = '/api/boochat/link' } catch { } }}
+                          className="px-3 py-2 rounded bg-emerald-500 text-white font-semibold"
+                        >
+                          Join
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {inboxUnread > 0 && (
                   <button
                     onClick={() => { setShowInbox(false); router.push("/chats"); }}

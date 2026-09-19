@@ -43,6 +43,15 @@ export async function GET(req: NextRequest) {
     }))
     const unread = items.filter((i) => !i.read).length
 
+    // boochat membership + partner display name
+    let boochatJoined = false
+    let partnerName = ""
+    try {
+      const m = await supabase.from("boochat_membership").select("user_id").eq("user_id", userId).maybeSingle()
+      if ((m as any)?.data) boochatJoined = true
+    } catch {}
+    try { partnerName = String(process.env.BOOCHAT_PARTNER_NAME || "") } catch {}
+
     // Best-effort prune beyond 100/user (keeps the table bounded).
     try {
       const { data: oldest } = await supabase
@@ -57,7 +66,7 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    return NextResponse.json({ success: true, items, unread })
+    return NextResponse.json({ success: true, items, unread, boochatJoined, partnerName })
   } catch (e: any) {
     console.error("[notify/inbox]", e)
     return NextResponse.json({ success: false, items: [], unread: 0 })
