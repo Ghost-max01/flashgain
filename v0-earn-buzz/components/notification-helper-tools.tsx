@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { NotificationPermissionPopup } from "@/components/notification-permission-popup"
 import { useNotification } from "@/hooks/useNotification"
 import { safeParse } from "@/lib/safe-storage";
+import { Bell, BellRing } from "lucide-react"
 
 function resolveUserId(): string {
   if (typeof window === "undefined") {
@@ -72,7 +73,8 @@ export function NotificationHelperTools() {
   useEffect(() => {
     const checkUserLogin = () => {
       const userData = localStorage.getItem("tivexx-user")
-      const hasUser = userData && safeParse<{ id?: unknown }>(userData, null)?.id
+      const parsedUser = userData ? safeParse<{ id?: unknown } | null>(userData, null) : null
+      const hasUser = Boolean(parsedUser?.id)
 
       if (hasUser && !userLoggedIn) {
         setUserLoggedIn(true)
@@ -143,6 +145,12 @@ export function NotificationHelperTools() {
   }, [hideHelpers, recordHelperUsage, userLoggedIn])
 
   const onEnable = async () => {
+    if (permission === "granted") {
+      setOpen(true)
+      recordHelperUsage("tools_visible")
+      return
+    }
+
     await requestPermission()
     setOpen(true)
     recordHelperUsage("tools_visible")
@@ -172,18 +180,16 @@ export function NotificationHelperTools() {
   return (
     <>
       {(!hideHelpers || userLoggedIn) && showFloatingButtons && (
-        <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
-          <Button 
-            size="sm" 
-            onClick={onEnable} 
+        <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={permission === "granted" ? "Notifications enabled" : "Enable notifications"}
+            onClick={onEnable}
             disabled={isLoading}
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold shadow-lg rounded-lg transition-colors"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400 text-black shadow-lg ring-2 ring-black/10 transition hover:scale-105 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Enable Notifications
-          </Button>
-          <Button size="sm" variant="outline" onClick={onCheck} disabled={isLoading}>
-            Check Notification Status
-          </Button>
+            {permission === "granted" ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+          </button>
         </div>
       )}
       <NotificationPermissionPopup

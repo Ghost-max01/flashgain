@@ -28,15 +28,15 @@ export function NotificationPermissionPopup({
   isLoading = false,
   showHelperButtons = true,
 }: NotificationPermissionPopupProps) {
-  if (!isOpen) return null;
-
   useEffect(() => {
-    if (permission !== 'granted' && permission !== 'denied') return;
+    if (!isOpen || (permission !== 'granted' && permission !== 'denied')) return;
     const timer = window.setTimeout(() => {
       onClose();
     }, 7000);
     return () => window.clearTimeout(timer);
-  }, [permission, onClose]);
+  }, [isOpen, permission, onClose]);
+
+  if (!isOpen) return null;
 
   const getStatusConfig = () => {
     switch (permission) {
@@ -44,8 +44,8 @@ export function NotificationPermissionPopup({
         return {
           icon: <Check className="h-5 w-5" />,
           title: 'Notification Allowed',
-          description: 'Notification allowed',
-          variant: 'default' as const,
+          description:
+            'Notifications are enabled and you will receive app alerts even when the app is not open.',
           badgeText: 'Granted',
           badgeVariant: 'default' as const,
         };
@@ -53,24 +53,24 @@ export function NotificationPermissionPopup({
         return {
           icon: <BellOff className="h-5 w-5" />,
           title: 'Notification Blocked',
-          description: 'Notification blocked',
-          variant: 'destructive' as const,
-          badgeText: 'Denied',
+          description:
+            'Notifications are blocked on this device. Please enable them in the browser or phone settings.',
+          badgeText: 'Blocked',
           badgeVariant: 'destructive' as const,
         };
       default:
         return {
           icon: <Bell className="h-5 w-5" />,
           title: 'Enable Notifications',
-          description: 'Tap allow to receive notifications.',
-          variant: 'default' as const,
-          badgeText: 'Not Set',
+          description: 'Tap allow to receive alerts and reminders.',
+          badgeText: 'Not set',
           badgeVariant: 'secondary' as const,
         };
     }
   };
 
   const status = getStatusConfig();
+  const isGranted = permission === 'granted';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -87,14 +87,14 @@ export function NotificationPermissionPopup({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {showHelperButtons && (
+          {showHelperButtons && !isGranted && (
             <div className="grid grid-cols-1 gap-2">
               <Button
                 onClick={onEnableNotifications}
                 disabled={isLoading}
                 className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold shadow-md"
               >
-                {isLoading ? 'Processing...' : 'Enable Notifications'}
+                {isLoading ? 'Processing...' : 'Allow Notifications'}
               </Button>
               <Button
                 onClick={onCheckStatus}
@@ -102,14 +102,23 @@ export function NotificationPermissionPopup({
                 variant="outline"
                 className="w-full"
               >
-                Check Notification Status
+                Check Status
               </Button>
             </div>
           )}
 
+          {diagnostic && (
+            <div className="rounded-xl bg-slate-100 p-3 text-xs text-slate-700">
+              <div className="font-semibold text-slate-900">Status</div>
+              <div className="mt-1 break-words">
+                {diagnostic.reason || 'Notification check'}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end">
-            <Button variant="outline" onClick={onClose}>
-              Close
+            <Button variant={isGranted ? 'default' : 'outline'} onClick={onClose}>
+              {isGranted ? 'Done' : 'Close'}
             </Button>
           </div>
         </CardContent>
