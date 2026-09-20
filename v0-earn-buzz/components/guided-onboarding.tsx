@@ -13,7 +13,7 @@ type Step = {
 };
 
 const STEPS: Step[] = [
-  { id: "welcome", title: "Welcome to FlashGain 9ja! 👋", desc: "30-sec moving tour — follow the highlight!", icon: Sparkles, color: "from-emerald-500 to-teal-600" },
+  { id: "welcome", title: "Welcome to Moneymate 9ja! 👋", desc: "30-sec moving tour — follow the highlight!", icon: Sparkles, color: "from-emerald-500 to-teal-600" },
   { id: "balance", title: "Your Balance", desc: "Every tap, task & referral lands here instantly.", target: '[data-tour="balance"]', icon: Wallet, color: "from-emerald-500 to-emerald-600" },
   { id: "tap", title: "Tap Orb", desc: "Tap the green orb — 100 energy, ₦100 per tap.", target: '[data-tour="tap-orb"]', icon: Zap, color: "from-emerald-500 to-cyan-600" },
   { id: "trust", title: "Trust Score", desc: "Earn: 5 mins +2, 5 referrals +2, 5 navs +1, 10 tasks +2, 50 taps +1, payment +5.", target: '[data-tour="trust"]', icon: Award, color: "from-blue-500 to-violet-600" },

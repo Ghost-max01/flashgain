@@ -227,7 +227,7 @@ export default function InvestmentPlatformPage() {
               </div>
               <div>
                 <span className="text-xl font-bold text-white block leading-tight">
-                  FlashGain 9ja Investment.
+                  Moneymate 9ja Investment.
                 </span>
                 <span className="text-xs text-emerald-300/70">
                   Est. 2018 • Regulated
@@ -935,7 +935,7 @@ export default function InvestmentPlatformPage() {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-12 hh-entry-1">
             <h2 className="text-3xl font-bold text-white mb-4 relative inline-block">
-              Why Choose FlashGain 9ja
+              Why Choose Moneymate 9ja
               <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-emerald-500 rounded-full animate-width-slow"></span>
             </h2>
             <p className="text-xl text-white/70">
@@ -1063,7 +1063,7 @@ export default function InvestmentPlatformPage() {
                   <Building className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-lg font-bold text-white">
-                  FlashGain 9ja
+                  Moneymate 9ja
                 </span>
               </div>
               <p className="text-sm text-white/50">
@@ -1077,7 +1077,7 @@ export default function InvestmentPlatformPage() {
 
           <div className="mt-12 pt-8 border-t border-white/10 text-center text-sm text-white/40">
             <p>
-              © {new Date().getFullYear()} FlashGain 9ja Capital Management. All
+              © {new Date().getFullYear()} Moneymate 9ja Capital Management. All
               rights reserved.
             </p>
             <p className="mt-2 animate-pulse-subtle">

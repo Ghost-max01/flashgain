@@ -1,5 +1,5 @@
 -- ============================================================
--- FlashGain9ja — SCHEMA REMNANTS (copy/paste into Supabase SQL Editor)
+-- Moneymate9ja — SCHEMA REMNANTS (copy/paste into Supabase SQL Editor)
 -- Fills ONLY the gaps between the app code and the live database.
 -- Everything is IF NOT EXISTS / guarded, so it is safe to run even if
 -- some (or all) of these already exist. Run top to bottom, once.

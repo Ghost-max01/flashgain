@@ -19,7 +19,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'flashgain9ja.money',
+        hostname: 'Moneymate9ja.money',
       },
       {
         protocol: 'http',
@@ -28,7 +28,7 @@ const nextConfig = {
     ],
   },
   async headers() {
-    const appUrl = process.env.APP_URL || 'https://flashgain9ja.money';
+    const appUrl = process.env.APP_URL || 'https://Moneymate9ja.money';
     let allowOrigin = appUrl;
     try {
       allowOrigin = new URL(appUrl).origin;

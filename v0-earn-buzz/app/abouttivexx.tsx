@@ -29,7 +29,7 @@ export default function AboutPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
         <div className="text-center p-6">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <div>Loading FlashGain 9ja profile…</div>
+          <div>Loading Moneymate 9ja profile…</div>
         </div>
       </div>
     );
@@ -77,7 +77,7 @@ export default function AboutPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-extrabold text-white/90">
-                  FlashGain 9ja
+                  Moneymate 9ja
                 </h1>
                 <p className="text-sm text-white/90 mt-0.5">
                   Empowering Hustlers. Changing Lives.
@@ -106,10 +106,10 @@ export default function AboutPage() {
             </div>
 
             <div className="flex-1">
-              <h2 className="text-2xl font-bold">FlashGain 9ja</h2>
+              <h2 className="text-2xl font-bold">Moneymate 9ja</h2>
               <p className="text-white/70 mt-2 leading-relaxed">
                 {" "}
-                FlashGain 9ja is a fintech rewards platform built to help
+                Moneymate 9ja is a fintech rewards platform built to help
                 Nigerians earn, save and access fast financial products. We
                 combine referral rewards, daily earnings, and low-barrier loan
                 options in one mobile-friendly experience.{" "}
@@ -188,7 +188,7 @@ export default function AboutPage() {
             <h3 className="font-bold mb-3">Verification & Refundable Fee</h3>
             <p className="text-sm text-white/70 leading-relaxed">
               To comply with regulatory requirements and prevent automated
-              fraud, FlashGain 9ja requires a one-time verification fee. This
+              fraud, Moneymate 9ja requires a one-time verification fee. This
               fee is used for identity documentation checks and is{" "}
               <strong>refunded</strong> to your dashboard balance after
               successful verification.
@@ -216,7 +216,7 @@ export default function AboutPage() {
           <Card className="p-5 bg-white/6">
             <h3 className="font-bold mb-3">Withdraw Options & Upgrade</h3>
             <p className="text-sm text-white/80 leading-relaxed">
-              FlashGain 9ja offers two ways to withdraw:
+              Moneymate 9ja offers two ways to withdraw:
             </p>
             <ul className="list-disc pl-5 mt-3 text-sm text-white/80 space-y-2">
               <li>
@@ -302,7 +302,7 @@ export default function AboutPage() {
             </p>
             <div className="mt-4">
               <Button
-                onClick={() => window.open("https://t.me/flashgain9janews")}
+                onClick={() => window.open("https://t.me/Moneymate9janews")}
                 className="bg-emerald-300 text-black"
               >
                 Join Community
@@ -327,7 +327,7 @@ export default function AboutPage() {
               </div>
 
               <div className="text-sm text-white/70">
-                FlashGain 9ja © {new Date().getFullYear()}. All rights reserved.
+                Moneymate 9ja © {new Date().getFullYear()}. All rights reserved.
               </div>
             </div>
           </Card>

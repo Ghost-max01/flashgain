@@ -212,7 +212,7 @@ export default function AdminLogin() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-slate-400 text-sm">
-          <p>FlashGain Admin Dashboard v1.0</p>
+          <p>Moneymate Admin Dashboard v1.0</p>
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@ try {
   if (typeof firebase !== "undefined" && firebase.messaging) {
     const messaging = firebase.messaging()
     messaging.onBackgroundMessage((payload) => {
-      const title = payload.notification?.title || payload.data?.title || "FlashGain 9ja"
+      const title = payload.notification?.title || payload.data?.title || "Moneymate 9ja"
       const body = payload.notification?.body || payload.data?.body || "You have a new alert"
       const clickUrl = payload.data?.clickUrl || payload.fcmOptions?.link || "/dashboard"
 
@@ -35,7 +35,7 @@ try {
         icon: "/icons/icon-192x192.png",
         badge: "/icons/icon-192x192.png",
         vibrate: [200, 100, 200],
-        tag: payload.data?.tag || "flashgain-fcm",
+        tag: payload.data?.tag || "Moneymate-fcm",
         renotify: true,
         data: { url: clickUrl, messageId: payload.messageId },
         actions: [
@@ -174,7 +174,7 @@ self.addEventListener("push", (event) => {
   }
 
   // Support both flat payload and nested notification object
-  const title = payload.title || payload.notification?.title || "FlashGain 9ja"
+  const title = payload.title || payload.notification?.title || "Moneymate 9ja"
   const body = payload.body || payload.notification?.body || "You have a new alert"
   const icon = payload.icon || payload.notification?.icon || "/icons/icon-192x192.png"
   const clickUrl = payload.clickUrl || payload.data?.url || "/dashboard"
@@ -184,7 +184,7 @@ self.addEventListener("push", (event) => {
     icon,
     badge: "/icons/icon-192x192.png",
     vibrate: [200, 100, 200],
-    tag: payload.tag || "flashgain-push",
+    tag: payload.tag || "Moneymate-push",
     renotify: true,
     requireInteraction: false,
     data: { url: clickUrl },

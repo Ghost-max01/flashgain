@@ -26,7 +26,7 @@ export function ServiceWorkerUpdater() {
         // clear old Next chunk caches that may hold the broken layout-ef862 / page-5f716
         if ('caches' in window) {
           void caches.keys().then(keys => keys.forEach(k => {
-            if (k.includes('next') || k.includes('workbox') || k.includes('flashgain') || k === 'earn-buzz-v3' || k === 'earn-buzz-v4' || k === 'earn-buzz-v5') void caches.delete(k);
+            if (k.includes('next') || k.includes('workbox') || k.includes('Moneymate') || k === 'earn-buzz-v3' || k === 'earn-buzz-v4' || k === 'earn-buzz-v5') void caches.delete(k);
           }));
         }
       }

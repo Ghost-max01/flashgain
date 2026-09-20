@@ -185,7 +185,7 @@ export default function SetupBankAfterSignupPage() {
 
   const handleProceed = () => {
     // NOTE (per request): the post-signup splash is COMMENTED OUT, not deleted.
-    // The "/welcome" page (FlashGain 9ja • Financial Services typing + dots,
+    // The "/welcome" page (Moneymate 9ja • Financial Services typing + dots,
     // app/welcome/page.tsx) is kept in the repo but skipped, so after signup
     // the flow is: spinner → welcome modal (TutorialModal) → onboarding
     // (GuidedOnboarding) on /dashboard. To restore the splash, uncomment the
@@ -246,7 +246,7 @@ export default function SetupBankAfterSignupPage() {
             <div className="hh-spinner-ring hh-spinner-ring-2"></div>
             <div className="hh-spinner-ring hh-spinner-ring-3"></div>
           </div>
-          <h1 className="hh-loading-title">FlashGain 9ja</h1>
+          <h1 className="hh-loading-title">Moneymate 9ja</h1>
           <p className="hh-loading-text">
             {transitioning
               ? isLocked ? "Bank details secured — redirecting..."

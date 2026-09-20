@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { X, Send, User, Bot, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getFlashgainSupportReply } from "@/lib/flashgain-support-replies"
+import { getMoneymateSupportReply } from "@/lib/Moneymate-support-replies"
 
 interface LiveChatProps {
   onClose: () => void
@@ -27,7 +27,7 @@ export function LiveChat({ onClose }: LiveChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello good day\n\nWhat do you need help on⁉️\n\nPick 1 number below:\n1. About FlashGain\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification.",
+      text: "Hello good day\n\nWhat do you need help on⁉️\n\nPick 1 number below:\n1. About Moneymate\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification.",
       isImage: true,
       imageUrl: "/chatbot-img/image0.png",
       sender: "agent",
@@ -115,8 +115,8 @@ export function LiveChat({ onClose }: LiveChatProps) {
 
     } catch (error) {
       console.error('Chat error:', error)
-      // Offline fallback — SAME automated response as FlashGain support.
-      const local = getFlashgainSupportReply(userInput)
+      // Offline fallback — SAME automated response as Moneymate support.
+      const local = getMoneymateSupportReply(userInput)
       const fallbackMessage: Message = {
         id: messages.length + 2,
         text: local.text,
@@ -143,7 +143,7 @@ export function LiveChat({ onClose }: LiveChatProps) {
   const showMenu = () => {
     const menuMessage: Message = {
       id: messages.length + 1,
-      text: "What do you need help on⁉️\n\nPick 1 number below:\n1. About FlashGain\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification.",
+      text: "What do you need help on⁉️\n\nPick 1 number below:\n1. About Moneymate\n2. How To Earn\n3. Withdrawals\n4. Refferal/link\n5. Verification.",
       sender: "agent",
       timestamp: new Date(),
     }
@@ -160,7 +160,7 @@ export function LiveChat({ onClose }: LiveChatProps) {
               <Bot className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800">FlashGain 9ja Support</h3>
+              <h3 className="font-semibold text-gray-800">Moneymate 9ja Support</h3>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <p className="text-xs text-gray-500">Online</p>

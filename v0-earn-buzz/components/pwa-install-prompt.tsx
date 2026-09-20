@@ -93,7 +93,7 @@ export function PWAInstallPrompt() {
                   <Download className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold">Install FlashGain 9ja</h2>
+                  <h2 className="text-base font-bold">Install Moneymate 9ja</h2>
                   <p className="text-xs text-gray-500">Add to your home screen</p>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export function PWAInstallPrompt() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Share className="w-5 h-5 text-yellow-600" />
-                <h2 className="text-sm font-bold">Install FlashGain 9ja</h2>
+                <h2 className="text-sm font-bold">Install Moneymate 9ja</h2>
               </div>
               <button onClick={handleDismiss} className="p-1 hover:bg-gray-100 rounded-md" aria-label="Close">
                 <X className="w-4 h-4 text-gray-400" />

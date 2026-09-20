@@ -556,12 +556,12 @@ export default function DashboardPage() {
               <span>
                 Visit{" "}
                 <a
-                  href="https://flashgain.online"
+                  href="https://Moneymate.online"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-emerald-400 underline"
                 >
-                  flashgain.online
+                  Moneymate.online
                 </a>{" "}
                 for articles and updates.
               </span>
@@ -1855,7 +1855,7 @@ export default function DashboardPage() {
     {
       name: "Channel",
       emoji: "📢",
-      link: "https://t.me/flashgain9janews",
+      link: "https://t.me/Moneymate9janews",
       external: true,
       color: "text-amber-400",
       bgColor: "",
@@ -2282,7 +2282,7 @@ export default function DashboardPage() {
             <Button
               onClick={() => {
                 setShowReminderDialog(false);
-                window.open("https://t.me/flashgain9janews", "_self");
+                window.open("https://t.me/Moneymate9janews", "_self");
               }}
               className="flex-1 hh-btn-blue"
             >
@@ -2642,7 +2642,7 @@ export default function DashboardPage() {
                   </span>
                 )}
               </button>
-              <Link href="https://t.me/flashgain9janews">
+              <Link href="https://t.me/Moneymate9janews">
                 <button className="hh-support-btn hh-support-green relative">
                   <Bell className="h-5 w-5 text-white" />
                   <span className="hh-notif-dot"></span>

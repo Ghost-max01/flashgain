@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Megaphone, Headset } from "lucide-react";
 import { safeParse } from "@/lib/safe-storage";
-import { getFlashgainSupportReply, SUPPORT_GREETING } from "@/lib/flashgain-support-replies";
+import { getMoneymateSupportReply, SUPPORT_GREETING } from "@/lib/Moneymate-support-replies";
 import { showLocalNotification } from "@/services/notification-service";
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -19,7 +19,7 @@ interface ChatMsg {
 const CHAT_KEY = "tivexx-support-chat";
 const UNREAD_KEY = "tivexx-support-unread";
 const TELEGRAM_SUPPORT = "https://t.me/Earnbuzzsupport";
-const TELEGRAM_CHANNEL = "https://t.me/flashgain9janews";
+const TELEGRAM_CHANNEL = "https://t.me/Moneymate9janews";
 
 function newId() {
   try {
@@ -78,10 +78,10 @@ export default function ChatsPage() {
     const next = [...msgs, mine];
     persist(next);
     setDraft("");
-    // SAME automated response as FlashGain support (dashboard popup + /api/chat).
+    // SAME automated response as Moneymate support (dashboard popup + /api/chat).
     if (replyTimer.current) clearTimeout(replyTimer.current);
     replyTimer.current = setTimeout(() => {
-      const auto = getFlashgainSupportReply(clean);
+      const auto = getMoneymateSupportReply(clean);
       const lines = [auto.text];
       if (auto.link) lines.push(`\n${auto.linkLabel || "Open link"}: ${auto.link}`);
       if (auto.followUpMenu) lines.push(`\n${auto.followUpMenu}`);
@@ -165,7 +165,7 @@ export default function ChatsPage() {
               <Headset className="h-4 w-4 text-emerald-300" />
             </span>
             <div>
-              <div className="text-sm font-bold text-white">FlashGain Support</div>
+              <div className="text-sm font-bold text-white">Moneymate Support</div>
               <div className="text-[11px] text-white/50">Typically replies within 24 hours</div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function ChatsPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Quick prompts — same 1-5 menu as FlashGain support */}
+          {/* Quick prompts — same 1-5 menu as Moneymate support */}
           <div className="flex gap-2 overflow-x-auto pb-3 pt-1">
             {["1", "2", "3", "4", "5"].map((q) => (
               <button

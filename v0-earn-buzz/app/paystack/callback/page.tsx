@@ -185,7 +185,7 @@ function CallbackInner() {
             <p className="text-xs text-white/40 mt-1 break-all">Ref: {reference || "—"}</p>
             <div className="mt-4 flex gap-2 justify-center">
               <Link href="/dashboard" className="rounded-full border border-white/10 px-5 py-2.5 font-bold text-sm">Dashboard</Link>
-              <a href="mailto:support@flashgain.online" className="rounded-full hh-btn-primary px-5 py-2.5 font-black text-sm">Contact support</a>
+              <a href="mailto:support@Moneymate.online" className="rounded-full hh-btn-primary px-5 py-2.5 font-black text-sm">Contact support</a>
             </div>
           </>
         )}

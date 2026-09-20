@@ -18,7 +18,7 @@ function sanitizeClickUrl(clickUrl?: string): string {
   if (v.startsWith("/")) return v.slice(0, 500);
   try {
     const u = new URL(v);
-    if (u.hostname === "flashgain9ja.money" || u.hostname.endsWith(".flashgain9ja.money")) {
+    if (u.hostname === "Moneymate9ja.money" || u.hostname.endsWith(".Moneymate9ja.money")) {
       return v.slice(0, 500);
     }
   } catch {}

@@ -223,7 +223,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8 hh-entry-1">
-            <h1 className="hh-glow-title mb-2">FlashGain 9ja</h1>
+            <h1 className="hh-glow-title mb-2">Moneymate 9ja</h1>
             <p className="hh-subtitle">Nigeria's trusted earning platform</p>
           </div>
 

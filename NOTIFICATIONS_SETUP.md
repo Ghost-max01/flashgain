@@ -13,7 +13,7 @@ are auto-cleaned).
 | --- | ----- | ------- |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | client + server | PushManager subscription key |
 | `VAPID_PRIVATE_KEY` | server only | signs Web Push payloads |
-| `VAPID_SUBJECT` | server only | must be a URL or `mailto:` (e.g. `mailto:support@flashgain9ja.money`) |
+| `VAPID_SUBJECT` | server only | must be a URL or `mailto:` (e.g. `mailto:support@Moneymate9ja.money`) |
 | `CRON_SECRET` | server only | Bearer token for the `/api/timer/cron` scheduler (any long random string) |
 | `ADMIN_NOTIFY_SECRET` | server only | Bearer token for `/api/notifications/send` + `/api/notify/broadcast` |
 | `NOTIFY_TOKEN_SECRET` | server only, optional | HMAC secret for offline-push tokens. **Defaults to `SUPABASE_SERVICE_ROLE_KEY`, so nothing to set** unless you want separation. |
@@ -78,7 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_notif_webpush_user ON public.notification_webpush
 ```
 
 If `user_timers` predates the type column (or any table below is missing),
-run `flashgain/updatedschema.sql` in the Supabase SQL editor — it is the
+run `Moneymate/updatedschema.sql` in the Supabase SQL editor — it is the
 single idempotent remnants file (safe to re-run) and covers this plus
 `claim_count`/`pause_until`:
 

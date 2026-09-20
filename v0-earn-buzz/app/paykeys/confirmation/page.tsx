@@ -68,7 +68,7 @@ function PayKeyConfirmationContent() {
             <div className="hh-spinner-ring hh-spinner-ring-middle"></div>
             <div className="hh-spinner-ring hh-spinner-ring-inner"></div>
           </div>
-          <h1 className="hh-loading-title">FlashGain 9ja</h1>
+          <h1 className="hh-loading-title">Moneymate 9ja</h1>
           <p className="hh-loading-text">Confirming your payment...</p>
         </div>
       </div>
@@ -229,7 +229,7 @@ function PayKeyConfirmationContent() {
 
               // Open Telegram DM with pre-filled message — user just taps Send
               const encoded = encodeURIComponent(msg);
-              window.open(`https://t.me/flashgainsupport?text=${encoded}`, "_self");
+              window.open(`https://t.me/Moneymatesupport?text=${encoded}`, "_self");
             }}
             className="hh-support-btn-full"
           >
@@ -1156,7 +1156,7 @@ export default function PayKeyConfirmationPage() {
               <div className="hh-spinner-ring hh-spinner-ring-middle"></div>
               <div className="hh-spinner-ring hh-spinner-ring-inner"></div>
             </div>
-            <h1 className="hh-loading-title">FlashGain 9ja</h1>
+            <h1 className="hh-loading-title">Moneymate 9ja</h1>
             <p className="hh-loading-text">Confirming your payment...</p>
           </div>
         </div>

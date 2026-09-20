@@ -55,12 +55,12 @@ function PoliciesContent() {
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 text-xs text-emerald-300 mb-4">
-            <FileText className="h-3.5 w-3.5" /> FlashGain 9ja Legal
+            <FileText className="h-3.5 w-3.5" /> Moneymate 9ja Legal
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-2">{tabTitles[active]}</h1>
           <p className="text-sm text-white/50">Last updated: August 27, 2026 &middot; Effective immediately</p>
           <p className="text-sm text-white/60 mt-3 max-w-xl mx-auto">
-            By creating an account or using FlashGain 9ja, you agree to the terms below. Please read them carefully.
+            By creating an account or using Moneymate 9ja, you agree to the terms below. Please read them carefully.
           </p>
         </div>
 
@@ -105,7 +105,7 @@ function PoliciesContent() {
         </div>
 
         <p className="text-center text-xs text-white/30 mt-6">
-          FlashGain 9ja &middot; Nigeria&apos;s trusted earning platform &middot; All rights reserved.
+          Moneymate 9ja &middot; Nigeria&apos;s trusted earning platform &middot; All rights reserved.
         </p>
       </div>
 
@@ -146,8 +146,8 @@ function PrivacyContent() {
     <div>
       <h3>1. Introduction</h3>
       <p>
-        At FlashGain 9ja (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;), your privacy matters. This Privacy Policy explains what data we collect,
-        how we use it, how we keep it safe, and your rights. By using FlashGain 9ja you agree to this policy.
+        At Moneymate 9ja (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;), your privacy matters. This Privacy Policy explains what data we collect,
+        how we use it, how we keep it safe, and your rights. By using Moneymate 9ja you agree to this policy.
       </p>
 
       <h3>2. Information We Collect</h3>
@@ -187,7 +187,7 @@ function PrivacyContent() {
 
       <h3>6. Children&apos;s Privacy (COPPA)</h3>
       <p>
-        FlashGain 9ja is intended for users aged 13 and older. We comply with the Children&apos;s Online Privacy Protection Act (COPPA)
+        Moneymate 9ja is intended for users aged 13 and older. We comply with the Children&apos;s Online Privacy Protection Act (COPPA)
         and do not knowingly collect data from anyone under 13. If we learn that such data was collected, we will delete it promptly.
       </p>
 
@@ -200,7 +200,7 @@ function PrivacyContent() {
       <h3>8. What We Will Never Do</h3>
       <p>
         We will never share, disclose, sell, or otherwise provide your data to other companies for the promotion of their products or services.
-        Your data is used solely to serve you better within FlashGain 9ja.
+        Your data is used solely to serve you better within Moneymate 9ja.
       </p>
 
       <h3>9. Changes to This Policy</h3>
@@ -222,7 +222,7 @@ function PaymentContent() {
     <div>
       <h3>1. Agreement to Payment Terms</h3>
       <p>
-        By using FlashGain 9ja and purchasing any service, bundle, or fee-based feature, you agree to this Payment Policy.
+        By using Moneymate 9ja and purchasing any service, bundle, or fee-based feature, you agree to this Payment Policy.
         All payments are processed securely and transparently.
       </p>
 
@@ -277,14 +277,14 @@ function SupportContent() {
     <div>
       <h3>1. Our Commitment</h3>
       <p>
-        FlashGain 9ja is committed to fast, friendly, and fair support. By using our platform you agree to use support channels responsibly and
+        Moneymate 9ja is committed to fast, friendly, and fair support. By using our platform you agree to use support channels responsibly and
         follow the guidelines below.
       </p>
 
       <h3>2. How to Get Help</h3>
       <ul>
         <li><strong>Live Chat</strong> — Available from your dashboard for account, payment, and technical issues.</li>
-        <li><strong>Telegram Channel</strong> — Join @flashgain9janews for updates, announcements, and community help.</li>
+        <li><strong>Telegram Channel</strong> — Join @Moneymate9janews for updates, announcements, and community help.</li>
         <li>When contacting us, include your registered email and a clear description so we can help faster.</li>
       </ul>
 

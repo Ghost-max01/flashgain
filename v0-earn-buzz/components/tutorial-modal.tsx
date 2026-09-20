@@ -86,7 +86,7 @@ export function TutorialModal({ onClose }: TutorialModalProps) {
 
         {/* Content Section — 2 stages only: Join Channel → Proceed to Dashboard */}
         <div className="hh-modal-content" key={animKey}>
-              <h3 className="hh-modal-title">Welcome to FlashGain 9ja!</h3>
+              <h3 className="hh-modal-title">Welcome to Moneymate 9ja!</h3>
               <p className="hh-modal-description">
                 Earn welcome bonus and daily cash by completing easy tasks. But first, join our WhatsApp channel for updates!
               </p>

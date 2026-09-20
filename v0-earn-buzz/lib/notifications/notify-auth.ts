@@ -132,7 +132,7 @@ export function timerMessage(timerType: unknown): { title: string; body: string;
   }
   return {
     title: "⏰ Claim Ready!",
-    body: "Your timer hit 00:00. Open FlashGain 9ja to claim your ₦2,000 now!",
+    body: "Your timer hit 00:00. Open Moneymate 9ja to claim your ₦2,000 now!",
     clickUrl: "/dashboard",
   };
 }

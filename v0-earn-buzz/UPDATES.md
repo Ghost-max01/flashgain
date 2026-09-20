@@ -41,10 +41,10 @@
 - [x] 12. UI cleanup — remove "The Investment" — Hide/remove section entirely from UI
   → `v0-earn-buzz/app/dashboard/page.tsx:1155-1170` — `menuItems` only Daily Tasks + Loans (Investments removed); `v0-earn-buzz/app/dashboard/page-new.tsx:295-317` — same removal; `v0-earn-buzz/components/guided-onboarding.tsx:20` — Quick Actions desc `Tasks, Loans — one tap` (removed Investments). No other "The Investment" section rendered.
 
-- [x] 13. Flashgain9ja placement — Move banner inside Quick Actions box, above Loan and Daily Tasks, flat full-width edge-to-edge (not boxed/card style)
+- [x] 13. Moneymate9ja placement — Move banner inside Quick Actions box, above Loan and Daily Tasks, flat full-width edge-to-edge (not boxed/card style)
   → `v0-earn-buzz/app/dashboard/page.tsx:2119-2131` — Inside Quick Actions `hh-card`, `block w-full mb-3 rounded-xl border border-amber-500/30 bg-gradient-to-r ... p-3 flex items-center gap-3` placed before `menuItems` grid, flat banner spanning edge-to-edge.
 
-- [x] 14. Flashgain9ja speed adjustment — Subtract 0.5 from current speed figure; document current value/unit before applying
+- [x] 14. Moneymate9ja speed adjustment — Subtract 0.5 from current speed figure; document current value/unit before applying
   → Before: `AUTO_TAP_INTERVAL_MS = 800` (0.8s, 800ms interval) in `v0-earn-buzz/app/dashboard/page.tsx:75`; After: `300` (reduced by 500ms = 0.5s); Verified via `git log` prior value 800. Banner docs `speed: 0.0 (was 0.5)` (`app/dashboard/page.tsx:2127`). Duration-matched intervals via `getAutoIntervalMs(plan)=Math.floor(durationMs/maxTaps)` (e.g., 24h/1500≈57.6s). `components/referral-reviews.tsx:258` animation `scroll-left-slow 300s` (was 200s, slowed by 100s).
 
 - [x] 15. New withdrawal requirement — Must play Spin & Win at least once per day; display 0/1 → 1/1, resets daily (per-day condition)
@@ -76,7 +76,7 @@
 | 10 | Section cleanup | `app/stake/page.tsx:330-387` | [x] Done | Wheel is next after stake button |
 | 11 | Trust score 5=1 | `lib/trust-score.ts:53`, `app/dashboard/page.tsx:1670` | [x] Done | `Math.floor(navCount/5)` |
 | 12 | Remove Investment | `app/dashboard/page.tsx:1155`, `page-new.tsx:295` | [x] Done | menuItems + onboarding desc |
-| 13 | Flashgain9ja placement | `app/dashboard/page.tsx:2119-2131` | [x] Done | Full-width flat banner inside Quick Actions |
+| 13 | Moneymate9ja placement | `app/dashboard/page.tsx:2119-2131` | [x] Done | Full-width flat banner inside Quick Actions |
 | 14 | Speed -0.5 | `app/dashboard/page.tsx:75,2127` | [x] Done | 800→300 (0.8s→0.3s), banner docs 0.5→0.0 |
 | 15 | Withdraw daily spin | `app/withdraw/page.tsx:30,158,621` | [x] Done | 0/1→1/1, poll 500ms, daily reset |
 | 16 | Final review | — | [x] Done | Build passed, checklist verified |

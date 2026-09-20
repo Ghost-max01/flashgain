@@ -19,9 +19,9 @@ const generateReviews = () => {
   ];
 
   const texts = [
-    "I earned ₦50,000 in my first week! FlashGain 9ja is 100% legit.",
+    "I earned ₦50,000 in my first week! Moneymate 9ja is 100% legit.",
     "Withdrawal came in less than 5 minutes. No cap, this platform is real.",
-    "I referred 30 people and earned ₦150,000. God bless FlashGain 9ja!",
+    "I referred 30 people and earned ₦150,000. God bless Moneymate 9ja!",
     "Best earning platform in Nigeria. I use it every single day.",
     "The daily earnings button alone changed my life. ₦2,000 every minute!",
     "No hidden charges, no stress. Just pure earnings. Thank you FG9ja!",
@@ -38,7 +38,7 @@ const generateReviews = () => {
     "The support team is always helpful and responsive.",
     "I've withdrawn over ₦500,000 since joining. Legit!",
     "Best investment of my time. Worth every second!",
-    "No scams, just real earnings. Thank you FlashGain!",
+    "No scams, just real earnings. Thank you Moneymate!",
     "The app is smooth and the earnings are consistent.",
     "I love the daily bonuses. Keeps me motivated!",
     "Fast approval for withdrawals. No waiting around.",
@@ -161,7 +161,7 @@ const ReviewCardSmall = ({
 }) => (
   <div
     onClick={() =>
-      window.open("https://flashgain-nigeria-hub-gpsz.vercel.app", "_blank")
+      window.open("https://Moneymate-nigeria-hub-gpsz.vercel.app", "_blank")
     }
     className="min-w-[240px] max-w-[260px] bg-gradient-to-br from-white/8 to-white/4 border border-white/10 rounded-lg p-3 flex-shrink-0 cursor-pointer hover:bg-gradient-to-br hover:from-white/12 hover:to-white/6 transition-all duration-300 hover:border-emerald-400/30"
   >
@@ -217,7 +217,7 @@ export function ReferralReviews() {
   return (
     <div className="referral-reviews-container">
       <div className="referral-reviews-header">
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Flashgain9ja Review</span>
+          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Moneymate9ja Review</span>
         <h3 className="text-sm font-bold text-white">What Users Are Saying</h3>
       </div>
 

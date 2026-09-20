@@ -35,9 +35,9 @@ function AutoTapReferContent() {
   const payNeedMap: Record<string, number> = { "24h": 20000, "2d": 30000, "3d": 50000, "1w": 100000 };
 
   const referralMessages = [
-    "Join FlashGain9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
-    "I completed tasks on FlashGain9ja and withdrew ₦250K successfully ✅ Join now with the link below.",
-    "FlashGain9ja paid me ₦300K last week 🔥 Don’t miss your chance. Click the link below to join 👇",
+    "Join Moneymate9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
+    "I completed tasks on Moneymate9ja and withdrew ₦250K successfully ✅ Join now with the link below.",
+    "Moneymate9ja paid me ₦300K last week 🔥 Don’t miss your chance. Click the link below to join 👇",
   ];
 
   const formatCurrency = (amount: number) => {
@@ -116,8 +116,8 @@ function AutoTapReferContent() {
   const referralLink = userData?.referral_code ? `/?ref=${userData.referral_code}` : "/register";
 
   const handleCopy = () => { if(!autoLink) return; navigator.clipboard.writeText(autoLink); setCopied(true); setTimeout(()=>setCopied(false),2000); };
-  const shareWhatsApp = () => { const msg=`Join FlashGain9ja and help me unlock Auto Tap ${plan.label}! ${autoLink}`; window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_self"); };
-  const shareTelegram = () => { const msg=`Join FlashGain9ja and help me unlock Auto Tap ${plan.label}!`; window.open(`https://t.me/share/url?url=${encodeURIComponent(autoLink)}&text=${encodeURIComponent(msg)}`,"_self"); };
+  const shareWhatsApp = () => { const msg=`Join Moneymate9ja and help me unlock Auto Tap ${plan.label}! ${autoLink}`; window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_self"); };
+  const shareTelegram = () => { const msg=`Join Moneymate9ja and help me unlock Auto Tap ${plan.label}!`; window.open(`https://t.me/share/url?url=${encodeURIComponent(autoLink)}&text=${encodeURIComponent(msg)}`,"_self"); };
   const cycleMessage = () => setActiveMessage(referralMessages[Math.floor(Math.random()*referralMessages.length)]);
 
   return (

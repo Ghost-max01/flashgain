@@ -32,7 +32,7 @@ export default function SupportPage() {
 
   const handleTelegramChannel = () => {
     // Open Telegram channel in same tab
-    const telegramChannelUrl = "https://t.me/flashgain9janews"
+    const telegramChannelUrl = "https://t.me/Moneymate9janews"
     window.open(telegramChannelUrl, '_self')
   }
 

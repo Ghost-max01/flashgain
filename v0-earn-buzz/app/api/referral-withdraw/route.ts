@@ -117,7 +117,7 @@ export async function POST(req: NextRequest){
     }
     // 2) Create the transfer recipient.
     const rc = await createRecipient(PAYSTACK_KEY, {
-      name: resolvedName || accountName || "FlashGain user",
+      name: resolvedName || accountName || "Moneymate user",
       accountNumber,
       bankCode,
     });
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest){
       amountNaira: amt,
       recipientCode: (rc as any).recipientCode,
       reference,
-      reason: isVipCash ? "FlashGain referral VIP welcome" : "FlashGain referral payout",
+      reason: isVipCash ? "Moneymate referral VIP welcome" : "Moneymate referral payout",
     });
     if(!(tr as any).ok){
       const otp = (tr as any).otp === true;

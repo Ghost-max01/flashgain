@@ -53,7 +53,7 @@ export default function AboutPage() {
             <div className="hh-spinner-ring hh-spinner-ring-2"></div>
             <div className="hh-spinner-ring hh-spinner-ring-3"></div>
           </div>
-          <h1 className="hh-loading-title">FlashGain 9ja</h1>
+          <h1 className="hh-loading-title">Moneymate 9ja</h1>
           <p className="hh-loading-text">Loading about page...</p>
         </div>
       </div>
@@ -78,9 +78,9 @@ export default function AboutPage() {
             <div className="hh-icon-large mx-auto mb-4">
               <Sparkles className="h-10 w-10 text-amber-300" />
             </div>
-            <h2 className="hh-title-large mb-2">Welcome to FlashGain 9ja</h2>
+            <h2 className="hh-title-large mb-2">Welcome to Moneymate 9ja</h2>
             <p className="text-sm text-white/80 mb-6">
-              Sign in to access the full About page and learn how FlashGain 9ja
+              Sign in to access the full About page and learn how Moneymate 9ja
               helps thousands of Nigerians earn, grow and withdraw without fees.
             </p>
             <div className="flex gap-3 justify-center">
@@ -127,7 +127,7 @@ export default function AboutPage() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
-                <h1 className="hh-title">About FlashGain 9ja</h1>
+                <h1 className="hh-title">About Moneymate 9ja</h1>
                 <p className="hh-subtitle">
                   Nigeria's most reliable earning platform
                 </p>
@@ -159,10 +159,10 @@ export default function AboutPage() {
               </span>
             </div>
 
-            <h1 className="hh-glow-title text-4xl mb-4">FlashGain 9ja</h1>
+            <h1 className="hh-glow-title text-4xl mb-4">Moneymate 9ja</h1>
 
             <p className="text-white/80 max-w-2xl mx-auto leading-relaxed">
-              FlashGain 9ja was created to empower Nigerians with real earning
+              Moneymate 9ja was created to empower Nigerians with real earning
               opportunities, fast withdrawals and trusted digital services. Our
               system helps users support their families, grow their hustle, fund
               education and improve their financial life.
@@ -196,7 +196,7 @@ export default function AboutPage() {
             <div className="hh-card hh-entry-2">
               <h2 className="hh-section-title mb-4 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-amber-400" />
-                What You Can Do on FlashGain 9ja
+                What You Can Do on Moneymate 9ja
               </h2>
 
               <ul className="space-y-3 text-sm text-white/85">
@@ -232,11 +232,11 @@ export default function AboutPage() {
               </ul>
             </div>
 
-            {/* Why Trust FlashGain 9ja */}
+            {/* Why Trust Moneymate 9ja */}
             <div className="hh-card hh-entry-3">
               <h3 className="hh-section-title mb-4 flex items-center gap-2">
                 <Shield className="h-5 w-5 text-emerald-400" />
-                Why Nigerians Trust FlashGain 9ja
+                Why Nigerians Trust Moneymate 9ja
               </h3>
               <ul className="space-y-3 text-sm text-white/85">
                 <li className="hh-list-item">
@@ -270,7 +270,7 @@ export default function AboutPage() {
                     Education Support
                   </div>
                   <p className="text-sm text-white/70">
-                    Students used FlashGain 9ja earnings to continue school.
+                    Students used Moneymate 9ja earnings to continue school.
                   </p>
                 </div>
                 <div className="hh-impact-card">
@@ -298,7 +298,7 @@ export default function AboutPage() {
                 Verified Platform
               </div>
               <p className="text-xs text-white/70 mb-4">
-                FlashGain 9ja strictly follows identity checks and fraud
+                Moneymate 9ja strictly follows identity checks and fraud
                 prevention systems to protect all users and ensure transparent
                 earnings.
               </p>
@@ -315,7 +315,7 @@ export default function AboutPage() {
 
                 <button
                   onClick={() =>
-                    window.open("https://t.me/flashgain9janews", "_self")
+                    window.open("https://t.me/Moneymate9janews", "_self")
                   }
                   className="hh-support-btn-amber w-full"
                 >
@@ -333,7 +333,7 @@ export default function AboutPage() {
                 <div>
                   <div className="font-bold text-white mb-1">Our Promise</div>
                   <p className="text-xs text-white/70">
-                    Withdrawals will remain free forever. FlashGain 9ja will
+                    Withdrawals will remain free forever. Moneymate 9ja will
                     always ensure your balance is protected and paid.
                   </p>
                 </div>
@@ -363,7 +363,7 @@ export default function AboutPage() {
 
         {/* Footer */}
         <div className="text-center text-xs text-white/40 mt-10">
-          FlashGain 9ja © {new Date().getFullYear()}. All rights reserved.
+          Moneymate 9ja © {new Date().getFullYear()}. All rights reserved.
         </div>
       </div>
 

@@ -6,18 +6,18 @@ import { safeParse } from "@/lib/safe-storage";
 const DEFAULT_ICON = "/icons/icon-192x192.png"
 const DEFAULT_BADGE = "/icons/icon-192x192.png"
 const DEFAULT_CLICK_URL = "/"
-const DEFAULT_TITLE = "FlashGain Notification"
+const DEFAULT_TITLE = "Moneymate Notification"
 
 function buildAbsoluteClickUrl(clickUrl: string) {
   if (!clickUrl) {
-    return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://flashgain9ja.money/"
+    return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://Moneymate9ja.money/"
   }
 
   if (/^https?:\/\//i.test(clickUrl)) {
     return clickUrl
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://flashgain9ja.money"
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://Moneymate9ja.money"
   return `${base.replace(/\/$/, "")}/${String(clickUrl).replace(/^\//, "")}`
 }
 

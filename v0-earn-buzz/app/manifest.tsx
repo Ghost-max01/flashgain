@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'FlashGain 9ja',
-    short_name: 'FlashGain',
+    name: 'Moneymate 9ja',
+    short_name: 'Moneymate',
     description: 'Your ultimate financial companion',
     start_url: '/',
     display: 'standalone',

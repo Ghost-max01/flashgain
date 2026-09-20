@@ -16,7 +16,7 @@ interface SystemSettings {
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SystemSettings>({
-    platformName: "FlashGain",
+    platformName: "Moneymate",
     maintenanceMode: false,
     maxTasksPerDay: 100,
     baseRewardAmount: 5000,

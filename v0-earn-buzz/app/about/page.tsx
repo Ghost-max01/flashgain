@@ -44,12 +44,12 @@ export default function AboutPage() {
         </div>
 
         <h1 className="text-3xl font-bold text-center text-green-700">
-          About FlashGain 9ja
+          About Moneymate 9ja
         </h1>
 
         <div className="space-y-5 leading-relaxed">
           <p>
-            FlashGain 9ja is a fast-rising Nigerian digital platform built to
+            Moneymate 9ja is a fast-rising Nigerian digital platform built to
             empower individuals through financial growth, earning opportunities,
             and access to smart online services — all in one place. Our goal is
             simple: to help Nigerians earn, grow, and live better in this tough
@@ -57,7 +57,7 @@ export default function AboutPage() {
           </p>
 
           <p>
-            At FlashGain 9ja, we provide users with access to a sustainable earning
+            At Moneymate 9ja, we provide users with access to a sustainable earning
             system through referrals, simple online tasks, and digital tools
             that pay real value for your effort. Every user matters to us — and
             that’s why our team works daily to stabilize the platform, improve
@@ -74,7 +74,7 @@ export default function AboutPage() {
           </p>
 
           <h2 className="text-xl font-semibold text-green-700">
-            What You Can Do on FlashGain 9ja
+            What You Can Do on Moneymate 9ja
           </h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>Earn from daily tasks and referrals</li>
@@ -101,10 +101,10 @@ export default function AboutPage() {
           </p>
 
           <p className="font-medium text-green-800">
-            FlashGain 9ja is not just a platform — it’s a movement built to help
+            Moneymate 9ja is not just a platform — it’s a movement built to help
             Nigerians earn online, support one another, and make digital income
             possible for everyone. The economy isn’t getting easier — but with
-            FlashGain 9ja, your hustle will always pay off.
+            Moneymate 9ja, your hustle will always pay off.
           </p>
         </div>
 
@@ -124,10 +124,10 @@ export default function AboutPage() {
             <br />
             Email:{" "}
             <a
-              href="mailto:support@FlashGain.com"
+              href="mailto:support@Moneymate.com"
               className="text-green-700 hover:underline"
             >
-              support@FlashGain.com
+              support@Moneymate.com
             </a>
             <br />
             Address: Lagos, Nigeria
@@ -135,7 +135,7 @@ export default function AboutPage() {
         </div>
 
         <div className="text-center text-sm text-gray-500 mt-10">
-          © 2025 FlashGain 9ja. All rights reserved.
+          © 2025 Moneymate 9ja. All rights reserved.
         </div>
       </div>
     </div>

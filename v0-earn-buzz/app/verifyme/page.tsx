@@ -81,7 +81,7 @@ export default function VerifyMePage() {
               </div>
             </div>
             
-            <h1 className="hh-glow-title">FlashGain 9ja</h1>
+            <h1 className="hh-glow-title">Moneymate 9ja</h1>
             
             <div className="flex items-center justify-center mt-2">
               <div className="hh-icon-large">
