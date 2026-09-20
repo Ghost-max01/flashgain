@@ -97,6 +97,79 @@ function ReferContent() {
       return { uid: looksUuid ? rawId : (typeof rawId === "string" ? rawId : ""), notifyToken: (u as any)?.notifyToken || undefined };
     } catch { return { uid: "", notifyToken: undefined }; }
   };
+  // ── One phone number per account + one bank account per account ──
+  // Per-account bindings (this device) + cross-account owner maps.
+  // Server re-checks the same rules in /api/airtime, /api/referral-airtime
+  // and /api/referral-withdraw so a second account can't reuse them.
+  const PHONE_OWNERS_KEY = "moneymate-phone-owners";
+  const BANK_OWNERS_KEY = "moneymate-bank-owners";
+  const boundPhoneKey = (uid: string) => `tivexx-airtime-phone-${uid}`;
+  const boundBankKey = (uid: string) => `tivexx-bank-bind-${uid}`;
+  const readJson = (k: string, fb: any) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch { return fb; } };
+  const getBoundPhone = (uid: string): string => {
+    try {
+      const b = localStorage.getItem(boundPhoneKey(uid));
+      if (b && /^\d{11}$/.test(b)) return b;
+      const v = loadVip();
+      const h0 = (v as any)?.phone || (Array.isArray((v as any)?.history) ? (v as any).history[0]?.phone : "");
+      const d = String(h0 || "").replace(/\D/g, "");
+      return /^\d{11}$/.test(d) ? d : "";
+    } catch { return ""; }
+  };
+  const checkPhoneReusable = (uid: string, phone: string): string | null => {
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (!/^\d{11}$/.test(digits)) return "Enter a valid 11-digit number";
+    const bound = getBoundPhone(uid);
+    if (bound && bound !== digits) return `This account is already linked to •••• ${bound.slice(-4)} — one number per account.`;
+    try {
+      const owners = readJson(PHONE_OWNERS_KEY, {} as Record<string, string>);
+      const owner = owners[digits];
+      if (owner && owner !== uid) return "This phone number is already used on another account.";
+    } catch {}
+    return null;
+  };
+  const savePhoneBinding = (uid: string, phone: string) => {
+    try {
+      const digits = String(phone).replace(/\D/g, "");
+      localStorage.setItem(boundPhoneKey(uid), digits);
+      const owners = readJson(PHONE_OWNERS_KEY, {} as Record<string, string>);
+      owners[digits] = uid;
+      localStorage.setItem(PHONE_OWNERS_KEY, JSON.stringify(owners));
+    } catch {}
+  };
+  const checkBankReusable = (uid: string, accountNumber: string): string | null => {
+    const digits = String(accountNumber || "").replace(/\D/g, "");
+    if (!/^\d{10}$/.test(digits)) return "Save your 10-digit bank account first";
+    try {
+      const bound = readJson(boundBankKey(uid), null as any);
+      const b = String((bound as any)?.accountNumber || "").replace(/\D/g, "");
+      if (b && b !== digits) return `This account is already linked to •••• ${b.slice(-4)} — one bank account per account.`;
+    } catch {}
+    try {
+      const owners = readJson(BANK_OWNERS_KEY, {} as Record<string, string>);
+      const owner = owners[digits];
+      if (owner && owner !== uid) return "This bank account is already used on another account.";
+    } catch {}
+    return null;
+  };
+  const saveBankBinding = (uid: string, accountNumber: string, bankCode: string) => {
+    try {
+      const digits = String(accountNumber).replace(/\D/g, "");
+      localStorage.setItem(boundBankKey(uid), JSON.stringify({ accountNumber: digits, bankCode }));
+      const owners = readJson(BANK_OWNERS_KEY, {} as Record<string, string>);
+      owners[digits] = uid;
+      localStorage.setItem(BANK_OWNERS_KEY, JSON.stringify(owners));
+    } catch {}
+  };
+  // Local mirror so Profile → History → Referrals shows every payout
+  // (cash + airtime, VIP + referral) with method + destination.
+  const pushReferralHistory = (entry: { amount: number; method: "airtime" | "bank"; phone?: string; network?: string; accountLast4?: string; type?: string }) => {
+    try {
+      const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
+      prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random() * 1e9)}`, amount: entry.amount, date: new Date().toISOString(), method: entry.method, phone: entry.phone || "", network: entry.network || "", accountLast4: entry.accountLast4 || "", type: entry.type || entry.method });
+      localStorage.setItem("tivexx-referral-withdrawals", JSON.stringify(prev.slice(0, 200)));
+    } catch {}
+  };
 
   const referralMessages = [
     "Join Moneymate9ja today and cashout just like me 💸 I already withdrew ₦200K once. Click the link below to start 👇",
@@ -602,19 +675,25 @@ function ReferContent() {
               const min = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
               // Server truth: referral_balance is approved-only once loaded; fall back to approvedCount*500 pre-load
               const avail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
-              // First-time users own a one-time ₦500 VIP slot even with 0
-              // approved referrals — cash must stay enabled for it (airtime
-              // already does via /api/airtime).
+              // Zero-balance guard: with ₦0 earned BOTH buttons stay grey and
+              // untappable — no first-₦500 display inflation.
+              const hasEarnings = avail > 0;
               const isVipCash = !vip.redeemed && avail < 500;
               const withdrawAmount = isVipCash ? 500 : avail;
-              const displayAvail = !vip.redeemed ? Math.max(avail, 500) : avail;
-              const canWithdraw = vip.redeemed ? avail >= min : !cashBusy;
-              const cashDisabled = cashBusy || (vip.redeemed ? avail < min : false);
+              const displayAvail = avail;
+              const canWithdraw = hasEarnings && (vip.redeemed ? avail >= min : !cashBusy);
+              const cashDisabled = !hasEarnings || cashBusy || (vip.redeemed ? avail < min : false);
               const openAirPopup = () => {
                 try {
                   const r = (typeof crypto !== "undefined" && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
                   setApClientRef(r);
                 } catch { setApClientRef(`${Date.now()}-${Math.floor(Math.random() * 1e9)}`); }
+                // Prefill the already-bound number (one number per account).
+                try {
+                  const { uid } = getAuth();
+                  const bound = uid ? getBoundPhone(uid) : "";
+                  if (bound) setApPhone(bound);
+                } catch {}
                 setApMsg(""); setShowAirPopup(true);
               };
               const doCashWithdraw = async ()=>{
@@ -636,6 +715,10 @@ function ReferContent() {
                       }catch{return null}
                     })();
                     if(!bd) { window.location.href="/setup-bank"; return; }
+                    // One bank account per account: block reuse across accounts.
+                    const _acct = String((bd as any)?.accountNumber || (bd as any)?.account_number || "").replace(/\D/g, "");
+                    const _bankErr = checkBankReusable(uid, _acct);
+                    if (_bankErr) { setCashMsg(_bankErr); return; }
                     if(isWithdrawing.current || cashBusy) return;
                     isWithdrawing.current = true; setCashBusy(true); setCashMsg("");
                     try{
@@ -664,12 +747,9 @@ function ReferContent() {
                       if(!res.ok){ setCashMsg(j.error||"Withdraw failed — try again"); setCashClientRef(""); return; }
                       setCashMsg(`Paid ₦${Number(amt).toLocaleString()} to your bank ✓ Ref: ${String(j.reference || j.transferCode || "").slice(0, 24)}`);
                       setCashClientRef("");
-                      // Local mirror for Profile → History → Referrals tab.
-                      try {
-                        const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
-                        prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random()*1e9)}`, amount: amt, date: new Date().toISOString() });
-                        localStorage.setItem("tivexx-referral-withdrawals", JSON.stringify(prev.slice(0, 200)));
-                      } catch {}
+                      // Local mirror for Profile → History → Referrals tab (with method + destination).
+                      pushReferralHistory({ amount: amt, method: "bank", accountLast4: _acct.slice(-4), type: "referral" });
+                      try { saveBankBinding(uid, _acct, String((bd as any)?.bankCode || (bd as any)?.bank_code || "")); } catch {}
                       const nb = Number(j.referral_balance ?? j.available ?? 0);
                       const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
                       setAnimatedEarnings(nb);
@@ -754,9 +834,10 @@ function ReferContent() {
         {showAirPopup && (() => {
           const apAvail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
           const apMin = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
-          // First-time VIP airtime is a fixed ₦500 one-time slot — allowed even
-          // with 0 approved referrals (mirrors the cash fix above).
-          const apCan = (!vip.redeemed || apAvail >= apMin) && apPhone.length === 11 && !apLoading;
+          // Zero-balance guard (matches the main card): with ₦0 earned the
+          // airtime button stays grey and untappable.
+          const apHasEarnings = apAvail > 0;
+          const apCan = apHasEarnings && (!vip.redeemed || apAvail >= apMin) && apPhone.length === 11 && !apLoading;
           return (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => { if (!apLoading) setShowAirPopup(false); }}>
               <div className="hh-popup max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
@@ -764,8 +845,9 @@ function ReferContent() {
                   <div className="text-base font-black text-white">Withdraw as Airtime</div>
                   <button onClick={() => { if (!apLoading) setShowAirPopup(false); }} className="text-white/50 hover:text-white font-black px-2" aria-label="Close">✕</button>
                 </div>
-                <div className="text-xs text-white/60 mb-3">Amount: <span className="text-amber-300 font-black">₦{(vip.redeemed ? apAvail : 500).toLocaleString()}</span> {vip.redeemed ? "• min ₦10,000" : "• one-time first ₦500"}</div>
-                {!vip.redeemed && <div className="text-[11px] text-white/50 -mt-2 mb-3">Your first-withdrawal balance: <span className="text-amber-300 font-black">₦500</span> • one-time only, airtime or cash</div>}
+                <div className="text-xs text-white/60 mb-3">Amount: <span className="text-amber-300 font-black">₦{(vip.redeemed ? apAvail : apAvail > 0 ? 500 : 0).toLocaleString()}</span> {vip.redeemed ? "• min ₦10,000" : "• one-time first ₦500"}</div>
+                {!vip.redeemed && apHasEarnings && <div className="text-[11px] text-white/50 -mt-2 mb-3">Your first-withdrawal balance: <span className="text-amber-300 font-black">₦500</span> • one-time only, airtime or cash</div>}
+                {!vip.redeemed && !apHasEarnings && <div className="text-[11px] text-amber-300/80 -mt-2 mb-3">No earnings yet — invite friends to unlock withdrawal.</div>}
                 <div className="grid grid-cols-2 gap-2">
                   <select value={apNetwork} onChange={(e) => setApNetwork(e.target.value)} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-bold text-white outline-none">
                     <option className="text-black" value="MTN">MTN</option>
@@ -781,12 +863,17 @@ function ReferContent() {
                   try {
                     const { uid, notifyToken } = getAuth();
                     if (!uid) throw new Error("Login first");
+                    // One phone number per account — block reuse across accounts.
+                    const phoneErr = checkPhoneReusable(uid, apPhone);
+                    if (phoneErr) throw new Error(phoneErr);
                     if (!vip.redeemed) {
                       const res = await fetch("/api/airtime", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, phone: apPhone, network: apNetwork, amount: 500 }) });
                       const j = await res.json().catch(() => ({}));
                       if (!res.ok) throw new Error(j.error || "Failed");
                       const next = { available: 0, redeemed: true, phone: apPhone, network: apNetwork, date: new Date().toISOString(), history: [...vip.history, { phone: apPhone, network: apNetwork, date: new Date().toISOString(), status: "success", amount: 500 }] };
                       saveVip(next); setVip(next);
+                      try { savePhoneBinding(uid, apPhone); } catch {}
+                      pushReferralHistory({ amount: 500, method: "airtime", phone: apPhone, network: apNetwork, type: "vip_airtime" });
                       setApMsg(`Airtime sent to ${apPhone} ✓`);
                       setTimeout(() => setShowAirPopup(false), 1200);
                     } else {
@@ -798,15 +885,17 @@ function ReferContent() {
                       setAnimatedEarnings(nb);
                       setUserData((prev: any) => prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
                       setApprovedCount(nac);
+                      try { savePhoneBinding(uid, apPhone); } catch {}
+                      pushReferralHistory({ amount: apAvail, method: "airtime", phone: apPhone, network: apNetwork, type: "referral_airtime" });
                       setApMsg(`Airtime sent to ${apPhone} ✓`);
                       setTimeout(() => setShowAirPopup(false), 1200);
                     }
                   } catch (e: any) {
-                    setApMsg(`Pending — ${(e as any)?.message || "try again"}`);
+                    setApMsg(`${(e as any)?.message || "try again"}`);
                   }
                   setApLoading(false);
                 }} className={`w-full mt-3 rounded-full font-black py-3 text-sm ${apCan ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
-                  {apLoading ? "Sending..." : `Withdraw ${(vip.redeemed ? apAvail : 500).toLocaleString()} Airtime →`}
+                  {apLoading ? "Sending..." : `Withdraw ${(vip.redeemed ? apAvail : apAvail > 0 ? 500 : 0).toLocaleString()} Airtime →`}
                 </button>
                 <button onClick={() => { if (!apLoading) setShowAirPopup(false); }} className="w-full mt-2 rounded-full border border-white/15 text-white font-bold py-2.5 text-sm">Close</button>
                 {!vip.redeemed && <div className="text-[11px] text-white/50 text-center mt-2">One-time only. After this, minimum is <b className="text-white">₦10,000</b> (20 referrals).</div>}

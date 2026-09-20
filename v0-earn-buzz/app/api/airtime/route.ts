@@ -38,6 +38,19 @@ export async function POST(req: NextRequest) {
         const { data: userRow } = await supabase.from("users").select("vip_redeemed, referral_vip_balance").eq("id", userId).maybeSingle();
         if (userRow?.vip_redeemed === true) return NextResponse.json({ error: "VIP already redeemed" }, { status: 400 });
       } catch {}
+      // One phone number per account: reject numbers already paid to another user.
+      try {
+        const { data: used } = await supabase
+          .from("referral_withdraws")
+          .select("user_id, meta")
+          .in("type", ["vip_airtime", "referral_airtime"])
+          .neq("user_id", userId)
+          .limit(2000);
+        const clash = ((used || []) as any[]).find(
+          (r: any) => String(r?.meta?.phone || "").replace(/\D/g, "") === digits,
+        );
+        if (clash) return NextResponse.json({ error: "This phone number is already used on another account (one number per account)." }, { status: 400 });
+      } catch {}
     }
 
     // --- REAL VTUGATE CALL — debits your VTUgate wallet ---

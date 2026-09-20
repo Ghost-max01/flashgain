@@ -199,8 +199,32 @@ export default function SetupBankAfterSignupPage() {
       return
     }
     if (!bank || !accountNumber || !accountName) return
+    // One bank account per account (same device): block numbers already
+    // bound to a different local account. Server re-checks at payout.
+    try {
+      const digits = accountNumber.replace(/\D/g, "")
+      const uRaw = localStorage.getItem("tivexx-user")
+      const uid = uRaw ? (JSON.parse(uRaw)?.id || "") : ""
+      const owners = JSON.parse(localStorage.getItem("moneymate-bank-owners") || "{}")
+      if (uid && owners[digits] && owners[digits] !== uid) {
+        setVerifyError("This bank account is already used on another account (one account per user).")
+        return
+      }
+    } catch {}
     // LOCK bank details — cannot be changed afterwards
     saveBankDetails({ bank, bankCode, accountNumber: accountNumber.replace(/\D/g, ""), accountName })
+    // Record owner for same-device cross-account blocking.
+    try {
+      const digits = accountNumber.replace(/\D/g, "")
+      const uRaw = localStorage.getItem("tivexx-user")
+      const uid = uRaw ? (JSON.parse(uRaw)?.id || "") : ""
+      if (uid && /^\d{10}$/.test(digits)) {
+        const owners = JSON.parse(localStorage.getItem("moneymate-bank-owners") || "{}")
+        owners[digits] = uid
+        localStorage.setItem("moneymate-bank-owners", JSON.stringify(owners))
+        localStorage.setItem(`tivexx-bank-bind-${uid}`, JSON.stringify({ accountNumber: digits, bankCode }))
+      }
+    } catch {}
     // Edit mode (change withdrawal account): celebrate with an animated
     // success popup instead of a bare redirect.
     if (editMode) {

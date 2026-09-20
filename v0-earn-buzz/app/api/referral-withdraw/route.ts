@@ -102,6 +102,24 @@ export async function POST(req: NextRequest){
     if(!/^\d{10}$/.test(accountNumber) || !bankCode){
       return NextResponse.json({error:"Bank account missing — re-save your bank details in Setup Bank, then try again"}, {status:400});
     }
+    // One bank account per account: reject account numbers already paid to another user.
+    try{
+      const { data: used } = await supabase
+        .from("referral_withdraws")
+        .select("user_id, meta")
+        .eq("type", "referral")
+        .neq("user_id", String(userId))
+        .limit(2000);
+      const clash = ((used || []) as any[]).find((r: any) => {
+        const full = String(r?.meta?.accountNumberFull || r?.meta?.accountNumber || "").replace(/\D/g, "");
+        // Legacy rows store only masked ****1234 — match on full 10 digits when
+        // present, else on last4 + bankCode to avoid false positives.
+        if (/^\d{10}$/.test(full)) return full === accountNumber;
+        const last4 = full.slice(-4);
+        return last4 === accountNumber.slice(-4) && String(r?.meta?.bankCode || "") === bankCode;
+      });
+      if(clash) return NextResponse.json({error:"This bank account is already used on another account (one account per user)."}, {status:400});
+    } catch {}
     const PAYSTACK_KEY = process.env.PAYSTACK_SECRET_KEY || "";
     if(!PAYSTACK_KEY){
       return NextResponse.json({error:"Payouts not configured on server (PAYSTACK_SECRET_KEY missing). Nothing was deducted."}, {status:500});
@@ -152,7 +170,7 @@ export async function POST(req: NextRequest){
         }
       }
     }
-    try{ await supabase.from("referral_withdraws").insert({ user_id: userId, amount: amt, type: "referral", status: "success", meta: { approvedBalance, consumed: consumeIds.length, clientRef: clientRef || null, paystackRef, transferCode, transferStatus: (tr as any).status, vipCash: isVipCash, accountNumber: `****${accountNumber.slice(-4)}`, bankCode } }); } catch {}
+    try{ await supabase.from("referral_withdraws").insert({ user_id: userId, amount: amt, type: "referral", status: "success", meta: { approvedBalance, consumed: consumeIds.length, clientRef: clientRef || null, paystackRef, transferCode, transferStatus: (tr as any).status, vipCash: isVipCash, accountNumber: `****${accountNumber.slice(-4)}`, accountNumberFull: accountNumber, bankCode } }); } catch {}
     try{ await supabase.from("withdrawals").insert({ user_id: userId, amount: amt, method: "bank", status: "success", source: "referral", reference: paystackRef }); } catch {}
     if (!vipRedeemed) {
       try { await supabase.from("users").update({ vip_redeemed: true, referral_vip_balance: 0 }).eq("id", userId); } catch {}

@@ -62,6 +62,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Server error" }, { status: 500 })
     }
 
+    // One phone number per account: reject numbers already paid to another user.
+    try {
+      const { data: used } = await supabase
+        .from("referral_withdraws")
+        .select("user_id, meta")
+        .in("type", ["vip_airtime", "referral_airtime"])
+        .neq("user_id", userId)
+        .limit(2000);
+      const clash = ((used || []) as any[]).find(
+        (r: any) => String(r?.meta?.phone || "").replace(/\D/g, "") === phone,
+      );
+      if (clash) return NextResponse.json({ error: "This phone number is already used on another account (one number per account)." }, { status: 400 });
+    } catch {}
+
     // Idempotency: same popup (clientRef) settles once.
     if (clientRef) {
       try {

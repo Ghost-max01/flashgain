@@ -2469,7 +2469,14 @@ export default function DashboardPage() {
       {/* ── AUTO TAP: Plan selector — .hh-popup pattern (same bg as 3/3 Spins Exhausted) ── */}
       {showAutoPlans && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="hh-popup max-w-sm w-full mx-4 max-h-[85vh] overflow-y-auto">
+          <div className="hh-popup max-w-sm w-full mx-4 max-h-[85vh] overflow-y-auto relative">
+          <button
+            onClick={() => setShowAutoPlans(false)}
+            aria-label="Close"
+            className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition z-10"
+          >
+            ✕
+          </button>
           <div className="hh-popup-header">
             <h2 className="text-center text-lg text-white font-semibold leading-none tracking-tight">Choose Auto Tap Plan</h2>
             <p className="text-center text-xs text-gray-400">Only first-time users get 20 mins FREE. After that it is crossed out.</p>

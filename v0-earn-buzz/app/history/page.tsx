@@ -64,7 +64,7 @@ export default function HistoryPage() {
   const [tab, setTab] = useState<Tab>("all")
   const [userId, setUserId] = useState("")
   const [refRecents, setRefRecents] = useState<{ id: string; amount: number; date: number; approved: boolean }[]>([])
-  const [refWithdrawn, setRefWithdrawn] = useState<{ id: string; amount: number; date: string }[]>([])
+  const [refWithdrawn, setRefWithdrawn] = useState<{ id: string; amount: number; date: string; method?: string; phone?: string; network?: string; accountLast4?: string; type?: string }[]>([])
   const [taskRows, setTaskRows] = useState<Row[]>([])
   const [claimRows, setClaimRows] = useState<Row[]>([])
   const [spinRows, setSpinRows] = useState<Row[]>([])
@@ -126,6 +126,11 @@ export default function HistoryPage() {
           id: String(x.id || `${x.date}-${x.amount}`),
           amount: Number(x.amount),
           date: String(x.date || new Date().toISOString()),
+          method: String(x.method || x.type || ""),
+          phone: String(x.phone || ""),
+          network: String(x.network || ""),
+          accountLast4: String(x.accountLast4 || ""),
+          type: String(x.type || x.method || ""),
         })))
       }
     } catch {}
@@ -336,9 +341,18 @@ export default function HistoryPage() {
       })
     }
     for (const w of refWithdrawn) {
+      const t = String((w as any)?.type || (w as any)?.method || "").toLowerCase();
+      const isAirtime = t.includes("airtime");
+      const isVip = t.includes("vip");
+      const title = isAirtime ? (isVip ? "VIP Airtime" : "Referral Airtime") : "Referral Cash";
+      const dest = isAirtime && (w as any)?.phone
+        ? ` · ${(w as any)?.network ? `${(w as any).network} ` : ""}${String((w as any).phone).slice(0, 4)}••••${String((w as any).phone).slice(-2)}`
+        : !(isAirtime) && (w as any)?.accountLast4
+          ? ` · Bank •••• ${(w as any).accountLast4}`
+          : "";
       rows.push({
-        id: `ref-wd-${w.id}`, tab: "referrals", title: "Referral Withdrawn",
-        sub: fmtDate(new Date(w.date).getTime()),
+        id: `ref-wd-${w.id}`, tab: "referrals", title,
+        sub: `${fmtDate(new Date(w.date).getTime())}${dest}`,
         amount: -Math.abs(w.amount), status: "withdrawn", date: new Date(w.date).getTime() || 0,
       })
     }
