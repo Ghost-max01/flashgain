@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { X, Send, User, Bot, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getMoneymateSupportReply } from "@/lib/Moneymate-support-replies"
+import { getMoneymateSupportReply } from "@/lib/flashgain-support-replies"
 
 interface LiveChatProps {
   onClose: () => void

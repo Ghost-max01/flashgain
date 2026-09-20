@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Megaphone, Headset } from "lucide-react";
 import { safeParse } from "@/lib/safe-storage";
-import { getMoneymateSupportReply, SUPPORT_GREETING } from "@/lib/Moneymate-support-replies";
+import { getMoneymateSupportReply, SUPPORT_GREETING } from "@/lib/flashgain-support-replies";
 import { showLocalNotification } from "@/services/notification-service";
 import { BottomNav } from "@/components/bottom-nav";
 
