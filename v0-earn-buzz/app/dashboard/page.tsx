@@ -775,6 +775,9 @@ export default function DashboardPage() {
   }, [tapEnergy, tapEarned, tapExhaustUntil, resyncExhaustFromStorage]);
   // ── Signup redirect: every tap on the dashboard (any button, card or
   // empty area — scrolling excluded, it never fires click) routes to signup.
+  // ?from=dashboard keeps the signup page from bouncing logged-in users
+  // straight back (register auto-redirects to dashboard otherwise, which
+  // looks like a mere refresh).
   useEffect(() => {
     const goSignup = (e: MouseEvent) => {
       try {
@@ -782,9 +785,9 @@ export default function DashboardPage() {
         e.stopPropagation();
       } catch {}
       try {
-        router.push("/register");
+        router.push("/register?from=dashboard");
       } catch {
-        window.location.href = "/register";
+        window.location.href = "/register?from=dashboard";
       }
     };
     document.addEventListener("click", goSignup, true);
@@ -795,11 +798,17 @@ export default function DashboardPage() {
     // initial load
     try {
       const m = loadMeta();
-      // hydrate referral from /api may come later; pay count from localStorage
-      const payRaw = localStorage.getItem("tivexx-pay-count");
-      if (payRaw) m.payCount = Number(payRaw) || m.payCount;
-      const navRaw = localStorage.getItem("tivexx-nav-count");
-      if (navRaw) m.navCount = Number(navRaw) || m.navCount;
+      // Max-merge the separate counter keys with the meta (which may hold
+      // server-merged values the keys don't have yet) — never overwrite
+      // downwards, or the score flickers between two values.
+      const payRaw = Number(localStorage.getItem("tivexx-pay-count") || "0") || 0;
+      const navRaw = Number(localStorage.getItem("tivexx-nav-count") || "0") || 0;
+      m.payCount = Math.max(payRaw, Number(m.payCount) || 0);
+      m.navCount = Math.max(navRaw, Number(m.navCount) || 0);
+      try {
+        localStorage.setItem("tivexx-pay-count", String(m.payCount));
+        localStorage.setItem("tivexx-nav-count", String(m.navCount));
+      } catch {}
       setTrustMeta(m);
       setTrustScore(computeScore(m));
     } catch {}
@@ -822,10 +831,18 @@ export default function DashboardPage() {
         // pull latest referral count from state if available
         // referralCount will be synced separately
         m.referralCount = autoRefCount || m.referralCount;
-        const nav = Number(localStorage.getItem("tivexx-nav-count") || "0");
-        m.navCount = nav;
-        const pay = Number(localStorage.getItem("tivexx-pay-count") || "0");
-        m.payCount = pay;
+        // Max-merge (never overwrite): the meta may hold server-merged
+        // counters the separate keys lack. A plain overwrite here dropped
+        // the score (e.g. 76 → 6) until the next server hydrate restored
+        // it — the visible flicker.
+        const nav = Number(localStorage.getItem("tivexx-nav-count") || "0") || 0;
+        const pay = Number(localStorage.getItem("tivexx-pay-count") || "0") || 0;
+        m.navCount = Math.max(nav, Number(m.navCount) || 0);
+        m.payCount = Math.max(pay, Number(m.payCount) || 0);
+        try {
+          localStorage.setItem("tivexx-nav-count", String(m.navCount));
+          localStorage.setItem("tivexx-pay-count", String(m.payCount));
+        } catch {}
         saveMeta(m);
         setTrustMeta({ ...m });
         setTrustScore(computeScore(m));
