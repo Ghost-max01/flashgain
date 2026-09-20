@@ -906,7 +906,6 @@ export default function DashboardPage() {
   }, []);
   // Guided onboarding must come AFTER TutorialModal (Welcome → Refer & Earn → Withdraw Anytime → Proceed to Dashboard)
   // Order: setup-bank → dashboard → TutorialModal (welcome modal) → GuidedOnboarding (7 steps).
-  // (The /welcome splash page is commented out per request — see setup-bank handleProceed.)
   // This effect only auto-shows Guided if Tutorial has already been completed (so sequence is preserved)
   useEffect(() => {
     try {
@@ -1083,6 +1082,7 @@ export default function DashboardPage() {
   // and daily caps server-side, then adopts the server's balance as truth.
   // Flushes on a debounce, when the app hides/closes, and on return.
   const flushManualTaps = useCallback(async () => {
+    const total = tapAccum.current;
     const total = tapAccum.current;
     if (total === 0) return;
     tapAccum.current = 0;
