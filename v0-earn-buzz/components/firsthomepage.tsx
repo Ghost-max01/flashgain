@@ -90,12 +90,11 @@ export default function FirstHomepage() {
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-[64px] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 via-emerald-500 to-amber-400 flex items-center justify-center shadow-lg shadow-emerald-200">
-              <span className="text-white font-black text-[18px]">F</span>
+              <span className="text-white font-black text-[18px]">M</span>
             </div>
             <span className="font-black text-[19px] tracking-tight">
-              <span className="text-emerald-600">Flash</span>
-              <span className="text-gray-900">Gain</span>
-              <span className="text-amber-500 text-[11px] align-super ml-0.5 font-extrabold">9ja</span>
+              <span className="text-emerald-600">Moneymate</span>
+              <span className="text-gray-900"> 9ja</span>
             </span>
           </Link>
           <div className="flex items-center gap-2">
@@ -127,7 +126,7 @@ export default function FirstHomepage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-semibold text-emerald-700">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              New • Get ₦5,000 welcome bonus when you join
+              New • Start tapping to earn today
             </div>
 
             <h1 className="mt-5 text-[32px] md:text-[46px] font-black tracking-tight leading-[0.95]">
@@ -141,8 +140,7 @@ export default function FirstHomepage() {
             </h1>
 
             <p className="mt-4 text-[15px] md:text-[17px] leading-7 text-gray-500 max-w-xl">
-              Moneymate 9ja rewards everyday Nigerians for simple tasks, honest engagement and referrals — claim, invite, and cash out straight to
-              your verified bank.
+              Moneymate 9ja rewards everyday Nigerians for simple taps, tasks, and referrals — tap to earn, invite friends, and cash out straight to your verified bank.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 max-w-md">
@@ -185,18 +183,18 @@ export default function FirstHomepage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gray-900 text-white grid place-items-center font-black text-sm">₦</div>
-                    <span className="font-bold text-sm">Daily claim</span>
+                    <span className="font-bold text-sm">Tap to earn</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">LIVE</span>
                 </div>
 
                 <div className="mt-5">
-                  <div className="text-xs font-semibold tracking-widest text-gray-400 uppercase">Available to claim</div>
+                  <div className="text-xs font-semibold tracking-widest text-gray-400 uppercase">Live tap rewards</div>
                   <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-4xl font-black tracking-tight">₦2,000</span>
-                    <span className="text-gray-400 text-sm">every 60 seconds</span>
+                    <span className="text-4xl font-black tracking-tight">₦100+</span>
+                    <span className="text-gray-400 text-sm">per tap</span>
                   </div>
-                  <div className="mt-2 text-xs text-gray-500">50 claims per cycle • resets after 5 hours</div>
+                  <div className="mt-2 text-xs text-gray-500">No timers — just tap, complete tasks, and grow your balance.</div>
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
@@ -205,14 +203,14 @@ export default function FirstHomepage() {
                       <Zap className="h-4 w-4 text-amber-500" />
                     </div>
                     <div className="mt-2 text-sm font-bold">Tap & Earn</div>
-                    <div className="text-xs text-gray-500">Play and earn game coins</div>
+                    <div className="text-xs text-gray-500">Earn as you tap</div>
                   </div>
                   <div className="rounded-2xl bg-gray-900 text-white p-3">
                     <div className="w-8 h-8 rounded-xl bg-white/10 grid place-items-center">
                       <Gift className="h-4 w-4 text-emerald-300" />
                     </div>
                     <div className="mt-2 text-sm font-bold">Referral bonus</div>
-                    <div className="text-xs text-white/60">₦2,000 per friend</div>
+                    <div className="text-xs text-white/60">₦500 per successful referral</div>
                   </div>
                 </div>
 
@@ -220,7 +218,7 @@ export default function FirstHomepage() {
                   href="/register"
                   className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition"
                 >
-                  Claim my bonus <ArrowRight className="h-4 w-4" />
+                  Start tapping <ArrowRight className="h-4 w-4" />
                 </Link>
                 <div className="mt-3 text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
                   <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
@@ -259,15 +257,15 @@ export default function FirstHomepage() {
               num: "01",
             },
             {
-              title: "Do simple tasks",
-              desc: "Claim daily rewards, tap games and micro-tasks.",
+              title: "Tap & earn",
+              desc: "Start tapping and complete simple tasks to grow your balance.",
               icon: ClipboardCheck,
               color: "bg-emerald-500",
               num: "02",
             },
             {
               title: "Invite & scale",
-              desc: "Share your link — earn ₦2,000 per verified friend.",
+              desc: "Share your link — earn ₦500 per successful referral.",
               icon: Share2,
               color: "bg-amber-500",
               num: "03",
@@ -307,7 +305,7 @@ export default function FirstHomepage() {
             <h3 className="font-black">Level up as you earn</h3>
           </div>
           <p className="mt-3 text-sm leading-6 text-gray-500">
-            Start at Starter and climb to Legend. Higher levels unlock more daily claims and bigger payouts — stay consistent, earn more.
+            Start at Starter and climb to Legend. Higher levels unlock more daily taps and bigger payouts — stay consistent, earn more.
           </p>
           <div className="mt-4 flex items-center gap-2 flex-wrap">
             {["Starter", "Bronze", "Silver", "Gold", "Legend"].map((l, i) => (
@@ -332,8 +330,7 @@ export default function FirstHomepage() {
             </div>
             <h3 className="mt-3 font-black text-white text-[16px]">Invite & earn</h3>
             <p className="mt-2 text-sm leading-6 text-white/80">
-              Share your link and get <b className="text-white">₦2,000</b> credited instantly per friend who joins and verifies — plus ongoing referral
-              perks as they earn.
+              Share your link and get <b className="text-white">₦500</b> credited instantly per successful referral — plus ongoing referral perks as they earn.
             </p>
             <Link href="/register" className="mt-4 inline-flex px-4 py-2 rounded-full bg-white text-sky-700 text-sm font-bold">
               Copy invite link
@@ -373,7 +370,7 @@ export default function FirstHomepage() {
               </div>
               <h3 className="mt-3 font-black text-lg">Turn gaps in your day into cash</h3>
               <p className="mt-2 text-sm leading-6 text-gray-500">
-                Whether you have 1 minute or 1 hour, there is a task that fits — daily claims, taps, and referrals that compound.
+                Whether you have 1 minute or 1 hour, there is a task that fits — daily taps, tasks, and referrals that compound.
               </p>
             </div>
           </div>
@@ -416,7 +413,7 @@ export default function FirstHomepage() {
         </div>
 
         <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-400">
-          <div>© {new Date().getFullYear()} Moneymate 9ja • All rights reserved.</div>
+          <div>© {new Date().getFullYear()} Moneymate 9ja • Moneymate9ja.online • All rights reserved.</div>
           <div className="flex items-center gap-4">
             <Link href="/policies?tab=privacy" className="hover:text-gray-600">
               Privacy Policy
@@ -438,10 +435,10 @@ export default function FirstHomepage() {
           >
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-sky-500 to-amber-400 grid place-items-center text-white font-black flex-shrink-0">
-                F
+                M
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-black">Install Moneymate</div>
+                <div className="text-sm font-black">Install Moneymate 9ja</div>
                 <div className="text-xs text-gray-500">{isIOS && iosExpanded ? "Follow steps below" : "Add to home screen for quick access"}</div>
               </div>
               <button
@@ -515,7 +512,7 @@ export default function FirstHomepage() {
           ))}
         </div>
         <div className="bg-[#f6f7fb] border-t border-gray-100 flex items-center justify-center gap-2 py-2 pb-[max(8px,env(safe-area-inset-bottom))]">
-          <span className="text-xs text-gray-400">rex? •</span><span className="text-xs font-semibold text-gray-700">Moneymate9ja.com.ng</span>
+          <span className="text-xs font-semibold text-gray-700">Moneymate9ja.online</span>
         </div>
       </div>
     </div>

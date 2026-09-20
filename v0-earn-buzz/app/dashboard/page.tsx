@@ -1083,7 +1083,6 @@ export default function DashboardPage() {
   // Flushes on a debounce, when the app hides/closes, and on return.
   const flushManualTaps = useCallback(async () => {
     const total = tapAccum.current;
-    const total = tapAccum.current;
     if (total === 0) return;
     tapAccum.current = 0;
     const clientEarnPerTap = earnPerTapRef.current || TAP_EARN_PER;
@@ -1279,7 +1278,7 @@ export default function DashboardPage() {
     // Offline push: register the run server-side so the finish notice can
     // arrive even when the app is closed (best-effort, never blocks).
     try {
-      const uid = (user
+      const uid = (userData as any)?.id || (userData as any)?.userId || "";
       if (uid) void scheduleReminder({ kind: "auto_finish", userId: uid, planId: id, startedAt: startedFree }).catch(() => {});
     } catch {}
   }, [autoFirstFreeUsed, toast, userData, autoPlanCooldowns]);
