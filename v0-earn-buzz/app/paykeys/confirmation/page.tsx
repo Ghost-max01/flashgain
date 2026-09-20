@@ -227,9 +227,9 @@ function PayKeyConfirmationContent() {
                 `I have made this payment but it was not verified. Please check and credit my account. Thank you.`,
               ].join("\n");
 
-              // Open Telegram DM with pre-filled message — user just taps Send
+              // Open WhatsApp channel instead of Telegram support DM
               const encoded = encodeURIComponent(msg);
-              window.open(`https://t.me/Moneymatesupport?text=${encoded}`, "_self");
+              window.open("https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", "_self");
             }}
             className="hh-support-btn-full"
           >

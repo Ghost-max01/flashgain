@@ -302,7 +302,7 @@ export default function AboutPage() {
             </p>
             <div className="mt-4">
               <Button
-                onClick={() => window.open("https://t.me/Moneymate9janews")}
+                onClick={() => window.open("https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j")}
                 className="bg-emerald-300 text-black"
               >
                 Join Community

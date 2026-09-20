@@ -18,8 +18,9 @@ interface ChatMsg {
 
 const CHAT_KEY = "tivexx-support-chat";
 const UNREAD_KEY = "tivexx-support-unread";
-const TELEGRAM_SUPPORT = "https://t.me/Earnbuzzsupport";
-const TELEGRAM_CHANNEL = "https://t.me/Moneymate9janews";
+const WHATSAPP_CHANNEL = "https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j";
+const TELEGRAM_SUPPORT = WHATSAPP_CHANNEL;
+const TELEGRAM_CHANNEL = WHATSAPP_CHANNEL;
 
 function newId() {
   try {

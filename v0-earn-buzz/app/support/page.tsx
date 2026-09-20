@@ -31,8 +31,8 @@ export default function SupportPage() {
   }
 
   const handleTelegramChannel = () => {
-    // Open Telegram channel in same tab
-    const telegramChannelUrl = "https://t.me/Moneymate9janews"
+    // Open WhatsApp channel in same tab
+    const telegramChannelUrl = "https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j"
     window.open(telegramChannelUrl, '_self')
   }
 
@@ -79,9 +79,9 @@ export default function SupportPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-orange-600" />
-              Telegram Channel
+              WhatsApp Channel
             </CardTitle>
-            <CardDescription>Join our Telegram channel for updates and announcements</CardDescription>
+            <CardDescription>Join our WhatsApp channel for updates and announcements</CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -92,7 +92,7 @@ export default function SupportPage() {
               Join Channel
             </Button>
             <p className="text-sm text-gray-500 mt-2">
-              Stay updated with the latest news and announcements from EearnBuzz.
+              Stay updated with the latest news and announcements from Moneymate 9ja.
             </p>
           </CardContent>
         </Card>

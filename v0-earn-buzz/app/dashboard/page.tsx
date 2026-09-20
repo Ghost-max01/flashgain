@@ -1123,7 +1123,7 @@ export default function DashboardPage() {
       } catch {}
     } catch (err) {
       console.log(`[FlushTaps] Error during flush:`, err);
-      // Re-queue so taps are never silently lost — next flush retries.
+      // Re-queue so taps are never silently lost
       tapAccum.current += total;
     }
   }, [newAccrualId, getTrustPayload]);
@@ -1279,7 +1279,7 @@ export default function DashboardPage() {
     // Offline push: register the run server-side so the finish notice can
     // arrive even when the app is closed (best-effort, never blocks).
     try {
-      const uid = (userData as any)?.id || (userData as any)?.userId || "";
+      const uid = (user
       if (uid) void scheduleReminder({ kind: "auto_finish", userId: uid, planId: id, startedAt: startedFree }).catch(() => {});
     } catch {}
   }, [autoFirstFreeUsed, toast, userData, autoPlanCooldowns]);

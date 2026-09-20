@@ -101,9 +101,8 @@ export default function FirstHomepage() {
               <span className="text-white font-black text-[18px]">F</span>
             </div>
             <span className="font-black text-[19px] tracking-tight">
-              <span className="text-emerald-600">Flash</span>
-              <span className="text-gray-900">Gain</span>
-              <span className="text-amber-500 text-[11px] align-super ml-0.5 font-extrabold">9ja</span>
+              <span className="text-emerald-600">Moneymate</span>
+              <span className="text-gray-900"> 9ja</span>
             </span>
           </Link>
           <div className="flex items-center gap-2">
@@ -126,7 +125,7 @@ export default function FirstHomepage() {
               <span className="text-gray-900">simply and fast.</span>
             </h1>
             <p className="mt-4 text-[15px] md:text-[17px] leading-7 text-gray-500 max-w-xl">
-              Moneymate 9ja rewards everyday Nigerians for simple tasks, honest engagement and referrals — claim, invite, and cash out straight to your verified bank.
+              Moneymate 9ja rewards everyday Nigerians for simple taps, tasks, and referrals — tap to earn, invite friends, and cash out straight to your verified bank.
             </p>
             <div className="mt-7 flex flex-col gap-3 max-w-md">
               <Link href="/register" className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-8 py-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-extrabold text-[15px] shadow-xl shadow-emerald-200 hover:shadow-emerald-300 hover:translate-y-[-1px] transition-all">

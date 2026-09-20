@@ -24,7 +24,7 @@ export default function GroupsPage() {
   }, [router])
 
   const handleJoinTelegram = () => {
-    window.open("https://t.me/realtechrt", '_self')
+    window.open("https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", '_self')
   }
 
   if (!userData) {
@@ -58,7 +58,7 @@ export default function GroupsPage() {
             className="w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center gap-2 rounded-full"
           >
             <Send className="h-5 w-5" />
-            Join Telegram Channel
+            Join WhatsApp Channel
           </Button>
         </div>
 

@@ -446,7 +446,7 @@ export default function DashboardPage() {
             <DialogDescription className="text-center pt-4 text-zinc-400">Join our official community for exclusive earning tips.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 mt-4">
-            <Button onClick={() => { setShowReminderDialog(false); window.open("https://t.me/Moneymate9janews", '_self') }} className="h-14 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-2xl">Join Telegram</Button>
+            <Button onClick={() => { setShowReminderDialog(false); window.open("https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", '_self') }} className="h-14 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-2xl">Join WhatsApp</Button>
             <Button onClick={() => { setShowReminderDialog(false); router.push("/refer") }} className="h-14 bg-zinc-800 hover:bg-zinc-700 font-bold rounded-2xl">Back to Referral</Button>
           </div>
         </DialogContent>
@@ -595,7 +595,7 @@ export default function DashboardPage() {
               <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Support</span>
             </div>
           </Link>
-          <Link href="https://t.me/Moneymate9janews" className="flex-1">
+          <Link href="https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j" className="flex-1">
             <div className="p-5 rounded-[2rem] bg-zinc-900/40 border border-white/5 flex flex-col items-center gap-2 hover:bg-zinc-800/60 transition-all group">
               <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform relative">
                 <Bell className="w-5 h-5 text-amber-400" />
