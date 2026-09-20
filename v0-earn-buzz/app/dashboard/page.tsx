@@ -1780,12 +1780,70 @@ export default function DashboardPage() {
     }
   }, [userData, confirmPw, mintingToken, toast]);
 
+  // DevTools-only entrypoint: run `await window.__diagnosePush()` in the
+  // browser console (F12 → Console) to print the full push checklist.
+  // The old in-dashboard Notifications card was removed per request.
+  useEffect(() => {
+    try {
+      (window as any).__diagnosePush = async () => {
+        try {
+          const raw = localStorage.getItem("tivexx-user");
+          const u = raw ? JSON.parse(raw) : null;
+          const uid = (u as any)?.id || (u as any)?.userId || null;
+          const result = await runPushDiagnostics(uid);
+          try {
+            console.groupCollapsed("[push-diagnostics] checklist");
+            console.log("marker:", (result as any)?.marker);
+            console.table((result as any)?.rows || []);
+            (result as any)?.rows?.forEach?.((r: any) =>
+              console.log(`${r?.ok ? "✓" : "✗"} ${r?.label} — ${r?.detail}`),
+            );
+            console.groupEnd();
+          } catch {}
+          return result;
+        } catch (e) {
+          console.error("[push-diagnostics] failed", e);
+          return null;
+        }
+      };
+      (window as any).__pushStatus = async () => {
+        try {
+          const raw = localStorage.getItem("tivexx-user");
+          const u = raw ? JSON.parse(raw) : null;
+          const uid = (u as any)?.id || (u as any)?.userId || "";
+          if (!uid) { console.warn("[push-status] no logged-in user"); return null; }
+          const status = await getSubscriptionStatus(uid);
+          console.log("[push-status]", {
+            permission: typeof Notification !== "undefined" ? Notification.permission : "unknown",
+            ...status,
+          });
+          return status;
+        } catch (e) {
+          console.error("[push-status] failed", e);
+          return null;
+        }
+      };
+    } catch {}
+  }, []);
+
   const handleRunDiagnostics = useCallback(async () => {
     if (!userData || diagnosing) return;
     const uid = (userData as any)?.id || (userData as any)?.userId || "";
     setDiagnosing(true);
     try {
-      setDiag(await runPushDiagnostics(uid || null));
+      const result = await runPushDiagnostics(uid || null);
+      setDiag(result);
+      // DevTools-only: mirror the full push checklist to the browser console
+      // (the in-dashboard card was removed — use F12 → Console).
+      try {
+        console.groupCollapsed("[push-diagnostics] checklist");
+        console.log("marker:", (result as any)?.marker);
+        console.table((result as any)?.rows || []);
+        (result as any)?.rows?.forEach?.((r: any) =>
+          console.log(`${r?.ok ? "✓" : "✗"} ${r?.label} — ${r?.detail}`),
+        );
+        console.groupEnd();
+      } catch {}
     } catch (e) {
       console.error("[dashboard] diagnostics failed", e);
     } finally {
@@ -1801,6 +1859,14 @@ export default function DashboardPage() {
       if (typeof Notification !== "undefined") setNotificationPermission(Notification.permission as NotificationPermission);
       const status = await getSubscriptionStatus(uid);
       setSubscriptionStatus(status);
+      try {
+        console.log("[push-status]", {
+          permission: typeof Notification !== "undefined" ? Notification.permission : "unknown",
+          hasAny: status.hasAny,
+          hasFcm: status.hasFcm,
+          hasWebpush: status.hasWebpush,
+        });
+      } catch {}
       toast({
         title: status.hasAny ? "Notifications active" : "No subscription found",
         description: status.hasAny
@@ -2362,7 +2428,14 @@ export default function DashboardPage() {
       {/* ── AUTO TAP: Eligible popup (20 mins free) — .hh-popup pattern (same bg as 3/3 Spins Exhausted) ── */}
       {showAutoFreePopup && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="hh-popup max-w-sm w-full mx-4">
+          <div className="hh-popup max-w-sm w-full mx-4 relative">
+          <button
+            onClick={() => setShowAutoFreePopup(false)}
+            aria-label="Close"
+            className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition"
+          >
+            ✕
+          </button>
           <div className="hh-popup-header">
             <h2 className="text-center text-xl text-white font-semibold leading-none tracking-tight">🎉 You are eligible!</h2>
             <p className="text-center pt-2 text-gray-300">You have 20 minutes of FREE auto tap. Your balance will increase automatically without tapping.</p>
@@ -2920,119 +2993,7 @@ export default function DashboardPage() {
           {userData && <ReferralCard userId={userData.id || userData.userId} />}
         </div>
 
-        {/* ── NOTIFICATIONS — Enable & Check Status (inside dashboard, only after login/signup) ── */}
-        <div className="hh-card hh-entry-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${notificationPermission === "granted" ? "bg-emerald-500" : "bg-gray-700"}`}>
-                {notificationPermission === "granted" ? <Bell className="h-5 w-5 text-white" /> : <BellOff className="h-5 w-5 text-white/80" />}
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-sm">Notifications</h3>
-                <p className="text-xs text-gray-400">
-                  {notificationPermission === "granted"
-                    ? "Enabled — you'll get claim alerts"
-                    : notificationPermission === "denied"
-                      ? "Blocked — enable in browser settings"
-                      : "Enable to get claim-ready alerts"}
-                </p>
-              </div>
-            </div>
-            {subscriptionStatus?.hasAny && <span className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">Active</span>}
-          </div>
-
-          {subscriptionStatus && (
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-white/5 border border-white/10 py-2">
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider">Permission</div>
-                <div className="text-xs font-bold text-white capitalize">{notificationPermission ?? "unknown"}</div>
-              </div>
-              <div className="rounded-xl bg-white/5 border border-white/10 py-2">
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider">FCM</div>
-                <div className={`text-xs font-bold ${subscriptionStatus.hasFcm ? "text-emerald-300" : "text-gray-400"}`}>{subscriptionStatus.hasFcm ? "yes" : "no"}</div>
-              </div>
-              <div className="rounded-xl bg-white/5 border border-white/10 py-2">
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider">WebPush</div>
-                <div className={`text-xs font-bold ${subscriptionStatus.hasWebpush ? "text-emerald-300" : "text-gray-400"}`}>{subscriptionStatus.hasWebpush ? "yes" : "no"}</div>
-              </div>
-            </div>
-          )}
-
-          {notificationPermission === "granted" && !(userData as any)?.notifyToken && (!subscriptionStatus || !subscriptionStatus.hasAny) && (
-            <div className="mt-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3">
-              <p className="text-[11px] font-bold text-amber-200 text-center">
-                Your session predates offline alerts — confirm your password once to unlock them here (no logout needed).
-              </p>
-              <div className="mt-2 flex gap-2">
-                <input
-                  type="password"
-                  value={confirmPw}
-                  onChange={(e) => setConfirmPw(e.target.value)}
-                  placeholder="Account password"
-                  autoComplete="current-password"
-                  className="flex-1 min-w-0 rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm font-bold text-white placeholder:text-white/30 outline-none"
-                />
-                <button
-                  onClick={handleMintNotifyToken}
-                  disabled={mintingToken || !confirmPw}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black disabled:opacity-50 shrink-0"
-                >
-                  {mintingToken ? "Checking…" : "Unlock"}
-                </button>
-              </div>
-              {mintMsg && <p className="mt-2 text-[11px] text-center text-white/70">{mintMsg}</p>}
-              <p className="mt-1.5 text-[10px] text-center text-white/40">Or log out and back in once, then tap Enable.</p>
-            </div>
-          )}
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Button
-              onClick={handleEnableNotifications}
-              disabled={notificationPermission === "granted" && !!subscriptionStatus?.hasAny}
-              className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-50"
-            >
-              {notificationPermission === "granted" ? "Enabled" : "Enable"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleCheckNotificationStatus}
-              disabled={isCheckingStatus}
-              className="rounded-full border-white/15 text-white hover:bg-white/10 bg-transparent"
-            >
-              {isCheckingStatus ? "Checking…" : "Check status"}
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleRunDiagnostics}
-            disabled={diagnosing}
-            className="w-full mt-2 rounded-full border-white/15 text-white hover:bg-white/10 bg-transparent text-xs"
-          >
-            {diagnosing ? "Diagnosing…" : "Diagnose push pipeline"}
-          </Button>
-          {diag && (
-            <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-black text-white">Push checklist</span>
-                <span className="text-[10px] font-mono text-white/40">{diag.marker}</span>
-              </div>
-              <div className="space-y-1.5">
-                {diag.rows.map((r) => (
-                  <div key={r.key} className="flex items-start gap-2">
-                    <span className={`mt-0.5 text-sm leading-none ${r.ok ? "text-emerald-300" : "text-red-400"}`}>{r.ok ? "✓" : "✗"}</span>
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-bold text-white">{r.label}</div>
-                      <div className="text-[10px] text-white/50 break-words">{r.detail}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <p className="mt-2 text-[11px] text-gray-500 text-center">Only visible after you log in or sign up. Guests don&apos;t see this.</p>
-        </div>
-
-        {/* ── USER EMAIL FOOTER ── */}
+        {/* USER EMAIL FOOTER */}
         <div className="text-center text-[11px] text-gray-400 pb-24 pt-3">
           {userData?.email ? `Email: ${userData.email}` : "Email not available"}
         </div>
