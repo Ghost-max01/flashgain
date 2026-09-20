@@ -109,7 +109,7 @@ export default function VerifyMePage() {
                 <CreditCard className="hh-coin-icon" />
               </div>
               <div className="flex-1">
-                <p className="hh-fee-amount">₦5,500</p>
+                <p className="hh-fee-amount">₦6,100</p>
                 <p className="hh-fee-desc">
                   One-time verification fee, <strong>automatically refunded</strong> to your dashboard balance after successful verification.
                 </p>
