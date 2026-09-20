@@ -109,6 +109,16 @@ export default function TaskPage() {
       if (data?.duplicate) {
         toast({ title: "Already claimed", description: "This task was already credited on the server.", variant: "destructive" })
         console.log(`[Task] Duplicate claim detected`);
+        // Never leave the card stuck in "verifying" — clear progress state.
+        setVerifyingTasks((prev) => { const n = { ...prev }; delete n[taskId]; return n })
+        if (progressIntervals.current[taskId]) { clearInterval(progressIntervals.current[taskId]); delete progressIntervals.current[taskId] }
+        if (!completedTasks.includes(taskId)) {
+          setCompletedTasks((prev) => {
+            const next = prev.includes(taskId) ? prev : [...prev, taskId]
+            try { localStorage.setItem("tivexx-completed-tasks", JSON.stringify(next)) } catch {}
+            return next
+          })
+        }
         return
       }
       if (!res.ok || !data?.success) {

@@ -73,12 +73,35 @@ export async function recomputeScore(
   } catch {}
 
   // Payments: best-effort from transactions table if it exists.
-  // ONLY money-in rows count — tap payouts (tap_manual/tap_auto) are money
-  // OUT and must never inflate this (each flush would otherwise mint +5).
+  // ONLY automatic Paystack-verified money-in rows count — tap payouts
+  // (tap_manual/tap_auto) are money OUT and must never inflate this (each
+  // flush would otherwise mint +10). Manual verification-fee bank transfers
+  // never go through Paystack verification so they never land here either;
+  // defensively, anything tagged verification/manual/fee (non-loan-fee) is
+  // also excluded — only real payments into the app earn trust.
   let payCount = 0;
   try {
-    const { data: txs, error } = await supabase.from("transactions").select("id,type").eq("user_id", userId).limit(5000);
-    if (!error) payCount = (txs || []).filter((t: any) => !String((t as any)?.type || "").startsWith("tap_")).length;
+    // Prefer selecting metadata too (for the verification-fee exclusion);
+    // fall back to id/type only if the column doesn't exist yet.
+    let txs: any[] | null = null;
+    try {
+      const r1 = await supabase.from("transactions").select("id,type,metadata").eq("user_id", userId).limit(5000);
+      if (!r1.error) txs = r1.data as any[];
+      else throw new Error("no-metadata-col");
+    } catch {
+      try {
+        const r2 = await supabase.from("transactions").select("id,type").eq("user_id", userId).limit(5000);
+        if (!r2.error) txs = r2.data as any[];
+      } catch {}
+    }
+    if (txs) payCount = (txs || []).filter((t: any) => {
+      const ty = String((t as any)?.type || "").toLowerCase();
+      if (ty.startsWith("tap_")) return false;
+      if (/(verif|manual|receipt)/.test(ty)) return false;
+      const meta = JSON.stringify((t as any)?.metadata || "").toLowerCase();
+      if (/(verification|verifyme|verify_fee|manual)/.test(meta)) return false;
+      return true;
+    }).length;
   } catch {}
 
   // Tasks: prefer user_tasks, fall back to task_completions.

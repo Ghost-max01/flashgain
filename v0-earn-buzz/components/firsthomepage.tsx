@@ -35,16 +35,25 @@ export default function FirstHomepage() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [iosExpanded, setIosExpanded] = useState(false);
+  const [androidExpanded, setAndroidExpanded] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
     const ios = /iPad|iPhone|iPod/.test(ua) || (typeof navigator !== "undefined" && (navigator as any).platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
     setIsIOS(ios);
+    // Already installed (persisted flag or standalone) — never show again.
+    try {
+      if (localStorage.getItem("moneymate_pwa_installed") === "1") {
+        setShowInstall(false);
+        return;
+      }
+    } catch {}
     const isStandalone =
       typeof window !== "undefined" &&
       (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true);
     if (isStandalone) {
+      try { localStorage.setItem("moneymate_pwa_installed", "1"); } catch {}
       setShowInstall(false);
       return;
     }
@@ -53,27 +62,49 @@ export default function FirstHomepage() {
       setDeferredPrompt(e);
     };
     const handleAppInstalled = () => {
+      try { localStorage.setItem("moneymate_pwa_installed", "1"); } catch {}
       setShowInstall(false);
       setDeferredPrompt(null);
     };
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
+    const mq = typeof window !== "undefined" ? window.matchMedia("(display-mode: standalone)") : null;
+    const handleDisplayChange = (ev: any) => {
+      if (ev?.matches) handleAppInstalled();
+    };
+    try {
+      if (mq && typeof (mq as any).addEventListener === "function") (mq as any).addEventListener("change", handleDisplayChange);
+      else (mq as any)?.addListener?.(handleDisplayChange);
+    } catch {}
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
+      try {
+        if (mq && typeof (mq as any).removeEventListener === "function") (mq as any).removeEventListener("change", handleDisplayChange);
+        else (mq as any)?.removeListener?.(handleDisplayChange);
+      } catch {}
     };
   }, []);
 
   const handleInstallClick = async () => {
+    // First tap EXPANDS the card (it grows to show details); second tap installs.
     if (deferredPrompt) {
+      if (!androidExpanded && !isIOS) {
+        setAndroidExpanded(true);
+        return;
+      }
       try {
         setIsInstalling(true);
         deferredPrompt.prompt();
         const choice = await deferredPrompt.userChoice;
-        if (choice?.outcome === "accepted") setShowInstall(false);
+        if (choice?.outcome === "accepted") {
+          try { localStorage.setItem("moneymate_pwa_installed", "1"); } catch {}
+          setShowInstall(false);
+        }
       } catch {}
       setDeferredPrompt(null);
       setIsInstalling(false);
+      setAndroidExpanded(false);
       return;
     }
     if (isIOS) {
@@ -431,7 +462,7 @@ export default function FirstHomepage() {
       {showInstall && (
         <div className="fixed bottom-[92px] md:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50">
           <div
-            className={`bg-white rounded-[20px] border border-gray-100 shadow-2xl p-3 flex flex-col gap-3 transition-all duration-300 overflow-hidden ${iosExpanded ? "min-h-[160px]" : ""}`}
+            className={`bg-white rounded-[20px] border border-gray-100 shadow-2xl p-3 flex flex-col gap-3 transition-all duration-300 overflow-hidden ${iosExpanded || androidExpanded ? "min-h-[160px]" : ""}`}
           >
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-sky-500 to-amber-400 grid place-items-center text-white font-black flex-shrink-0">
@@ -439,7 +470,7 @@ export default function FirstHomepage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-black">Install Moneymate 9ja</div>
-                <div className="text-xs text-gray-500">{isIOS && iosExpanded ? "Follow steps below" : "Add to home screen for quick access"}</div>
+                <div className="text-xs text-gray-500">{(isIOS && iosExpanded) || androidExpanded ? "Follow steps below" : "Add to home screen for quick access"}</div>
               </div>
               <button
                 onClick={handleInstallClick}
@@ -451,6 +482,7 @@ export default function FirstHomepage() {
               <button
                 onClick={() => {
                   if (isIOS && iosExpanded) setIosExpanded(false);
+                  else if (androidExpanded) setAndroidExpanded(false);
                   else setShowInstall(false);
                 }}
                 className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-50 text-gray-400 flex-shrink-0"
@@ -485,6 +517,26 @@ export default function FirstHomepage() {
                   </li>
                 </ol>
                 <p className="mt-3 text-[11px] text-gray-400 text-center">Then launch Moneymate from your home screen like a real app.</p>
+              </div>
+            )}
+            {/* Android expanded: card grows and shows benefits + install button */}
+            {!isIOS && androidExpanded && (
+              <div className="border-t border-gray-100 pt-3 animate-[fadeIn_0.25s_ease]">
+                <p className="text-xs font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-sky-500" /> Why install Moneymate?
+                </p>
+                <ul className="text-xs text-gray-600 space-y-1.5 pl-1">
+                  <li>✅ Home screen shortcut — open in one tap</li>
+                  <li>✅ Full-screen app experience</li>
+                  <li>✅ Push notifications even when closed</li>
+                </ul>
+                <button
+                  onClick={handleInstallClick}
+                  disabled={isInstalling}
+                  className="mt-3 w-full py-2.5 rounded-full bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition disabled:opacity-60"
+                >
+                  {isInstalling ? "..." : deferredPrompt ? "Install Now" : "Got it"}
+                </button>
               </div>
             )}
           </div>

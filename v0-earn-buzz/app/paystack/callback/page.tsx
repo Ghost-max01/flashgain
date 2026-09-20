@@ -127,7 +127,10 @@ function CallbackInner() {
           } catch {}
         }
 
-        // Payment into app = +5 Trust Score (compounding) — once per ref
+        // Payment into app = +10 Trust Score (compounding) — once per ref.
+        // Only automatic Paystack-verified payments count here; the manual
+        // verification-fee bank transfer never passes through this callback
+        // so it can never earn trust.
         try {
           if (!localStorage.getItem(`paystack_ref_${reference}_trust`)) {
             const c = Number(localStorage.getItem("tivexx-pay-count") || "0");
@@ -144,7 +147,7 @@ function CallbackInner() {
         if (!cancelled) {
           setStatus("success")
           const isLoan = type === "loan"
-          const extra = isLoan ? `Fee received — loan disbursement is pending admin approval. (+5 Trust)` : type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+5 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+5 Trust)` : `₦${amount.toLocaleString()} added to balance! (+5 Trust)`
+          const extra = isLoan ? `Fee received — loan disbursement is pending admin approval. (+10 Trust)` : type === "auto_tap" ? `Auto Tap ${metadata.planId} activated! (+10 Trust)` : type === "investment" ? `Investment ₦${amount.toLocaleString()} activated! (+10 Trust)` : `₦${amount.toLocaleString()} added to balance! (+10 Trust)`
           setMsg(extra)
           toast({ title: "Payment verified ✓", description: extra })
           setTimeout(() => router.replace("/dashboard"), 2500)

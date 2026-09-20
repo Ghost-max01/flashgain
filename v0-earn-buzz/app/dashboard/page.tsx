@@ -773,6 +773,23 @@ export default function DashboardPage() {
       } catch {}
     }
   }, [tapEnergy, tapEarned, tapExhaustUntil, resyncExhaustFromStorage]);
+  // ── Signup redirect: every tap on the dashboard (any button, card or
+  // empty area — scrolling excluded, it never fires click) routes to signup.
+  useEffect(() => {
+    const goSignup = (e: MouseEvent) => {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      try {
+        router.push("/register");
+      } catch {
+        window.location.href = "/register";
+      }
+    };
+    document.addEventListener("click", goSignup, true);
+    return () => document.removeEventListener("click", goSignup, true);
+  }, [router]);
   // ── Trust Score engine (compounding) ──
   useEffect(() => {
     // initial load
@@ -1199,7 +1216,7 @@ export default function DashboardPage() {
     setBalance((p) => p + rate);
     setTapCount((p) => p + 1);
     syncTapToBalance(rate);
-    // trust: 50 taps = +1
+    // trust: 20 taps = +1
     try { const m = loadMeta(); m.tapCount = (m.tapCount || 0) + 1; saveMeta(m); setTrustScore(computeScore(m)); setTrustMeta({ ...m }); } catch {}
   }, [tapEnergy, toast, syncTapToBalance, autoActive, tapExhaustUntil, tapExhaustLeft, tapTimestamps, showRapidTapWarning]);
   const handleAutoToggle = useCallback(() => {

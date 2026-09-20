@@ -5,11 +5,12 @@
 //
 // RULES (all compound / sum — nothing is capped):
 //  • time spent in app : every 5 minutes   = +2
-//  • referrals         : every 5 referrals = +2
+//  • referrals         : every 1 referral  = +1
 //  • tasks completed   : every 10 tasks    = +2   (auto-tap + daily, combined, cumulative)
-//  • app navigations   : every 5 navs      = +1
-//  • dashboard taps    : every 50 taps     = +1
-//  • payments into app : each payment      = +5
+//  • app navigations   : every 10 navs     = +1
+//  • dashboard taps    : every 20 taps     = +1
+//  • payments into app : each Paystack-verified payment = +10
+//    (manual verification-fee bank transfers are NOT auto-verified and never count)
 //
 // The displayed breakdown rows and the total are produced by the SAME
 // computeBreakdown() call, so the rows always sum exactly to the total.
@@ -44,15 +45,15 @@ export const EARN_PER_TAP_STEP = 10;
 export const RATES = {
   timeMinutesPerPoint: 5,
   timePointsPerHit: 2,
-  referralsPerPoint: 5,
-  referralPointsPerHit: 2,
+  referralsPerPoint: 1,
+  referralPointsPerHit: 1,
   tasksPerPoint: 10,
   taskPointsPerHit: 2,
-  navsPerPoint: 5,
+  navsPerPoint: 10,
   navPointsPerHit: 1,
-  tapsPerPoint: 50,
+  tapsPerPoint: 20,
   tapPointsPerHit: 1,
-  pointsPerPayment: 5,
+  pointsPerPayment: 10,
 } as const;
 
 export interface TrustMeta {
@@ -62,7 +63,7 @@ export interface TrustMeta {
   payCount: number;
   payAmount: number;       // total paid (display only)
   taskCount: number;       // cumulative completed tasks (never decremented)
-  tapCount: number;        // dashboard taps (50 = +1)
+  tapCount: number;        // dashboard taps (20 = +1)
   lastTimeAwarded: number;
   bonus: number;           // manual bumps (display only, clamped)
 }

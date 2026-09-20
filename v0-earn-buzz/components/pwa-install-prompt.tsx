@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Download, Share } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { X, Share, Smartphone } from 'lucide-react';
+
+const INSTALLED_KEY = 'moneymate_pwa_installed';
+const DISMISSED_KEY = 'pwa_install_dismissed_at';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -22,153 +23,207 @@ function detectPlatform() {
 
 function isAlreadyInstalled() {
   if (typeof window === 'undefined') return false;
+  try {
+    if (localStorage.getItem(INSTALLED_KEY) === '1') return true;
+  } catch {}
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   );
 }
 
+function markInstalled() {
+  try { localStorage.setItem(INSTALLED_KEY, '1'); } catch {}
+}
+
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showAndroidPrompt, setShowAndroidPrompt] = useState(false);
-  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+  const [show, setShow] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    // Already installed — nothing to do
-    if (isAlreadyInstalled()) return;
-
-    // Dismissed within last 24 hours — don't show again
-    const dismissedTime = localStorage.getItem('pwa_install_dismissed_at');
-    if (dismissedTime && parseInt(dismissedTime) > Date.now() - 24 * 60 * 60 * 1000) return;
-
-    const { isIOS, isAndroid } = detectPlatform();
-
-    if (isIOS) {
-      // iOS: show manual "Add to Home Screen" instructions after a short delay
-      const t = setTimeout(() => setShowIOSPrompt(true), 3000);
-      return () => clearTimeout(t);
+    // Already installed — never show again.
+    if (isAlreadyInstalled()) {
+      markInstalled();
+      return;
     }
 
-    if (isAndroid || true) {
-      // Android / Desktop: listen for browser-native install prompt
-      const handler = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e as BeforeInstallPromptEvent);
-        setShowAndroidPrompt(true);
-      };
-      window.addEventListener('beforeinstallprompt', handler);
-      return () => window.removeEventListener('beforeinstallprompt', handler);
+    // Dismissed within last 24 hours — don't show again yet.
+    try {
+      const dismissedTime = localStorage.getItem(DISMISSED_KEY);
+      if (dismissedTime && parseInt(dismissedTime) > Date.now() - 24 * 60 * 60 * 1000) return;
+    } catch {}
+
+    const { isIOS: ios } = detectPlatform();
+    setIsIOS(ios);
+
+    let timer: number | undefined;
+    if (ios) {
+      // iOS has no install prompt — show the mini card after a short delay.
+      timer = window.setTimeout(() => {
+        if (!isAlreadyInstalled()) setShow(true);
+      }, 3000);
     }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      if (isAlreadyInstalled()) return;
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setShow(true);
+    };
+    const handleInstalled = () => {
+      markInstalled();
+      setShow(false);
+      setDeferredPrompt(null);
+      setExpanded(false);
+    };
+    // If the app gets installed while open (or display mode flips),
+    // hide the card permanently.
+    const mq = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayChange = (ev: MediaQueryListEvent) => {
+      if (ev.matches) handleInstalled();
+    };
+    try {
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', handleDisplayChange);
+      else (mq as any).addListener(handleDisplayChange);
+    } catch {}
+
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', handleInstalled);
+      try {
+        if (typeof mq.removeEventListener === 'function') mq.removeEventListener('change', handleDisplayChange);
+        else (mq as any).removeListener(handleDisplayChange);
+      } catch {}
+    };
   }, []);
 
-  const handleAndroidInstall = async () => {
-    if (!deferredPrompt) return;
-    try {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowAndroidPrompt(false);
-        setDeferredPrompt(null);
-      }
-    } catch (err) {
-      console.error('Install error:', err);
-    }
-  };
-
   const handleDismiss = () => {
-    setShowAndroidPrompt(false);
-    setShowIOSPrompt(false);
-    localStorage.setItem('pwa_install_dismissed_at', Date.now().toString());
+    setShow(false);
+    setExpanded(false);
+    try { localStorage.setItem(DISMISSED_KEY, Date.now().toString()); } catch {}
   };
 
-  // ─── Android prompt ────────────────────────────────────────────────────────
-  if (showAndroidPrompt && deferredPrompt) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <Card className="w-full max-w-sm shadow-2xl bg-yellow-50 border-yellow-300 border-2">
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 bg-yellow-100 rounded-xl">
-                  <Download className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold">Install Moneymate 9ja</h2>
-                  <p className="text-xs text-gray-500">Add to your home screen</p>
-                </div>
-              </div>
-              <button onClick={handleDismiss} className="p-1 hover:bg-gray-100 rounded-md" aria-label="Close">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
+  // Small card → first tap EXPANDS it (grows to show details), second tap installs.
+  const handleInstallClick = async () => {
+    if (!expanded) {
+      setExpanded(true);
+      return;
+    }
+    if (deferredPrompt) {
+      try {
+        setIsInstalling(true);
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          markInstalled();
+          setShow(false);
+          setDeferredPrompt(null);
+          setExpanded(false);
+        }
+      } catch (err) {
+        console.error('Install error:', err);
+      }
+      setIsInstalling(false);
+      return;
+    }
+    if (isIOS) return; // steps are shown in the expanded card
+    setShow(false);
+  };
 
-            <p className="text-sm text-gray-600">
-              Install the app for faster access, offline use, and so you get <strong>push notifications even when the app is closed</strong>.
-            </p>
+  if (!show) return null;
 
-            <ul className="text-xs text-gray-500 space-y-1 pl-1">
-              <li>✅ Home screen shortcut</li>
-              <li>✅ Full-screen experience</li>
-              <li>✅ Background notifications</li>
-              <li>✅ Works offline</li>
-            </ul>
-
-            <div className="flex gap-2 pt-1">
-              <Button
-                onClick={handleAndroidInstall}
-                className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black font-bold shadow"
-              >
-                Install Now
-              </Button>
-              <Button onClick={handleDismiss} variant="outline" className="flex-1">
-                Later
-              </Button>
+  return (
+    <div className="fixed bottom-[92px] md:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50">
+      <div
+        className={`bg-white rounded-[20px] border border-gray-100 shadow-2xl p-3 flex flex-col gap-3 transition-all duration-300 overflow-hidden ${expanded ? 'min-h-[160px]' : ''}`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-sky-500 to-amber-400 grid place-items-center text-white font-black flex-shrink-0">
+            M
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-black text-gray-900">Install Moneymate 9ja</div>
+            <div className="text-xs text-gray-500">
+              {isIOS && expanded ? 'Follow steps below' : expanded ? 'Tap Install again to add it' : 'Add to home screen for quick access'}
             </div>
           </div>
-        </Card>
-      </div>
-    );
-  }
+          <button
+            onClick={handleInstallClick}
+            disabled={isInstalling}
+            className="px-5 py-2.5 rounded-full bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition flex-shrink-0 disabled:opacity-60"
+          >
+            {isInstalling ? '...' : expanded ? 'Install' : 'Install'}
+          </button>
+          <button
+            onClick={() => {
+              if (expanded) setExpanded(false);
+              else handleDismiss();
+            }}
+            className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-50 text-gray-400 flex-shrink-0"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-  // ─── iOS prompt ────────────────────────────────────────────────────────────
-  // iOS doesn't support beforeinstallprompt — guide users manually
-  if (showIOSPrompt) {
-    return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4">
-        <Card className="w-full shadow-2xl border-yellow-400 border-2 bg-amber-50">
-          <div className="p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Share className="w-5 h-5 text-yellow-600" />
-                <h2 className="text-sm font-bold">Install Moneymate 9ja</h2>
-              </div>
-              <button onClick={handleDismiss} className="p-1 hover:bg-gray-100 rounded-md" aria-label="Close">
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-600">
-              To install and get notifications on iOS:
-            </p>
-
-            <ol className="text-xs text-gray-600 space-y-1 pl-4 list-decimal">
-              <li>Tap the <strong>Share</strong> button <span className="text-blue-500">⬆</span> in Safari</li>
-              <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-              <li>Tap <strong>"Add"</strong> — then open the app from your home screen</li>
-            </ol>
-
-            <p className="text-xs text-yellow-700 font-medium">
-              ⚠ Notifications only work when the app is installed from Safari.
-            </p>
-
-            <Button onClick={handleDismiss} variant="outline" className="w-full text-xs" size="sm">
-              Got it
-            </Button>
+        {/* Expanded: card grows to ~2x and shows benefits + steps */}
+        {expanded && (
+          <div className="border-t border-gray-100 pt-3 animate-[fadeIn_0.25s_ease]">
+            {!isIOS ? (
+              <>
+                <p className="text-xs font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-sky-500" /> Why install?
+                </p>
+                <ul className="text-xs text-gray-600 space-y-1.5 pl-1">
+                  <li>✅ Home screen shortcut — open in one tap</li>
+                  <li>✅ Full-screen app experience</li>
+                  <li>✅ Push notifications even when closed</li>
+                </ul>
+                <button
+                  onClick={handleInstallClick}
+                  disabled={isInstalling}
+                  className="mt-3 w-full py-2.5 rounded-full bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition disabled:opacity-60"
+                >
+                  {isInstalling ? 'Installing...' : deferredPrompt ? 'Install Now' : 'Got it'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-sky-500" /> To add Moneymate on iPhone:
+                </p>
+                <ol className="space-y-2.5">
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white grid place-items-center text-xs font-bold flex-shrink-0">1</span>
+                    <span className="text-xs text-gray-600">
+                      Tap the <Share className="inline h-3.5 w-3.5 text-sky-600 mx-0.5" /> <span className="font-semibold text-gray-800">Share</span> button in Safari&apos;s bottom bar
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white grid place-items-center text-xs font-bold flex-shrink-0">2</span>
+                    <span className="text-xs text-gray-600">
+                      Scroll and tap <span className="font-semibold text-gray-800">Add to Home Screen</span>
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white grid place-items-center text-xs font-bold flex-shrink-0">3</span>
+                    <span className="text-xs text-gray-600">
+                      Tap <span className="font-semibold text-sky-600">Add</span> top-right to install instantly
+                    </span>
+                  </li>
+                </ol>
+                <p className="mt-3 text-[11px] text-gray-400 text-center">Then launch Moneymate from your home screen like a real app.</p>
+              </>
+            )}
           </div>
-        </Card>
+        )}
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }

@@ -163,10 +163,10 @@ function ReferContent() {
   };
   // Local mirror so Profile → History → Referrals shows every payout
   // (cash + airtime, VIP + referral) with method + destination.
-  const pushReferralHistory = (entry: { amount: number; method: "airtime" | "bank"; phone?: string; network?: string; accountLast4?: string; type?: string }) => {
+  const pushReferralHistory = (entry: { amount: number; method: "airtime" | "bank"; phone?: string; network?: string; accountLast4?: string; type?: string; status?: string }) => {
     try {
       const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
-      prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random() * 1e9)}`, amount: entry.amount, date: new Date().toISOString(), method: entry.method, phone: entry.phone || "", network: entry.network || "", accountLast4: entry.accountLast4 || "", type: entry.type || entry.method });
+      prev.unshift({ id: `${Date.now()}-${Math.floor(Math.random() * 1e9)}`, amount: entry.amount, date: new Date().toISOString(), method: entry.method, phone: entry.phone || "", network: entry.network || "", accountLast4: entry.accountLast4 || "", type: entry.type || entry.method, status: entry.status || "success" });
       localStorage.setItem("tivexx-referral-withdrawals", JSON.stringify(prev.slice(0, 200)));
     } catch {}
   };
@@ -748,13 +748,14 @@ function ReferContent() {
                       setCashMsg(`Paid ₦${Number(amt).toLocaleString()} to your bank ✓ Ref: ${String(j.reference || j.transferCode || "").slice(0, 24)}`);
                       setCashClientRef("");
                       // Local mirror for Profile → History → Referrals tab (with method + destination).
-                      pushReferralHistory({ amount: amt, method: "bank", accountLast4: _acct.slice(-4), type: "referral" });
+                      // Status is "success": Paystack already accepted the transfer server-side.
+                      pushReferralHistory({ amount: amt, method: "bank", accountLast4: _acct.slice(-4), type: "referral", status: "success" });
                       try { saveBankBinding(uid, _acct, String((bd as any)?.bankCode || (bd as any)?.bank_code || "")); } catch {}
-                      const nb = Number(j.referral_balance ?? j.available ?? 0);
-                      const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
-                      setAnimatedEarnings(nb);
-                      setUserData((prev:any)=> prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
-                      setApprovedCount(nac);
+                      // Successful cash withdrawal clears the approved earnings to 0
+                      // (the payout consumes the full approved balance via Paystack).
+                      setAnimatedEarnings(0);
+                      setUserData((prev:any)=> prev ? { ...prev, referral_balance: 0, approved_count: 0 } : prev);
+                      setApprovedCount(0);
                       // First withdrawal (any method) consumes the one-time slot.
                       if (!vip.redeemed) {
                         const next = { available: 0, redeemed: true, phone: "", network: "", date: new Date().toISOString(), history: [...vip.history] };

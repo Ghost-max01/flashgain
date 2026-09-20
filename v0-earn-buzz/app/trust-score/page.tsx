@@ -184,7 +184,7 @@ export default function TrustScorePage() {
             ))}
           </div>
           <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 text-xs text-amber-200 leading-relaxed">
-            💡 Tip: Stay 5 mins, do tasks (10=+2), invite 5 friends (=+2), tap 50× (=+1), explore, and fund once — you instantly jump to <b>Trusted</b>. Everything compounds.
+            💡 Tip: Stay 5 mins, do tasks (10=+2), invite friends (1=+1), tap 20× (=+1), explore (10 navs=+1), and fund once (+10) — you instantly jump to <b>Trusted</b>. Everything compounds.
           </div>
         </div>
 
