@@ -23,6 +23,7 @@ interface Task {
 }
 
 const AVAILABLE_TASKS: Task[] = [
+  { id: "survey-task-11", platform: "Survey Task 11", description: "Join our WhatsApp channel for updates and rewards.", category: "Social Media", reward: 1000, link: "https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", icon: "📲" },
   { id: "survey-task-1", platform: "Survey Task 1", description: "Tap our premium ad link for extra rewards.", category: "Ads", reward: 1000, link: "https://newadsrewardss-coral.vercel.app/", icon: "📢" },
   { id: "survey-task-2", platform: "Survey Task 2", description: "Tap our premium ad link for extra rewards", category: "Tasks", reward: 1000, link: "https://newadsrewardss-coral.vercel.app/", icon: "💬" },
   { id: "survey-task-3", platform: "Survey Task 3", description: "Tap our ad link to earn Extra money", category: "Advertisement", reward: 1000, link: "https://otieu.com/4/10575212", icon: "🎯" },
@@ -33,6 +34,7 @@ const AVAILABLE_TASKS: Task[] = [
   { id: "survey-task-8", platform: "Survey Task 8", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://otieu.com/4/10575212", icon: "🤖" },
   { id: "survey-task-9", platform: "Survey Task 9", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://creditbuzz.online", icon: "🎁" },
   { id: "survey-task-10", platform: "Survey Task 10", description: "Tap our premium ad link for extra rewards", category: "Advertisement", reward: 1000, link: "https://creditbuzz.online", icon: "🎁" },
+  { id: "survey-task-12", platform: "Survey Task 12", description: "Follow our second WhatsApp channel for daily updates.", category: "Social Media", reward: 1000, link: "https://whatsapp.com/channel/0029VbDDS23KQuJHyrHXqG2A", icon: "📣" },
 ];
 
 const AVAILABLE_TASKS_DEDUPED: Task[] = (() => {

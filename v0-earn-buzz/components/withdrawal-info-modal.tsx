@@ -25,9 +25,9 @@ export function WithdrawalInfoModal({
   onProceed,
 }: WithdrawalInfoModalProps) {
   const router = useRouter()
-  // All 4 withdrawal requirements: (1) ₦200,000 balance (2) 10 daily tasks
+  // All 4 withdrawal requirements: (1) ₦200,000 balance (2) 12 daily tasks
   // (3) 5 referrals (4) Spin & Win played today.
-  const TOTAL_TASKS = 10
+  const TOTAL_TASKS = 12
   const REQUIRED_REFERRALS = 5
   const MIN_BALANCE = 200000
 

@@ -32,7 +32,7 @@ export default function WithdrawPage() {
   const [showHoursPopup, setShowHoursPopup] = useState(false)
   const [spinPlayedToday, setSpinPlayedToday] = useState(false)
   const [balanceInitialized, setBalanceInitialized] = useState(false)
-  const TOTAL_DAILY_TASKS = 10
+  const TOTAL_DAILY_TASKS = 12
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
   // REVIEW DAY: requirements show as met all day today, no link needed.
