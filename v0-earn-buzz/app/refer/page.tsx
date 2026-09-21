@@ -34,7 +34,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/referral";
-import { VIP_AMOUNT, VIP_KEY, VIP_REDEEMED_KEY, REFERRAL_MIN_WITHDRAW, loadVip, saveVip } from "@/lib/referral-vip";
+  import { REFERRAL_MIN_WITHDRAW, loadVip } from "@/lib/referral-vip";
 import { getLevel, getProgress, getNextLabel, TRUST_LEVELS, type TrustMeta, computeScore, loadMeta } from "@/lib/trust-score";
 
 interface UserData {
@@ -66,13 +66,13 @@ function ReferContent() {
   const [activeMessage, setActiveMessage] = useState("");
   const [animatedEarnings, setAnimatedEarnings] = useState(0);
   const [isEarningsChanging, setIsEarningsChanging] = useState(false);
-  // First-₦500 one-time flag (form itself lives in the airtime popup)
-  const [vip, setVip] = useState<{ available: number; redeemed: boolean; phone?: string; network?: string; date?: string; history: any[] }>({ available: 500, redeemed: false, history: [] });
-  // referral approved/pending
+  // Minimum referral withdrawal is ₦10,000 (20 referrals) — no exceptions,
+  // no first-₦500 path. REFERRAL_MIN_WITHDRAW is the single source of truth.
+  // referral-withdraw airtime popup (10k+ only)
   const [approvedCount, setApprovedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const isWithdrawing = useRef(false);
-  // referral-withdraw airtime popup (10k+; doubles as first-₦500 VIP airtime)
+  // referral-withdraw airtime popup (10k+ only)
   const [showAirPopup, setShowAirPopup] = useState(false);
   const [apNetwork, setApNetwork] = useState("MTN");
   const [apPhone, setApPhone] = useState("");
@@ -162,7 +162,7 @@ function ReferContent() {
     } catch {}
   };
   // Local mirror so Profile → History → Referrals shows every payout
-  // (cash + airtime, VIP + referral) with method + destination.
+  // (cash + airtime) with method + destination.
   const pushReferralHistory = (entry: { amount: number; method: "airtime" | "bank"; phone?: string; network?: string; accountLast4?: string; type?: string; status?: string }) => {
     try {
       const prev = JSON.parse(localStorage.getItem("tivexx-referral-withdrawals") || "[]");
@@ -378,16 +378,6 @@ function ReferContent() {
         router.push(`/?ref=${encodeURIComponent(incomingRef)}${planSuffix}`);
         return;
       }
-    } catch {}
-
-    // load VIP state
-    try {
-      const v = loadVip();
-      // seed if missing (first login gets 500)
-      if (!localStorage.getItem(VIP_KEY) && !localStorage.getItem(VIP_REDEEMED_KEY)) {
-        saveVip({ available: 500, redeemed: false, history: [] });
-        setVip({ available: 500, redeemed: false, history: [] });
-      } else setVip(v);
     } catch {}
 
     // Set initial random message
@@ -609,8 +599,7 @@ function ReferContent() {
 
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 space-y-4 pt-2 relative z-10 pb-6">
-        {/* Hero Card — first thing on the page. The first-₦500 VIP form now
-            lives inside the Withdraw-as-airtime popup below, not as a card. */}
+        {/* Hero Card — first thing on the page. */}
 
         {/* Hero Card */}
         <div className="hh-card hh-card-hero hh-entry-1 relative overflow-hidden">
@@ -670,19 +659,18 @@ function ReferContent() {
               </div>
               <div className="text-[11px] text-white/50 mt-1">✅ Approved = friend reached Beginner (Trust 30+). Pending referrals don't pay yet.</div>
             </div>
-            {/* Referral withdraw — airtime or cash, min 10k after first ₦500 */}
+            {/* Referral withdraw — airtime or cash, min ₦10,000 (20 referrals) */}
             {(() => {
-              const min = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
+              const min = REFERRAL_MIN_WITHDRAW;
               // Server truth: referral_balance is approved-only once loaded; fall back to approvedCount*500 pre-load
               const avail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
               // Zero-balance guard: with ₦0 earned BOTH buttons stay grey and
-              // untappable — no first-₦500 display inflation.
+              // untappable.
               const hasEarnings = avail > 0;
-              const isVipCash = !vip.redeemed && avail < 500;
-              const withdrawAmount = isVipCash ? 500 : avail;
+              const withdrawAmount = avail;
               const displayAvail = avail;
-              const canWithdraw = hasEarnings && (vip.redeemed ? avail >= min : !cashBusy);
-              const cashDisabled = !hasEarnings || cashBusy || (vip.redeemed ? avail < min : false);
+              const canWithdraw = hasEarnings && avail >= min && !cashBusy;
+              const cashDisabled = !canWithdraw;
               const openAirPopup = () => {
                 try {
                   const r = (typeof crypto !== "undefined" && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
@@ -733,7 +721,7 @@ function ReferContent() {
                           setUserData((prev:any)=> prev ? { ...prev, referral_balance: fresh, approved_count: Number(sj.approved_count ?? prev.approved_count), pending_count: Number(sj.pending_count ?? 0), referral_count: Number(sj.referral_count ?? prev.referral_count) } : prev);
                           setApprovedCount(Number(sj.approved_count ?? approvedCount));
                           setPendingCount(Number(sj.pending_count ?? 0));
-                          amt = (!vip.redeemed && fresh < 500) ? 500 : fresh;
+                          amt = fresh;
                         }
                       } catch {}
                       let ref = cashClientRef;
@@ -756,11 +744,6 @@ function ReferContent() {
                       setAnimatedEarnings(0);
                       setUserData((prev:any)=> prev ? { ...prev, referral_balance: 0, approved_count: 0 } : prev);
                       setApprovedCount(0);
-                      // First withdrawal (any method) consumes the one-time slot.
-                      if (!vip.redeemed) {
-                        const next = { available: 0, redeemed: true, phone: "", network: "", date: new Date().toISOString(), history: [...vip.history] };
-                        saveVip(next); setVip(next);
-                      }
                     } finally { isWithdrawing.current = false; setCashBusy(false); }
                   };
               // Confirm gate: warns that withdrawn referrals leave the count.
@@ -789,7 +772,7 @@ function ReferContent() {
                 <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
                   <div className="mb-2">
                     <div className="text-xs font-black text-white">Referral Withdraw</div>
-                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{displayAvail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} {vip.redeemed ? "(20 referrals)" : "(first ₦500)"}</div>
+                    <div className="text-[11px] text-white/60">Available: <span className="text-emerald-300 font-black">₦{displayAvail.toLocaleString()}</span> • Min: ₦{min.toLocaleString()} (20 referrals)</div>
                     {cashMsg && <div className={`mt-1 text-[11px] font-bold ${cashMsg.startsWith("Paid") ? "text-emerald-300" : "text-amber-300"}`}>{cashMsg}</div>}
                   </div>
                   <div className="grid grid-cols-1 gap-2">
@@ -808,7 +791,7 @@ function ReferContent() {
                       <div className="text-center text-4xl mb-2">⚠️</div>
                       <div className="text-base font-black text-white text-center">Before you withdraw</div>
                       <p className="text-xs text-white/70 text-center leading-relaxed mt-2">
-                        After this withdrawal, the referral{withdrawAmount === 500 ? "" : "s"} will <span className="text-amber-300 font-black">disappear from your withdrawal count</span> and available balance. This cannot be undone.
+                        After this withdrawal, the referrals will <span className="text-amber-300 font-black">disappear from your withdrawal count</span> and available balance. This cannot be undone.
                       </p>
                       <button onClick={() => setWdDontShow((v) => !v)} className="flex items-center justify-center gap-2 mt-3 w-full" aria-pressed={wdDontShow}>
                         <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${wdDontShow ? "border-emerald-400" : "border-white/30"}`}>
@@ -834,11 +817,11 @@ function ReferContent() {
         {/* Withdraw-as-airtime popup (same page, no navigation) */}
         {showAirPopup && (() => {
           const apAvail = (userData?.referral_balance ?? (approvedCount || 0) * 500);
-          const apMin = vip.redeemed ? REFERRAL_MIN_WITHDRAW : 500;
+          const apMin = REFERRAL_MIN_WITHDRAW;
           // Zero-balance guard (matches the main card): with ₦0 earned the
           // airtime button stays grey and untappable.
           const apHasEarnings = apAvail > 0;
-          const apCan = apHasEarnings && (!vip.redeemed || apAvail >= apMin) && apPhone.length === 11 && !apLoading;
+          const apCan = apHasEarnings && apAvail >= apMin && apPhone.length === 11 && !apLoading;
           return (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => { if (!apLoading) setShowAirPopup(false); }}>
               <div className="hh-popup max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
@@ -846,9 +829,8 @@ function ReferContent() {
                   <div className="text-base font-black text-white">Withdraw as Airtime</div>
                   <button onClick={() => { if (!apLoading) setShowAirPopup(false); }} className="text-white/50 hover:text-white font-black px-2" aria-label="Close">✕</button>
                 </div>
-                <div className="text-xs text-white/60 mb-3">Amount: <span className="text-amber-300 font-black">₦{(vip.redeemed ? apAvail : apAvail > 0 ? 500 : 0).toLocaleString()}</span> {vip.redeemed ? "• min ₦10,000" : "• one-time first ₦500"}</div>
-                {!vip.redeemed && apHasEarnings && <div className="text-[11px] text-white/50 -mt-2 mb-3">Your first-withdrawal balance: <span className="text-amber-300 font-black">₦500</span> • one-time only, airtime or cash</div>}
-                {!vip.redeemed && !apHasEarnings && <div className="text-[11px] text-amber-300/80 -mt-2 mb-3">No earnings yet — invite friends to unlock withdrawal.</div>}
+                <div className="text-xs text-white/60 mb-3">Amount: <span className="text-amber-300 font-black">₦{apAvail.toLocaleString()}</span> • min ₦10,000 (20 referrals)</div>
+                {!apHasEarnings && <div className="text-[11px] text-amber-300/80 -mt-2 mb-3">No earnings yet — invite friends to unlock withdrawal.</div>}
                 <div className="grid grid-cols-2 gap-2">
                   <select value={apNetwork} onChange={(e) => setApNetwork(e.target.value)} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-bold text-white outline-none">
                     <option className="text-black" value="MTN">MTN</option>
@@ -867,39 +849,26 @@ function ReferContent() {
                     // One phone number per account — block reuse across accounts.
                     const phoneErr = checkPhoneReusable(uid, apPhone);
                     if (phoneErr) throw new Error(phoneErr);
-                    if (!vip.redeemed) {
-                      const res = await fetch("/api/airtime", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, phone: apPhone, network: apNetwork, amount: 500 }) });
-                      const j = await res.json().catch(() => ({}));
-                      if (!res.ok) throw new Error(j.error || "Failed");
-                      const next = { available: 0, redeemed: true, phone: apPhone, network: apNetwork, date: new Date().toISOString(), history: [...vip.history, { phone: apPhone, network: apNetwork, date: new Date().toISOString(), status: "success", amount: 500 }] };
-                      saveVip(next); setVip(next);
-                      try { savePhoneBinding(uid, apPhone); } catch {}
-                      pushReferralHistory({ amount: 500, method: "airtime", phone: apPhone, network: apNetwork, type: "vip_airtime" });
-                      setApMsg(`Airtime sent to ${apPhone} ✓`);
-                      setTimeout(() => setShowAirPopup(false), 1200);
-                    } else {
-                      const res = await fetch("/api/referral-airtime", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, notifyToken, phone: apPhone, network: apNetwork, amount: apAvail, clientRef: apClientRef }) });
-                      const j = await res.json().catch(() => ({}));
-                      if (!res.ok) throw new Error(j.error || "Failed");
-                      const nb = Number(j.referral_balance ?? j.available ?? 0);
-                      const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
-                      setAnimatedEarnings(nb);
-                      setUserData((prev: any) => prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
-                      setApprovedCount(nac);
-                      try { savePhoneBinding(uid, apPhone); } catch {}
-                      pushReferralHistory({ amount: apAvail, method: "airtime", phone: apPhone, network: apNetwork, type: "referral_airtime" });
-                      setApMsg(`Airtime sent to ${apPhone} ✓`);
-                      setTimeout(() => setShowAirPopup(false), 1200);
-                    }
+                    const res = await fetch("/api/referral-airtime", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, notifyToken, phone: apPhone, network: apNetwork, amount: apAvail, clientRef: apClientRef }) });
+                    const j = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(j.error || "Failed");
+                    const nb = Number(j.referral_balance ?? j.available ?? 0);
+                    const nac = Number(j.approved_count ?? j.approvedCount ?? 0);
+                    setAnimatedEarnings(nb);
+                    setUserData((prev: any) => prev ? { ...prev, referral_balance: nb, approved_count: nac } : prev);
+                    setApprovedCount(nac);
+                    try { savePhoneBinding(uid, apPhone); } catch {}
+                    pushReferralHistory({ amount: apAvail, method: "airtime", phone: apPhone, network: apNetwork, type: "referral_airtime" });
+                    setApMsg(`Airtime sent to ${apPhone} ✓`);
+                    setTimeout(() => setShowAirPopup(false), 1200);
                   } catch (e: any) {
                     setApMsg(`${(e as any)?.message || "try again"}`);
                   }
                   setApLoading(false);
                 }} className={`w-full mt-3 rounded-full font-black py-3 text-sm ${apCan ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black" : "bg-white/10 text-white/40 cursor-not-allowed"}`}>
-                  {apLoading ? "Sending..." : `Withdraw ${(vip.redeemed ? apAvail : apAvail > 0 ? 500 : 0).toLocaleString()} Airtime →`}
+                  {apLoading ? "Sending..." : `Withdraw ${apAvail.toLocaleString()} Airtime →`}
                 </button>
                 <button onClick={() => { if (!apLoading) setShowAirPopup(false); }} className="w-full mt-2 rounded-full border border-white/15 text-white font-bold py-2.5 text-sm">Close</button>
-                {!vip.redeemed && <div className="text-[11px] text-white/50 text-center mt-2">One-time only. After this, minimum is <b className="text-white">₦10,000</b> (20 referrals).</div>}
               </div>
             </div>
           );

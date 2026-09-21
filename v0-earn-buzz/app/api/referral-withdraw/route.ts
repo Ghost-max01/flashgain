@@ -70,29 +70,16 @@ export async function POST(req: NextRequest){
     }
     // (b) approved balance from the single shared helper.
     const { approvedCount, approvedBalance, approvedRows } = await computeApproved(supabase, String(userId));
-    // (e) min: vip_redeemed?10000:500 (do NOT trust client vip)
-    let vipRedeemed = false;
-    try{
-      const { data: urow } = await supabase.from("users").select("vip_redeemed").eq("id", userId).maybeSingle();
-      vipRedeemed = (urow as any)?.vip_redeemed === true;
-    } catch {}
-    if(!vipRedeemed){
-      try{
-        const { data: prior } = await supabase.from("referral_withdraws").select("id").eq("user_id", userId).in("type", ["referral", "vip_airtime"]).limit(1);
-        if(Array.isArray(prior) && prior.length > 0) vipRedeemed = true;
-      } catch {}
-    }
-    const min = vipRedeemed ? 10000 : 500;
+    // Minimum is a flat ₦10,000 (20 referrals) — no first-₦500 exception.
+    const min = 10000;
     if(amt < min){
-      return NextResponse.json({error:`Minimum referral withdrawal is ₦${min.toLocaleString()}`}, {status:400});
+      return NextResponse.json({error:`Minimum referral withdrawal is ₦${min.toLocaleString()} (20 referrals)`}, {status:400});
     }
-    // First-time ₦500 VIP cash needs no approved referrals; anything above
-    // the approved balance is rejected before touching the provider.
-    const isVipCash = !vipRedeemed && amt === 500 && approvedBalance < 500;
-    if(!isVipCash && amt > approvedBalance){
+    // Anything above the approved balance is rejected before touching the provider.
+    if(amt > approvedBalance){
       return NextResponse.json({error: `Insufficient approved balance. Approved: ₦${approvedBalance}, pending not withdrawable until friends reach Beginner (30+)`}, {status:400});
     }
-    if(!isVipCash){
+    {
       const need = Math.floor(amt / PER_REFERRAL);
       if(approvedRows.slice(0, need).length < need){
         return NextResponse.json({error:"Not enough approved referrals to cover amount"}, {status:400});
@@ -146,7 +133,7 @@ export async function POST(req: NextRequest){
       amountNaira: amt,
       recipientCode: (rc as any).recipientCode,
       reference,
-      reason: isVipCash ? "Moneymate referral VIP welcome" : "Moneymate referral payout",
+      reason: "Moneymate referral payout",
     });
     if(!(tr as any).ok){
       const otp = (tr as any).otp === true;
@@ -159,7 +146,7 @@ export async function POST(req: NextRequest){
     const paystackRef = (tr as any).reference as string;
     // 4) Provider accepted → NOW consume + record. Never before.
     const consumeIds: string[] = [];
-    if(!isVipCash){
+    {
       const need = Math.floor(amt / PER_REFERRAL);
       for(const r of approvedRows.slice(0, need)) consumeIds.push((r as any).id);
       if(consumeIds.length){
@@ -170,13 +157,10 @@ export async function POST(req: NextRequest){
         }
       }
     }
-    try{ await supabase.from("referral_withdraws").insert({ user_id: userId, amount: amt, type: "referral", status: "success", meta: { approvedBalance, consumed: consumeIds.length, clientRef: clientRef || null, paystackRef, transferCode, transferStatus: (tr as any).status, vipCash: isVipCash, accountNumber: `****${accountNumber.slice(-4)}`, accountNumberFull: accountNumber, bankCode } }); } catch {}
+    try{ await supabase.from("referral_withdraws").insert({ user_id: userId, amount: amt, type: "referral", status: "success", meta: { approvedBalance, consumed: consumeIds.length, clientRef: clientRef || null, paystackRef, transferCode, transferStatus: (tr as any).status, accountNumber: `****${accountNumber.slice(-4)}`, accountNumberFull: accountNumber, bankCode } }); } catch {}
     try{ await supabase.from("withdrawals").insert({ user_id: userId, amount: amt, method: "bank", status: "success", source: "referral", reference: paystackRef }); } catch {}
-    if (!vipRedeemed) {
-      try { await supabase.from("users").update({ vip_redeemed: true, referral_vip_balance: 0 }).eq("id", userId); } catch {}
-    }
-    const newAvailable = isVipCash ? approvedBalance : approvedBalance - amt;
-    const newApprovedCount = isVipCash ? approvedCount : approvedCount - Math.floor(amt / PER_REFERRAL);
-    return NextResponse.json({ success:true, vipCash: isVipCash, reference: paystackRef, transferCode, available: newAvailable, referral_balance: newAvailable, approved_count: newApprovedCount, approvedCount: newApprovedCount, consumed: consumeIds.length });
+    const newAvailable = approvedBalance - amt;
+    const newApprovedCount = approvedCount - Math.floor(amt / PER_REFERRAL);
+    return NextResponse.json({ success:true, reference: paystackRef, transferCode, available: newAvailable, referral_balance: newAvailable, approved_count: newApprovedCount, approvedCount: newApprovedCount, consumed: consumeIds.length });
   }catch(e:any){ return NextResponse.json({error:e.message||"Server error"}, {status:500}); }
 }
