@@ -29,7 +29,7 @@ const AVAILABLE_TASKS: Task[] = [
   { id: "survey-task-4", platform: "Survey Task 4", description: "Tap our premium ad link for extra rewards", category: "Advertisement", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎁" },
   { id: "survey-task-5", platform: "Survey Task 5", description: "Tap our premium ad link for extra rewards", category: "Advertisement", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎡" },
   { id: "survey-task-6", platform: "Survey Task 6", description: "Tap our ad link to earn Extra money", category: "Advertisement", reward: 1000, link: "https://omg10.com/4/10571302", icon: "💸💲" },
-  { id: "survey-task-7", platform: "Survey Task 7", description: "Join Nova Cash", category: "Tasks", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎵" },
+  { id: "survey-task-7", platform: "Survey Task 7", description: "Tap our premium ad link for extra rewards", category: "Tasks", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎵" },
   { id: "survey-task-8", platform: "Survey Task 8", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🤖" },
   { id: "survey-task-9", platform: "Survey Task 9", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎁" },
   { id: "survey-task-10", platform: "Survey Task 10", description: "Tap our premium ad link for extra rewards", category: "Advertisement", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎁" },
