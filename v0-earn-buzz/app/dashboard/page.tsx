@@ -3047,9 +3047,37 @@ export default function DashboardPage() {
               <h2 className="text-xl font-black text-white tracking-tight">Messages</h2>
             </div>
             {inboxReady.length === 0 && inboxUnread === 0 && inboxFeed.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm font-bold text-white/70">Inbox is empty</p>
-                <p className="text-xs text-white/40 mt-1">No new messages yet.</p>
+              <div className="text-center py-6 space-y-3">
+                <div>
+                  <p className="text-sm font-bold text-white/70">Inbox is empty</p>
+                  <p className="text-xs text-white/40 mt-1">No new messages yet.</p>
+                </div>
+                {/* Show Boochat Join card even when inbox is empty so new users can join */}
+                {!boochatJoined && (
+                  <div className="w-full rounded-2xl border border-emerald-500/20 bg-emerald-500/6 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 text-left">
+                        <div className="text-sm font-black text-white truncate">Join {boochatPartnerName || "MoneyMate News"} channel to receive notifications and updates</div>
+                        <div className="text-xs text-white/55 mt-1">Get announcements and direct messages from the channel.</div>
+                      </div>
+                      <div className="shrink-0">
+                        <button
+                          onClick={() => {
+                            try {
+                              setShowInbox(false);
+                              window.location.href = "/api/boochat/link";
+                            } catch (e) {
+                              try { toast({ title: "Could not open channel", description: "Please try again later.", variant: "destructive" }); } catch {}
+                            }
+                          }}
+                          className="px-3 py-2 rounded bg-emerald-500 text-white font-semibold"
+                        >
+                          Join
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="mt-4 space-y-2 max-h-[50vh] overflow-y-auto">
