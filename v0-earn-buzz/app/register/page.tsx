@@ -48,12 +48,6 @@ export default function RegisterPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    // Arrived from a dashboard tap-to-signup: stay on the signup page even
-    // for logged-in users (otherwise this bounces straight back to the
-    // dashboard and the tap looks like a mere refresh).
-    try {
-      if (searchParams.get("from") === "dashboard") return;
-    } catch {}
     const storedUser = localStorage.getItem("tivexx-user") || restoreUserSessionFromCookie();
     if (storedUser) {
       router.push("/dashboard");

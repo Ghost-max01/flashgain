@@ -773,26 +773,6 @@ export default function DashboardPage() {
       } catch {}
     }
   }, [tapEnergy, tapEarned, tapExhaustUntil, resyncExhaustFromStorage]);
-  // ── Signup redirect: every tap on the dashboard (any button, card or
-  // empty area — scrolling excluded, it never fires click) routes to signup.
-  // ?from=dashboard keeps the signup page from bouncing logged-in users
-  // straight back (register auto-redirects to dashboard otherwise, which
-  // looks like a mere refresh).
-  useEffect(() => {
-    const goSignup = (e: MouseEvent) => {
-      try {
-        e.preventDefault();
-        e.stopPropagation();
-      } catch {}
-      try {
-        router.push("/register?from=dashboard");
-      } catch {
-        window.location.href = "/register?from=dashboard";
-      }
-    };
-    document.addEventListener("click", goSignup, true);
-    return () => document.removeEventListener("click", goSignup, true);
-  }, [router]);
   // ── Trust Score engine (compounding) ──
   useEffect(() => {
     // initial load
