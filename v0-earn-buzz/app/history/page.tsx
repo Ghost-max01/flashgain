@@ -63,7 +63,7 @@ export default function HistoryPage() {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>("all")
   const [userId, setUserId] = useState("")
-  const [refRecents, setRefRecents] = useState<{ id: string; amount: number; date: number; approved: boolean }[]>([])
+  const [refRecents, setRefRecents] = useState<{ id: string; amount: number; date: number; approved: boolean; paid?: boolean }[]>([])
   const [refWithdrawn, setRefWithdrawn] = useState<{ id: string; amount: number; date: string; method?: string; phone?: string; network?: string; accountLast4?: string; type?: string }[]>([])
   const [taskRows, setTaskRows] = useState<Row[]>([])
   const [claimRows, setClaimRows] = useState<Row[]>([])
@@ -146,6 +146,7 @@ export default function HistoryPage() {
                   amount: Number(x.amount || 0),
                   date: Number(x.date || 0),
                   approved: (x as any).approved === true,
+                  paid: (x as any).paid === true,
                 }))
                 .sort((a, b) => b.date - a.date)
                 .slice(0, MAX_ROWS),
@@ -330,13 +331,16 @@ export default function HistoryPage() {
   const referralRows: Row[] = useMemo(() => {
     const rows: Row[] = []
     // Individual referrals with exact time (server recents, newest first).
+    // Paid-out referrals render as Paid (not Pending/Approved) — one row
+    // per referral, so all 10 paid referrals each show Paid.
     for (const r of refRecents) {
+      const isPaid = (r as any).paid === true;
       rows.push({
         id: `ref-${r.id}`, tab: "referrals",
-        title: r.approved ? "Referral Earning" : "Referral Pending",
-        sub: r.date ? `${fmtDate(r.date)}${r.approved ? "" : " · activates at Beginner"}` : "Pending",
-        amount: r.approved ? r.amount : 0,
-        status: r.approved ? "credited" : "pending",
+        title: isPaid ? "Referral Paid" : r.approved ? "Referral Earning" : "Referral Pending",
+        sub: r.date ? `${fmtDate(r.date)}${isPaid ? " · paid out" : r.approved ? "" : " · activates at Beginner"}` : "Pending",
+        amount: (isPaid || r.approved) ? r.amount : 0,
+        status: isPaid ? "paid" : r.approved ? "credited" : "pending",
         date: r.date,
       })
     }

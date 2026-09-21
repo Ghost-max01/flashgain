@@ -14,6 +14,7 @@ export async function GET(request: Request) {
         referral_balance: 0,
         pending_count: 0,
         approved_count: 0,
+        paid_count: 0,
         pending_balance: 0,
       })
     }
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
           referral_balance: 0,
           pending_count: 0,
           approved_count: 0,
+          paid_count: 0,
           pending_balance: 0,
         })
       }
@@ -82,9 +84,12 @@ export async function GET(request: Request) {
     }
 
     // Fetch all referrals for this referrer (paginate up to 2000 for now).
-    // Exclude consumed (already-withdrawn) rows so a withdrawal isn't undone
-    // by the next recompute; fall back if the 008 migration isn't applied yet.
+    // Consumed (already-paid) rows are EXCLUDED from counts/balance so a
+    // withdrawal isn't undone by the next recompute — but they are RETURNED
+    // as paid rows so History can show each one as Paid instead of Pending.
+    // Fall back if the 008 migration isn't applied yet.
     let allRefs: any[] | null = null
+    let paidRefs: any[] = []
     try {
       const r = await supabase
         .from("referrals")
@@ -92,6 +97,7 @@ export async function GET(request: Request) {
         .eq("referrer_id", userId)
         .limit(2000)
       if (r.error) throw r.error
+      paidRefs = (r.data ?? []).filter((x: any) => x.consumed === true)
       allRefs = (r.data ?? []).filter((x: any) => x.consumed !== true)
     } catch {
       const r2 = await supabase
@@ -100,13 +106,14 @@ export async function GET(request: Request) {
         .eq("referrer_id", userId)
         .limit(2000)
       if (r2.error) throw r2.error
+      paidRefs = []
       allRefs = r2.data ?? []
     }
 
     const totalCount = allRefs?.length ?? 0
 
     // No referrals -> early return
-    if (totalCount === 0) {
+    if (totalCount === 0 && paidRefs.length === 0) {
       return NextResponse.json({
         success: true,
         referral_code: user?.referral_code || "",
@@ -114,6 +121,7 @@ export async function GET(request: Request) {
         referral_balance: 0, // withdrawable: approved only
         pending_count: 0,
         approved_count: 0,
+        paid_count: 0,
         pending_balance: 0,
         recent: [],
       })
@@ -124,11 +132,20 @@ export async function GET(request: Request) {
     let pendingCount = totalCount
     let referralBalance = 0
     // Individual dated rows for History (latest 50, newest first).
-    let recent: { id: string; amount: number; date: number; approved: boolean }[] = []
+    // paid rows (already withdrawn) are included with paid:true so each one
+    // renders as Paid — they never count toward approved/pending/balance.
+    let recent: { id: string; amount: number; date: number; approved: boolean; paid: boolean }[] = []
     const toMs = (v: any) => {
       const t = new Date(v || 0).getTime()
       return Number.isFinite(t) ? t : 0
     }
+    const paidRows = (paidRefs as any[]).map((r: any) => ({
+      id: String(r.id || r.referred_id || ""),
+      amount: Math.min(Number(r.amount || 500), 500),
+      date: toMs((r as any).created_at),
+      approved: true,
+      paid: true,
+    }))
 
     try {
       const { data: referredUsers } = await supabase
@@ -159,25 +176,27 @@ export async function GET(request: Request) {
           amount: isApproved ? Math.min(Number(r.amount || 500), 500) : 0,
           date: toMs((r as any).created_at),
           approved: isApproved,
+          paid: false,
         })
       }
       approvedCount = approved
       pendingCount = pending
       referralBalance = approvedSum
-      recent = list.sort((a, b) => b.date - a.date).slice(0, 50)
+      recent = [...list, ...paidRows].sort((a, b) => b.date - a.date).slice(0, 50)
     } catch {
       // Fallback to processed flag if trust lookup fails
       const approvedRows = (allRefs as any[]).filter((r) => r.processed === true)
       approvedCount = approvedRows.length
       pendingCount = totalCount - approvedCount
       referralBalance = approvedRows.reduce((s, r) => s + Number(r.amount || 500), 0)
-      recent = (allRefs as any[])
+      recent = [...(allRefs as any[])
         .map((r: any) => ({
           id: String(r.id || r.referred_id || ""),
           amount: r.processed === true ? Math.min(Number(r.amount || 500), 500) : 0,
           date: toMs(r.created_at),
           approved: r.processed === true,
-        }))
+          paid: false,
+        })), ...paidRows]
         .sort((a, b) => b.date - a.date)
         .slice(0, 50)
     }
@@ -190,6 +209,7 @@ export async function GET(request: Request) {
       referral_balance: referralBalance,
       pending_count: pendingCount,
       approved_count: approvedCount,
+      paid_count: paidRefs.length,
       pending_balance: pendingCount * 500,
       recent,
     })
@@ -202,6 +222,7 @@ export async function GET(request: Request) {
       referral_balance: 0,
       pending_count: 0,
       approved_count: 0,
+      paid_count: 0,
       pending_balance: 0,
       recent: [],
     })
