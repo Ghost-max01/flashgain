@@ -90,18 +90,29 @@ export default function WithdrawPage() {
     // Check if a new day has started and reset tasks if needed
     const lastResetDate = localStorage.getItem("tivexx-last-reset-date")
     const today = new Date().toDateString()
-    
+
     if (lastResetDate !== today) {
-      // Reset completed tasks and spin play for the new day
-      localStorage.setItem("tivexx-completed-tasks", "[]")
+      // If there's no recorded last reset date (first-run after update or
+      // before withdraw page has ever been opened), don't wipe a possibly
+      // valid `tivexx-completed-tasks` value produced by the Tasks page.
+      // Only clear tasks when an explicit previous-date exists.
+      if (lastResetDate) {
+        localStorage.setItem("tivexx-completed-tasks", "[]")
+        setCompletedTasksCount(0)
+        localStorage.setItem("tivexx-spin-played-date", "") // reset daily spin requirement
+        setSpinPlayedToday(false)
+      } else {
+        // Preserve existing completed tasks (if any) and initialise counts
+        const completedTasks = safeParse(localStorage.getItem("tivexx-completed-tasks"), [])
+        setCompletedTasksCount(Array.isArray(completedTasks) ? completedTasks.length : 0)
+        const spinDate = localStorage.getItem("tivexx-spin-played-date") || ""
+        setSpinPlayedToday(today === spinDate)
+      }
       localStorage.setItem("tivexx-last-reset-date", today)
-      setCompletedTasksCount(0)
-      localStorage.setItem("tivexx-spin-played-date", "") // reset daily spin requirement
-      setSpinPlayedToday(false)
     } else {
       // Get completed tasks for the current day
       const completedTasks = safeParse(localStorage.getItem("tivexx-completed-tasks"), [])
-      setCompletedTasksCount(completedTasks.length)
+      setCompletedTasksCount(Array.isArray(completedTasks) ? completedTasks.length : 0)
       const spinDate = localStorage.getItem("tivexx-spin-played-date") || ""
       setSpinPlayedToday(today === spinDate)
     }

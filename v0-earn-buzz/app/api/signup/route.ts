@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { generateReferralCode } from "@/lib/utils/referral"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { issueNotifyToken } from "@/lib/notifications/notify-auth"
+import { sendNotificationToUser } from "@/lib/notifications/server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -186,6 +187,21 @@ export async function POST(request: NextRequest) {
     // for background alerts immediately, no re-login needed.
     let notifyToken: string | null = null
     try { notifyToken = issueNotifyToken(String((newUser as any)?.id || userId || "")) } catch {}
+    // Seed a real inbox notification so fresh signups see the Join card
+    try {
+      const partnerName = String(process.env.BOOCHAT_PARTNER_NAME || "MoneyMate News")
+      await sendNotificationToUser({
+        uid: String((newUser as any)?.id || userId),
+        title: `Join ${partnerName} channel to receive notifications and updates`,
+        body: `Get announcements and direct messages from the channel.`,
+        clickUrl: "/api/boochat/link",
+        kind: "channel_invite",
+        dedupeKey: `boochat:invite:${String((newUser as any)?.id || userId)}`,
+      } as any)
+    } catch (e) {
+      // Non-fatal: inbox seeding should not block signup
+      console.warn("[signup] failed to seed boochat invite inbox row:", e)
+    }
     return NextResponse.json({ success: true, user: { ...newUser, notifyToken } })
   } catch (error) {
     console.error("[v0] Signup error:", error)
