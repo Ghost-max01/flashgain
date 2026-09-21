@@ -67,7 +67,14 @@ export async function GET(req: NextRequest) {
     const redirectTo = `${cfg.baseUrl}/auth/login?partner=${encodeURIComponent(cfg.partnerSlug)}&token=${encodeURIComponent(token)}`
     return NextResponse.redirect(redirectTo)
   } catch (e: any) {
-    console.error("/api/boochat/link error:", e)
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 })
+    // Missing BOOCHAT_* env vars is a config problem, not a crash — say so
+    // (naming the missing key only, never its value) instead of a blank 500.
+    const msg = String((e as any)?.message || "");
+    if (msg.includes("BOOCHAT_")) {
+      console.error("/api/boochat/link not configured:", msg);
+      return NextResponse.json({ success: false, error: "Channel join is not configured yet — please try again later." }, { status: 503 });
+    }
+    console.error("/api/boochat/link error:", e);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }

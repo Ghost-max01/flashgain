@@ -3116,7 +3116,26 @@ export default function DashboardPage() {
                       </div>
                       <div className="shrink-0">
                         <button
-                          onClick={() => { setShowInbox(false); try { window.location.href = '/api/boochat/link' } catch { } }}
+                          onClick={async () => {
+                            // Resolve the signed join link first: on error
+                            // (not configured / logged out) show a message
+                            // instead of dumping the user on a raw JSON page.
+                            try {
+                              const r = await fetch("/api/boochat/link", { credentials: "same-origin" });
+                              if (r.redirected && r.url) {
+                                setShowInbox(false);
+                                window.location.href = r.url;
+                                return;
+                              }
+                              const j = await r.json().catch(() => ({} as any));
+                              if (!r.ok) throw new Error(String((j as any)?.error || `Join failed (${r.status})`));
+                              // No redirect (unexpected) — fall back to direct nav.
+                              setShowInbox(false);
+                              window.location.href = "/api/boochat/link";
+                            } catch (e: any) {
+                              try { toast({ title: "Could not open channel", description: String(e?.message || "Please try again later."), variant: "destructive" }); } catch {}
+                            }
+                          }}
                           className="px-3 py-2 rounded bg-emerald-500 text-white font-semibold"
                         >
                           Join
