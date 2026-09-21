@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { verifyNotifyToken } from "@/lib/notifications/notify-auth";
 import { computeScore, type TrustMeta } from "@/lib/trust-score-core";
 
 // Server-side trust recompute. Mirrors lib/trust-score-core EXACTLY (same
@@ -143,7 +144,13 @@ export async function POST(req: NextRequest){
     const userId = body?.userId as string | undefined;
     if(!userId) return NextResponse.json({error:"Missing"}, {status:400});
     // NOTE: client-supplied trustScore is IGNORED — score is recomputed server-side.
-    const authed = await getOwnedUid(req, userId);
+    let authed = await getOwnedUid(req, userId);
+    // Legacy localStorage login has no Supabase session/token — accept the
+    // login-issued notify token (same pattern as referral/airtime routes)
+    // so trust syncs don't 401 for those users.
+    if (!authed) {
+      try { if (verifyNotifyToken((body as any)?.notifyToken, userId)) authed = userId; } catch {}
+    }
     if (!authed) return NextResponse.json({error:"Unauthorized"}, {status:401});
     try{
       const supabase: any = getSupabaseAdmin();

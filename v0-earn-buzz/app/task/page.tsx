@@ -180,8 +180,9 @@ export default function TaskPage() {
       console.log(`[Task] Trust score updated: taskCount=${meta.taskCount}, score=${score}`);
       if (typeof window !== "undefined") {
         try {
-          const uid = (JSON.parse(localStorage.getItem("tivexx-user") || "{}")).id || (JSON.parse(localStorage.getItem("tivexx-user") || "{}")).userId
-          if (uid) void fetch("/api/user-trust", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, trustScore: score, timeMs: meta.timeMs, navCount: meta.navCount, tapCount: meta.tapCount, trustMeta: meta }) }).catch(() => {})
+          const storedUid = (JSON.parse(localStorage.getItem("tivexx-user") || "{}"));
+          const uid = storedUid.id || storedUid.userId
+          if (uid) void fetch("/api/user-trust", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, notifyToken: storedUid.notifyToken || undefined, trustScore: score, timeMs: meta.timeMs, navCount: meta.navCount, tapCount: meta.tapCount, trustMeta: meta }) }).catch(() => {})
         } catch {}
       }
     } catch {}

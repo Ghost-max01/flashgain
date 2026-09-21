@@ -866,7 +866,7 @@ export default function DashboardPage() {
         saveMeta(m);
         setTrustScore(computeScore(m));
         setTrustMeta({ ...m });
-        try{ const uid = (userData as any)?.id || (userData as any)?.userId; if(uid) void fetch("/api/user-trust",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, trustScore: computeScore(m), timeMs: m.timeMs, navCount: m.navCount, tapCount: m.tapCount, trustMeta: m })}).catch(()=>{});}catch{}
+        try{ const uid = (userData as any)?.id || (userData as any)?.userId; if(uid) void fetch("/api/user-trust",{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: uid, notifyToken: (userData as any)?.notifyToken || undefined, trustScore: computeScore(m), timeMs: m.timeMs, navCount: m.navCount, tapCount: m.tapCount, trustMeta: m })}).catch(()=>{});}catch{}
       }
     } catch {}
   }, [userData, autoRefCount]);
@@ -886,7 +886,7 @@ export default function DashboardPage() {
       void fetch("/api/user-trust", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: uid, timeMs: m.timeMs, navCount: m.navCount, tapCount: m.tapCount, trustMeta: m }),
+        body: JSON.stringify({ userId: uid, notifyToken: (userData as any)?.notifyToken || undefined, timeMs: m.timeMs, navCount: m.navCount, tapCount: m.tapCount, trustMeta: m }),
       }).catch(() => {});
     } catch {}
   }, [trustScore, userData]);
