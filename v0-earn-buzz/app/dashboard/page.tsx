@@ -3081,7 +3081,18 @@ export default function DashboardPage() {
                         if (uid && !f.read) void markInboxRead(uid, [fid]);
                       } catch {}
                       setShowInbox(false);
-                      router.push(url.startsWith("/") ? url : "/dashboard");
+                      // Channel broadcasts/DMs carry an external Boochat
+                      // channel URL — open it (tap takes them to the channel).
+                      // In-app paths still route client-side.
+                      try {
+                        if (/^https?:\/\//i.test(url)) {
+                          window.open(url, "_blank", "noopener");
+                        } else {
+                          router.push(url.startsWith("/") ? url : "/dashboard");
+                        }
+                      } catch {
+                        window.location.href = url;
+                      }
                     }}
                     className={`w-full text-left rounded-2xl border p-3 ${f.read ? "border-white/10 bg-white/5" : "border-blue-500/30 bg-blue-500/10"}`}
                   >

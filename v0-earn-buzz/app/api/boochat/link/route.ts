@@ -55,11 +55,16 @@ export async function GET(req: NextRequest) {
     const headerB = base64Url(JSON.stringify(header))
     const payloadB = base64Url(JSON.stringify(payload))
     const toSign = `${headerB}.${payloadB}`
-    const sig = crypto.createHmac("sha256", cfg.sharedSecret).update(toSign).digest("base64")
-    const sigB = sig.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+    // STANDARD base64 (not url-safe): Boochat verifies with
+    // Buffer.from(sig, "base64"). A url-safe (-/_/unpadded) signature would
+    // decode to different bytes there and fail ~3 in 4 joins. The token is
+    // encodeURIComponent'd below, so +/= are transport-safe.
+    const sigB = crypto.createHmac("sha256", cfg.sharedSecret).update(toSign).digest("base64")
     const token = `${headerB}.${payloadB}.${sigB}`
 
-    const redirectTo = `${cfg.baseUrl}/auth?partner=${encodeURIComponent(cfg.partnerSlug)}&token=${encodeURIComponent(token)}`
+    // Boochat has /auth/login and /auth/signup but NO bare /auth route —
+    // /auth would 404. Login handles new + existing partner users.
+    const redirectTo = `${cfg.baseUrl}/auth/login?partner=${encodeURIComponent(cfg.partnerSlug)}&token=${encodeURIComponent(token)}`
     return NextResponse.redirect(redirectTo)
   } catch (e: any) {
     console.error("/api/boochat/link error:", e)
