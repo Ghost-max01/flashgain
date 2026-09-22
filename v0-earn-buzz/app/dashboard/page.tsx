@@ -118,7 +118,19 @@ interface MenuItem {
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [userData, setUserData] = useState<UserData | null>(null);
+  // Sync cache-first init: returning to /dashboard (back nav) must NOT flash
+  // the Loading spinner + reset orb to 100. Read localStorage during first
+  // render so the orb paints its TRUE state immediately.
+  const [userData, setUserData] = useState<UserData | null>(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) return null;
+      const u = JSON.parse(raw);
+      if (u && typeof u === "object") return u as UserData;
+      return null;
+    } catch { return null; }
+  });
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawalNotification, setShowWithdrawalNotification] =
     useState(false);
@@ -272,14 +284,43 @@ export default function DashboardPage() {
     }).catch(() => {});
     return () => { try { unsub?.(); } catch {} };
   }, []);
-  const [balance, setBalance] = useState(50000);
-  const [animatedBalance, setAnimatedBalance] = useState(50000);
+  const [balance, setBalance] = useState(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) return 50000;
+      const b = Number(JSON.parse(raw)?.balance);
+      return Number.isFinite(b) ? b : 50000;
+    } catch { return 50000; }
+  });
+  const [animatedBalance, setAnimatedBalance] = useState(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) return 50000;
+      const b = Number(JSON.parse(raw)?.balance);
+      return Number.isFinite(b) ? b : 50000;
+    } catch { return 50000; }
+  });
   const [isBalanceChanging, setIsBalanceChanging] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [canClaim, setCanClaim] = useState(true);
   const [isCounting, setIsCounting] = useState(false);
-  const [displayedName, setDisplayedName] = useState("");
-  const [nameIndex, setNameIndex] = useState(0);
+  // Cache-first: returning via back-nav must NOT retype the name (that ~2s
+  // typewriter restart reads as an orb/header glitch). Paint full name first.
+  const [displayedName, setDisplayedName] = useState(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) return "";
+      const u = JSON.parse(raw);
+      return String(u?.name || "");
+    } catch { return ""; }
+  });
+  const [nameIndex, setNameIndex] = useState(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) return 0;
+      return String(JSON.parse(raw)?.name || "").length;
+    } catch { return 0; }
+  });
   const [showTutorial, setShowTutorial] = useState(false);
   const [claimCount, setClaimCount] = useState(0);
   const [pauseEndTime, setPauseEndTime] = useState<number | null>(null);
@@ -292,15 +333,44 @@ export default function DashboardPage() {
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   // ── Tap-to-Earn inline round orb (carried into balance card) ──
-  const [tapEnergy, setTapEnergy] = useState(TAP_MAX_ENERGY);
-  const [tapEarned, setTapEarned] = useState(0);
+  // Lazy init from storage so back-navigation paints the TRUE orb state on
+  // first frame (no 100 → 0 snap / 2-sec glitch while the load effect runs).
+  const [tapEnergy, setTapEnergy] = useState(() => {
+    try {
+      if (typeof window === "undefined") return TAP_MAX_ENERGY;
+      const ex = Number(localStorage.getItem(TAP_EXHAUST_KEY) || 0);
+      if (ex > Date.now()) return 0;
+      const raw = localStorage.getItem(TAP_STORAGE_KEY);
+      if (!raw) return TAP_MAX_ENERGY;
+      const s = JSON.parse(raw);
+      return Math.min(TAP_MAX_ENERGY, Math.max(0, s.energy ?? TAP_MAX_ENERGY));
+    } catch { return TAP_MAX_ENERGY; }
+  });
+  const [tapEarned, setTapEarned] = useState(() => {
+    try {
+      const raw = localStorage.getItem(TAP_STORAGE_KEY);
+      if (!raw) return 0;
+      return Number(JSON.parse(raw).earned || 0);
+    } catch { return 0; }
+  });
   const [tapTapping, setTapTapping] = useState(false);
   const [tapParticles, setTapParticles] = useState<{id:number,x:number,y:number}[]>([]);
   const tapPid = useRef(0);
   const tapAccum = useRef(0);
   const tapSyncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [tapExhaustUntil, setTapExhaustUntil] = useState<number | null>(null);
-  const [tapExhaustLeft, setTapExhaustLeft] = useState(0);
+  const [tapExhaustUntil, setTapExhaustUntil] = useState<number | null>(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      const ex = Number(localStorage.getItem(TAP_EXHAUST_KEY) || 0);
+      return ex > Date.now() ? ex : null;
+    } catch { return null; }
+  });
+  const [tapExhaustLeft, setTapExhaustLeft] = useState(() => {
+    try {
+      const ex = Number(localStorage.getItem(TAP_EXHAUST_KEY) || 0);
+      return ex > Date.now() ? ex - Date.now() : 0;
+    } catch { return 0; }
+  });
   // Rapid tap detection — >3 taps in 1 sec triggers warning
   const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
   const [showRapidTapWarning, setShowRapidTapWarning] = useState(false);
@@ -585,7 +655,8 @@ export default function DashboardPage() {
   // ── Tap-to-Earn: load + persist + exhaust 10min + auto tap (NO gradual refill) ──
   // Wall-clock exhaust: tapExhaustUntil timestamp keeps moving while the app
   // is closed, so the FILLING water + countdown catch up on return (same as auto-tap).
-  const tapHydratedRef = useRef(false);
+  // Already hydrated via lazy useState init above (no 100→0 snap on return).
+  const tapHydratedRef = useRef(true);
   const resyncExhaustFromStorage = useCallback(() => {
     try {
       const ex = localStorage.getItem(TAP_EXHAUST_KEY);
@@ -2274,14 +2345,16 @@ export default function DashboardPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#050d14]">
         <div className="text-center">
           <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div>
+            {/* NEW brand spinner (orange). OLD OLD emerald/ping green commented out below. */}
+            {/* OLD: <div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div> */}
+            <div className="absolute inset-0 rounded-full border-2 border-orange-500/30 animate-ping"></div>
             <div
-              className="absolute inset-2 rounded-full border-2 border-emerald-400/50 animate-ping"
+              className="absolute inset-2 rounded-full border-2 border-orange-400/50 animate-ping"
               style={{ animationDelay: "0.3s" }}
             ></div>
-            <div className="absolute inset-4 rounded-full bg-emerald-500/20 animate-pulse"></div>
+            <div className="absolute inset-4 rounded-full bg-orange-500/20 animate-pulse"></div>
           </div>
-          <p className="text-emerald-400 text-sm font-medium tracking-widest uppercase">
+          <p className="text-orange-400 text-sm font-medium tracking-widest uppercase">
             Loading
           </p>
         </div>
@@ -3262,9 +3335,11 @@ export default function DashboardPage() {
           width: 14px;
           height: 14px;
           left: 25%;
+          /* OLD OLD blue commented out. */
+          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.5), transparent); */
           background: radial-gradient(
             circle,
-            rgba(59, 130, 246, 0.5),
+            rgba(249, 115, 22, 0.45),
             transparent
           );
           animation-duration: 11s;
@@ -3286,9 +3361,11 @@ export default function DashboardPage() {
           width: 18px;
           height: 18px;
           left: 55%;
+          /* OLD OLD purple commented out. */
+          /* OLD: background: radial-gradient(circle, rgba(139, 92, 246, 0.4), transparent); */
           background: radial-gradient(
             circle,
-            rgba(139, 92, 246, 0.4),
+            rgba(245, 158, 11, 0.35),
             transparent
           );
           animation-duration: 13s;
@@ -3322,9 +3399,11 @@ export default function DashboardPage() {
           width: 12px;
           height: 12px;
           left: 15%;
+          /* OLD OLD blue commented out. */
+          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent); */
           background: radial-gradient(
             circle,
-            rgba(59, 130, 246, 0.4),
+            rgba(249, 115, 22, 0.35),
             transparent
           );
           animation-duration: 12s;
@@ -3358,9 +3437,11 @@ export default function DashboardPage() {
           width: 9px;
           height: 9px;
           left: 88%;
+          /* OLD OLD purple commented out. */
+          /* OLD: background: radial-gradient(circle, rgba(139, 92, 246, 0.5), transparent); */
           background: radial-gradient(
             circle,
-            rgba(139, 92, 246, 0.5),
+            rgba(245, 158, 11, 0.4),
             transparent
           );
           animation-duration: 10.5s;
@@ -3382,9 +3463,11 @@ export default function DashboardPage() {
           width: 16px;
           height: 16px;
           left: 48%;
+          /* OLD OLD blue commented out. */
+          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent); */
           background: radial-gradient(
             circle,
-            rgba(59, 130, 246, 0.3),
+            rgba(249, 115, 22, 0.28),
             transparent
           );
           animation-duration: 14s;
@@ -3412,20 +3495,26 @@ export default function DashboardPage() {
         .hh-mesh-overlay {
           position: fixed;
           inset: 0;
+          /* NEW: dark + orange glows. OLD OLD green/blue/purple commented out. */
+          /* OLD:
+            radial-gradient(ellipse 60% 40% at 20% 80%, rgba(16, 185, 129, 0.07) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 50% at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+            radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 60%);
+          */
           background:
             radial-gradient(
               ellipse 60% 40% at 20% 80%,
-              rgba(16, 185, 129, 0.07) 0%,
+              rgba(249, 115, 22, 0.06) 0%,
               transparent 60%
             ),
             radial-gradient(
               ellipse 50% 50% at 80% 20%,
-              rgba(59, 130, 246, 0.06) 0%,
+              rgba(245, 158, 11, 0.05) 0%,
               transparent 60%
             ),
             radial-gradient(
               ellipse 40% 30% at 50% 50%,
-              rgba(139, 92, 246, 0.04) 0%,
+              rgba(234, 88, 12, 0.04) 0%,
               transparent 60%
             );
           pointer-events: none;
@@ -3505,9 +3594,11 @@ export default function DashboardPage() {
         .hh-orb-1 {
           width: 150px;
           height: 150px;
+          /* NEW: faint orange glow. OLD OLD green commented out below. */
+          /* OLD: background: radial-gradient(circle, rgba(16, 185, 129, 0.2), transparent); */
           background: radial-gradient(
             circle,
-            rgba(16, 185, 129, 0.2),
+            rgba(249, 115, 22, 0.16),
             transparent
           );
           top: -40px;
@@ -3518,9 +3609,11 @@ export default function DashboardPage() {
         .hh-orb-2 {
           width: 100px;
           height: 100px;
+          /* NEW: faint amber glow. OLD OLD blue commented out below. */
+          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent); */
           background: radial-gradient(
             circle,
-            rgba(59, 130, 246, 0.15),
+            rgba(245, 158, 11, 0.12),
             transparent
           );
           bottom: 20px;
@@ -3548,22 +3641,28 @@ export default function DashboardPage() {
           height: 52px;
           border-radius: 50%;
           padding: 2px;
-          background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
+          /* NEW brand ring (orange/amber). OLD OLD green→blue→purple commented out. */
+          /* OLD: background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); */
+          background: linear-gradient(135deg, #f97316, #f59e0b, #ea580c);
           animation: hh-ring-spin 4s linear infinite;
         }
 
         @keyframes hh-ring-spin {
           0% {
-            background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
+            /* OLD: background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); */
+            background: linear-gradient(135deg, #f97316, #f59e0b, #ea580c);
           }
           33% {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #10b981);
+            /* OLD: background: linear-gradient(135deg, #3b82f6, #8b5cf6, #10b981); */
+            background: linear-gradient(135deg, #f59e0b, #ea580c, #f97316);
           }
           66% {
-            background: linear-gradient(135deg, #8b5cf6, #10b981, #3b82f6);
+            /* OLD: background: linear-gradient(135deg, #8b5cf6, #10b981, #3b82f6); */
+            background: linear-gradient(135deg, #ea580c, #f97316, #f59e0b);
           }
           100% {
-            background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
+            /* OLD: background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); */
+            background: linear-gradient(135deg, #f97316, #f59e0b, #ea580c);
           }
         }
 
@@ -3620,13 +3719,17 @@ export default function DashboardPage() {
         }
 
         .hh-action-purple {
-          background: linear-gradient(135deg, #7c3aed, #5b21b6);
-          box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+          /* OLD OLD purple commented out — routed to new brand orange. */
+          /* OLD: background: linear-gradient(135deg, #7c3aed, #5b21b6); box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3); */
+          background: linear-gradient(135deg, #ea580c, #c2410c);
+          box-shadow: 0 4px 20px rgba(234, 88, 12, 0.3);
         }
 
         .hh-action-green {
-          background: linear-gradient(135deg, #059669, #047857);
-          box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3);
+          /* OLD OLD green commented out — routed to new brand orange. */
+          /* OLD: background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3); */
+          background: linear-gradient(135deg, #f97316, #c2410c);
+          box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3);
         }
 
         .hh-action-icon {
@@ -4220,24 +4323,34 @@ export default function DashboardPage() {
         .hh-tap-particle { position: absolute; font-size: 12px; font-weight: 900; color: #fbbf24; pointer-events: none; animation: hh-tap-float 0.7s ease-out forwards; text-shadow: 0 1px 6px rgba(0,0,0,0.4); white-space: nowrap; }
         @keyframes hh-tap-float { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; } 100% { transform: translate(-50%, -90px) scale(1.05); opacity: 0; } }
         .te-halo { position: absolute; inset: -28px; border-radius: 50%; animation: te-halo-pulse 2.4s ease-in-out infinite; }
-        .te-halo-active { background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%); }
+        .te-halo-active { background: radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%); }
+        /* OLD OLD green halo commented out: */
+        /* OLD: .te-halo-active { background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%); } */
         .te-halo-inactive { background: radial-gradient(circle, rgba(107,114,128,0.1) 0%, transparent 70%); animation: none; }
         @keyframes te-halo-pulse { 0%,100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 0.4; } }
         .te-ring { position: absolute; inset: 0; border-radius: 50%; }
-        .te-ring-outer { inset: -38px; border: 2px dashed rgba(16,185,129,0.18); animation: te-spin 22s linear infinite; }
-        .te-ring-inner { inset: -22px; border: 1px solid rgba(16,185,129,0.12); animation: te-spin 16s linear infinite reverse; }
+        .te-ring-outer { inset: -38px; border: 2px dashed rgba(249,115,22,0.22); animation: te-spin 22s linear infinite; }
+        .te-ring-inner { inset: -22px; border: 1px solid rgba(249,115,22,0.16); animation: te-spin 16s linear infinite reverse; }
+        /* OLD OLD green rings commented out: */
+        /* OLD: .te-ring-outer { border: 2px dashed rgba(16,185,129,0.18); } */
+        /* OLD: .te-ring-inner { border: 1px solid rgba(16,185,129,0.12); } */
         @keyframes te-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .te-orb { position: relative; width: 220px; height: 220px; border-radius: 50%; border: none; outline: none; cursor: pointer; transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1); user-select: none; -webkit-tap-highlight-color: transparent; }
-        .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(52,211,153,0.95), #10b981 48%, rgba(6,95,70,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 60px rgba(16,185,129,0.45), 0 0 120px rgba(16,185,129,0.15); }
+        .te-orb { position: relative; width: 220px; height: 220px; border-radius: 50%; border: none; outline: none; cursor: pointer; transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease; user-select: none; -webkit-tap-highlight-color: transparent; }
+        /* NEW: manual orb = same orange family as auto (no green/purple flash on return). */
+        /* OLD OLD green orb commented out: */
+        /* OLD: .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(52,211,153,0.95), #10b981 48%, rgba(6,95,70,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 60px rgba(16,185,129,0.45), 0 0 120px rgba(16,185,129,0.15); } */
+        .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(253,186,116,0.95), #f97316 48%, rgba(124,45,18,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(124,45,18,0.7), inset 0 6px 22px rgba(253,186,116,0.35), 0 0 60px rgba(249,115,22,0.45), 0 0 120px rgba(249,115,22,0.15); }
         .te-orb-depleted { background: radial-gradient(circle at 38% 32%, rgba(107,114,128,0.6), rgba(55,65,81,0.8) 100%); box-shadow: inset 0 -8px 20px rgba(0,0,0,0.5); opacity: 0.55; cursor: not-allowed; }
         .te-orb-tap { transform: scale(0.86) !important; }
         .te-orb-active:hover {
           box-shadow:
-            inset 0 -12px 28px rgba(6, 95, 70, 0.7),
-            inset 0 6px 22px rgba(52, 211, 153, 0.35),
-            0 0 80px rgba(16, 185, 129, 0.6),
-            0 0 140px rgba(16, 185, 129, 0.2);
+            inset 0 -12px 28px rgba(124, 45, 18, 0.7),
+            inset 0 6px 22px rgba(253, 186, 116, 0.35),
+            0 0 80px rgba(249, 115, 22, 0.6),
+            0 0 140px rgba(249, 115, 22, 0.2);
         }
+        /* OLD OLD green hover commented out: */
+        /* OLD: .te-orb-active:hover { box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 80px rgba(16,185,129,0.6), 0 0 140px rgba(16,185,129,0.2); } */
         .te-orb-shine { position: absolute; top: 18px; left: 36px; width: 80px; height: 36px; border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.7), transparent); filter: blur(10px); opacity: 0.25; pointer-events: none; }
         .te-orb-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
         .te-orb-icon-bounce { animation: te-icon-bounce 1.6s ease-in-out infinite; }

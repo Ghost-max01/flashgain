@@ -57,10 +57,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ background: "#050d14" }}>
       <head>
         <meta name="theme-color" content="#ea580c" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        {/* Critical first-paint: new brand base (dark + orange). Old green/purple
+            flash came from unstyled white paint before CSS/JS loaded. */}
+        <style>{`html,body{background:#050d14 !important;color:#fff !important;}`}</style>
         <link rel="manifest" href="/manifest.json?v=20260318" />
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png?v=20260318" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=20260318" />
@@ -68,7 +71,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico?v=20260318" />
         {/* Head scripts intentionally left minimal */}
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} style={{ background: "#050d14" }} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <NoPinchZoom />
           <ClientCrashGuard />

@@ -156,8 +156,10 @@ export function ScrollingText() {
 
   const message = shuffled[index] || ""
 
+  // NEW brand strip (dark + orange). OLD OLD green commented out below.
+  // OLD: <div className="bg-gradient-to-r from-green-600 to-green-700 ...">
   return (
-    <div className="bg-gradient-to-r from-green-600 to-green-700 text-white py-2 px-4 overflow-hidden">
+    <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white py-2 px-4 overflow-hidden">
       <div className="whitespace-nowrap animate-marquee">
         <span className="text-sm font-medium">{message}</span>
       </div>

@@ -149,39 +149,31 @@
   }
 }
 
-/* Tivexx hero background (SVG mesh) — blends #395756, #4F5D75, #7261A3, #A67DB8 */
+/* Tivexx hero background — NEW brand base (dark + faint orange glow).
+   OLD OLD COLOR (pre-rebrand green/purple mesh #395756/#4F5D75/#7261A3/#A67DB8) — commented out below, do not re-enable. */
+/* OLD:
 .bg-tivexx-hero {
   background-image: url("data:image/svg+xml;utf8,\
-    <svg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900' preserveAspectRatio='none'>\
-      <defs>\
-        <linearGradient id='t1' x1='0' x2='1'>\
-          <stop offset='0' stop-color='#395756'/>\
-          <stop offset='1' stop-color='#4F5D75'/>\
-        </linearGradient>\
-        <linearGradient id='t2' x1='0' x2='1'>\
-          <stop offset='0' stop-color='#7261A3'/>\
-          <stop offset='1' stop-color='#A67DB8'/>\
-        </linearGradient>\
-        <filter id='blur'><feGaussianBlur stdDeviation='120' /></filter>\
-      </defs>\
-      <rect width='100%' height='100%' fill='url(#t1)' opacity='0.95'/>\
-      <circle cx='18%' cy='26%' r='320' fill='url(#t2)' opacity='0.55' filter='url(#blur)'/>\
-      <ellipse cx='76%' cy='68%' rx='420' ry='260' fill='#395756' opacity='0.32' filter='url(#blur)'/>\      <!-- Subtle gold highlight: small blurred circle to add warmth -->\
-      <circle cx='48%' cy='12%' r='160' fill='#D4AF37' opacity='0.07' filter='url(#blur)'/>      <rect width='100%' height='100%' fill='rgba(0,0,0,0.06)' />\
-    </svg>");
+    <svg ... #395756 ... #4F5D75 ... #7261A3 ... #A67DB8 ...>");
+}
+*/
+.bg-tivexx-hero {
+  background: #050d14;
+  background-image:
+    radial-gradient(30% 30% at 12% 18%, rgba(234,88,12,0.12), transparent 60%),
+    radial-gradient(40% 40% at 82% 72%, rgba(249,115,22,0.08), transparent 60%);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   color: #fff;
 }
 
-/* Soft overlay utility to improve CTA/text contrast when needed */
+/* Soft overlay utility — NEW (dark veil + orange glow). */
+/* OLD OLD COLORS commented out: #1B30221E (old green) + #8B5CF619 (old purple) — do not re-enable. */
 .bg-tivexx-hero--overlay {
-  /* Layered blend: animated soft radial glows + dark veil to improve contrast */
-  /* Use explicit hex (8-digit) colors to match the glow keyframe precisely */
   background-image:
-    radial-gradient(30% 30% at 12% 18%, #1B30221E, transparent 24%),
-    radial-gradient(40% 40% at 82% 72%, #8B5CF619, transparent 28%),
+    radial-gradient(30% 30% at 12% 18%, rgba(234,88,12,0.10), transparent 24%),
+    radial-gradient(40% 40% at 82% 72%, rgba(249,115,22,0.08), transparent 28%),
     linear-gradient(180deg, #0000002E, #00000047);
   background-repeat: no-repeat;
   background-size: 120% 120%, 140% 140%, 100% 100%;

@@ -31,7 +31,9 @@ const promoItems: PromoItem[] = [
     image: "/images/promo-game-day.png",
     buttonText: "Play Now",
     buttonLink: "/watch",
-    bgColor: "bg-gradient-to-r from-blue-500 to-purple-500",
+    // OLD OLD blue→purple commented out — routed to new brand orange.
+    // OLD: bgColor: "bg-gradient-to-r from-blue-500 to-purple-500",
+    bgColor: "bg-gradient-to-r from-orange-500 to-amber-500",
   },
   {
     id: 3,
@@ -40,7 +42,9 @@ const promoItems: PromoItem[] = [
     image: "/images/promo-winners.png",
     buttonText: "Join Contest",
     buttonLink: "/earn-more",
-    bgColor: "bg-gradient-to-r from-green-500 to-teal-500",
+    // OLD OLD green→teal commented out — routed to new brand orange.
+    // OLD: bgColor: "bg-gradient-to-r from-green-500 to-teal-500",
+    bgColor: "bg-gradient-to-r from-orange-600 to-amber-600",
   },
 ]
 

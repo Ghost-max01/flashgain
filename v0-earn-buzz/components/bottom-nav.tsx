@@ -101,7 +101,9 @@ export function BottomNav() {
           color: #9ca3af; text-decoration: none; font-size: 10px; font-weight: 600;
           padding: 8px 10px; position: relative;
         }
-        .bv-nav-active { color: #10b981 !important; }
+        .bv-nav-active { color: #f97316 !important; }
+        /* OLD OLD green commented out: */
+        /* OLD: .bv-nav-active { color: #10b981 !important; } */
         .bv-nav-badge {
           position: absolute; top: -6px; right: -10px; min-width: 16px; height: 16px;
           padding: 0 4px; border-radius: 9999px; background: #dc2626; color: #fff;
