@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock, Trophy } from "lucide-react"
+import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, UserX, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 import { getBankDetails, type BankDetails } from "@/lib/bank-details"
@@ -527,11 +527,21 @@ export default function WithdrawPage() {
             <div className="wallet-card" id="wallet-card">
               <div className="row-top">
                 <div className="chip"></div>
-                <svg className="contactless" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M8 11a5 5 0 0 1 8 0" opacity="0.9" />
-                  <path d="M5.5 8.5a9 9 0 0 1 13 0" opacity="0.65" />
-                  <path d="M3 6a13 13 0 0 1 18 0" opacity="0.4" />
-                </svg>
+                <div className="row-top-right">
+                  {/* Glassmorph entry point for the existing withdraw-without-referral
+                      flow — same toggleActive state as the (hidden) toggle section,
+                      so referral gate / Instant Withdraw button behave identically. */}
+                  <button
+                    onClick={() => setToggleActive(!toggleActive)}
+                    aria-pressed={toggleActive}
+                    title="Withdraw Without Referral"
+                    className={`glass-noref-btn ${toggleActive ? 'glass-noref-on' : ''}`}
+                  >
+                    <span className="glass-noref-dot" aria-hidden="true"></span>
+                    <UserX className="h-3.5 w-3.5 shrink-0" />
+                    <span>Withdraw Without Referral</span>
+                  </button>
+                </div>
               </div>
 
               <div className="label-row">
@@ -1853,6 +1863,71 @@ export default function WithdrawPage() {
           height: 22px;
           opacity: 0.85;
           color: rgba(255,255,255,0.86);
+          flex-shrink: 0;
+        }
+
+        .row-top-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          z-index: 2;
+        }
+
+        /* ── Glassmorph "Withdraw Without Referral" pill (top-right of card) ── */
+        .glass-noref-btn {
+          position: relative;
+          z-index: 3;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 11px;
+          border-radius: 9999px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.03em;
+          line-height: 1;
+          white-space: nowrap;
+          color: rgba(255,255,255,0.92);
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.28);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          box-shadow:
+            0 4px 16px rgba(0,0,0,0.25),
+            inset 0 1px 0 rgba(255,255,255,0.28);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .glass-noref-btn:hover {
+          background: rgba(255,255,255,0.2);
+          transform: translateY(-1px);
+        }
+
+        .glass-noref-btn:active {
+          transform: scale(0.96);
+        }
+
+        .glass-noref-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.5);
+          flex-shrink: 0;
+          transition: all 0.2s ease;
+        }
+
+        .glass-noref-on {
+          background: rgba(16,185,129,0.28);
+          border-color: rgba(52,211,153,0.65);
+          box-shadow:
+            0 0 16px rgba(16,185,129,0.45),
+            inset 0 1px 0 rgba(255,255,255,0.28);
+        }
+
+        .glass-noref-on .glass-noref-dot {
+          background: #34d399;
+          box-shadow: 0 0 6px #34d399;
         }
 
         .label-row {
