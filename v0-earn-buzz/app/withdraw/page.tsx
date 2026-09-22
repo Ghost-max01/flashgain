@@ -11,6 +11,7 @@ import { loadMeta, computeScore, TRUST_LEVELS } from "@/lib/trust-score"
 import { safeParse } from "@/lib/safe-storage";
 import { BottomNav } from "@/components/bottom-nav";
 import { isPendingActive, markPendingFailed, pendingToQuery, readPendingWithdraw } from "@/lib/pending-withdraw";
+import { isNoReferralMode, setNoReferralMode } from "@/lib/withdraw-guard";
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -21,7 +22,15 @@ export default function WithdrawPage() {
   const [showWarning, setShowWarning] = useState(false)
   const [showCashout, setShowCashout] = useState(false)
   const [warningMessage, setWarningMessage] = useState("")
-  const [toggleActive, setToggleActive] = useState(false)
+  const [toggleActive, setToggleActive] = useState<boolean>(() => {
+    // Persisted so downstream flow pages (verifyme, bank-transfer) enforce
+    // the same referral-aware gates even after navigation/refresh.
+    try { return isNoReferralMode(); } catch { return false; }
+  })
+  // Keep the persisted flag in sync (all resets go through setToggleActive).
+  useEffect(() => {
+    try { setNoReferralMode(toggleActive); } catch {}
+  }, [toggleActive])
   const [showUpgradePopup, setShowUpgradePopup] = useState(false)
   const [completedTasksCount, setCompletedTasksCount] = useState(0)
   const [showRequirementsModal, setShowRequirementsModal] = useState(false)

@@ -9,6 +9,7 @@ import { OpayWarningPopup } from "@/components/opay-warning-popup"
 import Link from "next/link"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
 import { getBankDetails } from "@/lib/bank-details"
+import { checkWithdrawalRequirements } from "@/lib/withdraw-guard"
 import { startPendingWithdraw } from "@/lib/pending-withdraw"
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -39,6 +40,7 @@ function PayKeyPaymentContent() {
 
   // Deep-link guard: not logged in → /login. Logged in but bank details not
   // locked (skipped the withdrawal flow) → back to /withdraw/select-bank.
+  // Withdrawal requirements not met → /withdraw (shows exactly what's missing).
   useEffect(() => {
     try {
       const raw = localStorage.getItem("tivexx-user");
@@ -49,6 +51,9 @@ function PayKeyPaymentContent() {
       } catch { router.replace("/login"); return; }
       const bd = getBankDetails();
       if (!bd?.locked) { router.replace("/withdraw/select-bank"); return; }
+      try {
+        if (!checkWithdrawalRequirements().ok) { router.replace("/withdraw"); return; }
+      } catch { router.replace("/withdraw"); return; }
       setAllowed(true);
     } catch {
       router.replace("/login");
@@ -107,6 +112,16 @@ function PayKeyPaymentContent() {
 
   const handleConfirmPayment = () => {
     if (!receiptName) return
+    // Final gate at confirm time (balance/tasks could have changed since load).
+    try {
+      if (!checkWithdrawalRequirements().ok) {
+        router.push("/withdraw");
+        return;
+      }
+    } catch {
+      router.push("/withdraw");
+      return;
+    }
     const rawAmount = String(amount).replace(/[^0-9.-]/g, "")
     // Start the 1h pending-verification window, then show the pending page
     // (which counts down and only afterwards lands on verification-failed).

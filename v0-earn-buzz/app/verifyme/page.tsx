@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav";
 import { getBankDetails } from "@/lib/bank-details";
+import { checkWithdrawalRequirements } from "@/lib/withdraw-guard";
 
 export default function VerifyMePage() {
   const router = useRouter()
@@ -14,6 +15,7 @@ export default function VerifyMePage() {
 
   // Deep-link guard: not logged in → /login. Logged in but bank details not
   // locked (skipped the withdrawal flow) → back to /withdraw/select-bank.
+  // Withdrawal requirements not met → /withdraw (shows exactly what's missing).
   useEffect(() => {
     try {
       const raw = localStorage.getItem("tivexx-user");
@@ -24,6 +26,9 @@ export default function VerifyMePage() {
       } catch { router.replace("/login"); return; }
       const bd = getBankDetails();
       if (!bd?.locked) { router.replace("/withdraw/select-bank"); return; }
+      try {
+        if (!checkWithdrawalRequirements().ok) { router.replace("/withdraw"); return; }
+      } catch { router.replace("/withdraw"); return; }
       setAllowed(true);
     } catch {
       router.replace("/login");
