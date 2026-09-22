@@ -4311,34 +4311,27 @@ export default function DashboardPage() {
         .hh-tap-particle { position: absolute; font-size: 12px; font-weight: 900; color: #fbbf24; pointer-events: none; animation: hh-tap-float 0.7s ease-out forwards; text-shadow: 0 1px 6px rgba(0,0,0,0.4); white-space: nowrap; }
         @keyframes hh-tap-float { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; } 100% { transform: translate(-50%, -90px) scale(1.05); opacity: 0; } }
         .te-halo { position: absolute; inset: -28px; border-radius: 50%; animation: te-halo-pulse 2.4s ease-in-out infinite; }
-        .te-halo-active { background: radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%); }
-        /* OLD OLD green halo commented out: */
-        /* OLD: .te-halo-active { background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%); } */
+        .te-halo-active { background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%); }
+        /* Signup-button green (manual orb). Auto-tap ON uses orange (.te-halo-auto). */
         .te-halo-inactive { background: radial-gradient(circle, rgba(107,114,128,0.1) 0%, transparent 70%); animation: none; }
         @keyframes te-halo-pulse { 0%,100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 0.4; } }
         .te-ring { position: absolute; inset: 0; border-radius: 50%; }
-        .te-ring-outer { inset: -38px; border: 2px dashed rgba(249,115,22,0.22); animation: te-spin 22s linear infinite; }
-        .te-ring-inner { inset: -22px; border: 1px solid rgba(249,115,22,0.16); animation: te-spin 16s linear infinite reverse; }
-        /* OLD OLD green rings commented out: */
-        /* OLD: .te-ring-outer { border: 2px dashed rgba(16,185,129,0.18); } */
-        /* OLD: .te-ring-inner { border: 1px solid rgba(16,185,129,0.12); } */
+        .te-ring-outer { inset: -38px; border: 2px dashed rgba(16,185,129,0.18); animation: te-spin 22s linear infinite; }
+        .te-ring-inner { inset: -22px; border: 1px solid rgba(16,185,129,0.12); animation: te-spin 16s linear infinite reverse; }
+        /* Signup-button green rings (manual). Auto-tap ON uses orange (.te-ring-auto). */
         @keyframes te-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .te-orb { position: relative; width: 220px; height: 220px; border-radius: 50%; border: none; outline: none; cursor: pointer; transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease; user-select: none; -webkit-tap-highlight-color: transparent; }
-        /* NEW: manual orb = same orange family as auto (no green/purple flash on return). */
-        /* OLD OLD green orb commented out: */
-        /* OLD: .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(52,211,153,0.95), #10b981 48%, rgba(6,95,70,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 60px rgba(16,185,129,0.45), 0 0 120px rgba(16,185,129,0.15); } */
-        .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(253,186,116,0.95), #f97316 48%, rgba(124,45,18,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(124,45,18,0.7), inset 0 6px 22px rgba(253,186,116,0.35), 0 0 60px rgba(249,115,22,0.45), 0 0 120px rgba(249,115,22,0.15); }
+        /* Manual orb = signup/login button green (#10b981 family). Auto-tap ON uses orange (.te-orb-auto). */
+        .te-orb-active { background: radial-gradient(circle at 38% 32%, rgba(52,211,153,0.95), #10b981 48%, rgba(6,95,70,0.9) 100%); box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 60px rgba(16,185,129,0.45), 0 0 120px rgba(16,185,129,0.15); }
         .te-orb-depleted { background: radial-gradient(circle at 38% 32%, rgba(107,114,128,0.6), rgba(55,65,81,0.8) 100%); box-shadow: inset 0 -8px 20px rgba(0,0,0,0.5); opacity: 0.55; cursor: not-allowed; }
         .te-orb-tap { transform: scale(0.86) !important; }
         .te-orb-active:hover {
           box-shadow:
-            inset 0 -12px 28px rgba(124, 45, 18, 0.7),
-            inset 0 6px 22px rgba(253, 186, 116, 0.35),
-            0 0 80px rgba(249, 115, 22, 0.6),
-            0 0 140px rgba(249, 115, 22, 0.2);
+            inset 0 -12px 28px rgba(6, 95, 70, 0.7),
+            inset 0 6px 22px rgba(52, 211, 153, 0.35),
+            0 0 80px rgba(16, 185, 129, 0.6),
+            0 0 140px rgba(16, 185, 129, 0.2);
         }
-        /* OLD OLD green hover commented out: */
-        /* OLD: .te-orb-active:hover { box-shadow: inset 0 -12px 28px rgba(6,95,70,0.7), inset 0 6px 22px rgba(52,211,153,0.35), 0 0 80px rgba(16,185,129,0.6), 0 0 140px rgba(16,185,129,0.2); } */
         .te-orb-shine { position: absolute; top: 18px; left: 36px; width: 80px; height: 36px; border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.7), transparent); filter: blur(10px); opacity: 0.25; pointer-events: none; }
         .te-orb-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
         .te-orb-icon-bounce { animation: te-icon-bounce 1.6s ease-in-out infinite; }
