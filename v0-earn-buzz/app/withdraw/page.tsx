@@ -10,6 +10,7 @@ import { getBankDetails, type BankDetails } from "@/lib/bank-details"
 import { loadMeta, computeScore, TRUST_LEVELS } from "@/lib/trust-score"
 import { safeParse } from "@/lib/safe-storage";
 import { BottomNav } from "@/components/bottom-nav";
+import { isPendingActive, markPendingFailed, pendingToQuery, readPendingWithdraw } from "@/lib/pending-withdraw";
 
 export default function WithdrawPage() {
   const router = useRouter()
@@ -30,6 +31,10 @@ export default function WithdrawPage() {
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
   const [showTrustRequiredPopup, setShowTrustRequiredPopup] = useState(false)
   const [showHoursPopup, setShowHoursPopup] = useState(false)
+  // Pending-withdrawal resume: if a 1h verification is still running (or just
+  // expired), offer to continue it instead of starting over.
+  const [showPendingResume, setShowPendingResume] = useState(false)
+  const [pendingResume, setPendingResume] = useState<any>(null)
   const [spinPlayedToday, setSpinPlayedToday] = useState(false)
   const [balanceInitialized, setBalanceInitialized] = useState(false)
   const TOTAL_DAILY_TASKS = 12
@@ -123,6 +128,21 @@ export default function WithdrawPage() {
       const bd = getBankDetails()
       if (bd?.locked) setBankDetails(bd)
     } catch {}
+    // Pending verification resume: show "continue last pending withdrawal?"
+    try {
+      const p = readPendingWithdraw()
+      if (p && p.status === "pending") {
+        if (isPendingActive(p)) {
+          setPendingResume(p)
+          setShowPendingResume(true)
+        } else {
+          // Expired while away — flip to failed so Continue lands correctly.
+          try { markPendingFailed() } catch {}
+          setPendingResume({ ...p, status: "failed" })
+          setShowPendingResume(true)
+        }
+      }
+    } catch {}
   }, [router])
 
   const fetchReferralCount = async (userId: string) => {
@@ -158,6 +178,24 @@ export default function WithdrawPage() {
     `${Math.min((referralCount / REQUIRED_REFERRALS) * 100, 100)}%`, 
     [referralCount]
   );
+
+  // Continue the last pending withdrawal: still counting → pending page,
+  // already elapsed → failed page.
+  const handlePendingContinue = () => {
+    try {
+      const p = readPendingWithdraw() || pendingResume
+      setShowPendingResume(false)
+      if (!p) return
+      if (isPendingActive(p)) {
+        router.push(`/paykeys/pending?${pendingToQuery(p)}`)
+      } else {
+        try { markPendingFailed() } catch {}
+        router.push(`/paykeys/confirmation?${pendingToQuery({ ...p, status: "failed" } as any)}`)
+      }
+    } catch {
+      setShowPendingResume(false)
+    }
+  };
 
   // Keep completed tasks count in sync across tabs and when the page regains focus
   useEffect(() => {
@@ -964,6 +1002,36 @@ export default function WithdrawPage() {
                 View Trust Score
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending withdrawal resume — Continue only + X (X only dismisses, keeps pending) */}
+      {showPendingResume && pendingResume && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="hh-popup max-w-sm w-full mx-4 relative">
+            <button
+              onClick={() => setShowPendingResume(false)}
+              aria-label="Close"
+              className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition"
+            >
+              ✕
+            </button>
+            <div className="hh-popup-header">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 flex items-center justify-center">
+                <Clock className="h-7 w-7 text-amber-400" />
+              </div>
+              <h2 className="text-xl font-black text-white text-center tracking-tight">Pending withdrawal</h2>
+            </div>
+            <p className="text-sm text-white/80 text-center mt-2 leading-relaxed">
+              Do you want to continue with the last pending withdrawal?
+            </p>
+            <button
+              onClick={handlePendingContinue}
+              className="hh-popup-btn hh-popup-btn-confirm w-full mt-6"
+            >
+              Continue
+            </button>
           </div>
         </div>
       )}

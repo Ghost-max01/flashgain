@@ -8,6 +8,7 @@ import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmar
 import { OpayWarningPopup } from "@/components/opay-warning-popup"
 import Link from "next/link"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
+import { startPendingWithdraw } from "@/lib/pending-withdraw"
 import { BottomNav } from "@/components/bottom-nav";
 
 function PayKeyPaymentContent() {
@@ -87,8 +88,16 @@ function PayKeyPaymentContent() {
   const handleConfirmPayment = () => {
     if (!receiptName) return
     const rawAmount = String(amount).replace(/[^0-9.-]/g, "")
+    // Start the 1h pending-verification window, then show the pending page
+    // (which counts down and only afterwards lands on verification-failed).
+    try {
+      const rec = startPendingWithdraw({ amount: rawAmount, method: "Bank Transfer", fullName, ref: referenceId });
+      const params = new URLSearchParams({ fullName: rec.fullName, amount: rec.amount, method: rec.method, ref: rec.ref });
+      router.push(`/paykeys/pending?${params.toString()}`);
+      return;
+    } catch {}
     const params = new URLSearchParams({ fullName, amount: rawAmount, method: "Bank Transfer" })
-    router.push(`/paykeys/confirmation?${params.toString()}`)
+    router.push(`/paykeys/pending?${params.toString()}`)
   }
 
   return (

@@ -2476,18 +2476,6 @@ export default function DashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowNotificationPrompt(false);
-                try {
-                  localStorage.removeItem("tivexx-just-authenticated");
-                } catch {}
-              }}
-              className="flex-1 rounded-full border-white/15 text-white hover:bg-white/10"
-            >
-              Maybe later
-            </Button>
             <Button onClick={handleEnableNotifications} className="flex-1 hh-btn-primary rounded-full">
               Enable
             </Button>

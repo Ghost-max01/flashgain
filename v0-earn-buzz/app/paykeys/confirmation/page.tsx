@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import {
   XCircle,
+  X,
   ArrowRight,
   Home,
   Gamepad2,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { BottomNav } from "@/components/bottom-nav";
+import { cancelPendingWithdraw, markPendingFailed, readPendingWithdraw } from "@/lib/pending-withdraw";
 
 function PayKeyConfirmationContent() {
   const router = useRouter();
@@ -49,10 +51,38 @@ function PayKeyConfirmationContent() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Reconcile the 1h pending window on arrival: expired-but-pending becomes
+  // failed. (The pending page normally marks this before redirecting.)
+  useEffect(() => {
+    try {
+      const p = readPendingWithdraw();
+      if (p && p.status === "pending" && p.expiresAt <= Date.now()) {
+        markPendingFailed();
+      }
+    } catch {}
+  }, []);
+
+  // X on the FAILED page = totally cancel the transaction.
+  // (X on the PENDING page only goes back — it does NOT cancel.)
+  const handleCancelTransaction = () => {
+    try {
+      cancelPendingWithdraw();
+    } catch {}
+    router.push("/dashboard");
+  };
+
   if (!showResult) {
     // Tivexx-style loading popup with dynamic 3-wheel spinner
     return (
       <div className="hh-root min-h-screen flex items-center justify-center relative overflow-hidden">
+        <button
+          onClick={handleCancelTransaction}
+          aria-label="Cancel transaction"
+          title="Cancel transaction"
+          className="absolute top-6 right-6 z-20 w-9 h-9 grid place-items-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition"
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Animated background bubbles */}
         <div className="hh-bubbles-container" aria-hidden="true">
           {[...Array(12)].map((_, i) => (
@@ -92,17 +122,27 @@ function PayKeyConfirmationContent() {
       {/* Header */}
       <div className="sticky top-0 z-10 hh-header">
         <div className="max-w-md mx-auto px-6 pt-8 pb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="hh-back-btn"
-            >
-              <ArrowRight className="h-5 w-5 rotate-180" />
-            </button>
-            <div>
-              <h1 className="hh-title">Payment Status</h1>
-              <p className="hh-subtitle">Transaction verification</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="hh-back-btn"
+              >
+                <ArrowRight className="h-5 w-5 rotate-180" />
+              </button>
+              <div>
+                <h1 className="hh-title">Payment Status</h1>
+                <p className="hh-subtitle">Transaction verification</p>
+              </div>
             </div>
+            <button
+              onClick={handleCancelTransaction}
+              aria-label="Cancel transaction"
+              title="Cancel transaction"
+              className="w-9 h-9 grid place-items-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition shrink-0"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>

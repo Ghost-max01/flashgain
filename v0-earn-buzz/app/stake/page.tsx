@@ -134,6 +134,11 @@ export default function StakeWinPage() {
   const [rotation, setRotation] = useState(0)
   const [spinResult, setSpinResult] = useState<(typeof SPIN_SEGMENTS)[number] | null>(null)
   const [showSpinResult, setShowSpinResult] = useState(false)
+  // Locked round figure: captured at spin start so the displayed stake NEVER
+  // moves when the win/debit settles or the next tier auto-advances.
+  // Result banner, toasts and history render from THESE, never live `amount`.
+  const [lockedStake, setLockedStake] = useState<number | null>(null)
+  const [lockedTier, setLockedTier] = useState<number | null>(null)
   // Server settlement truth (credited amount + multiplier + outcome) — the
   // banner/toast render from THIS, never from local estimates.
   const [settleInfo, setSettleInfo] = useState<{ credited: number; multiplier: number; corrected: boolean; outcome: "win" | "loss" } | null>(null)
@@ -270,6 +275,11 @@ export default function StakeWinPage() {
       const label = leftH >= 1 ? `${leftH}h` : `${leftM}m`
       return toast({ title: `${tierPct}% tier on cooldown`, description: `Wait ${label} before spinning this tier again`, variant: "destructive" })
     }
+    // Lock this round's figure BEFORE anything settles or auto-advances.
+    const roundStake = spinStake
+    const roundTier = tierPct
+    setLockedStake(roundStake)
+    setLockedTier(roundTier)
 
     // ── TIER-SPECIFIC WIN PROBABILITIES ──
     // 20% tier: 70% win chance
@@ -367,11 +377,11 @@ export default function StakeWinPage() {
             return
           }
           const mult = landed.win ? (landed.amount === 1 ? 1 : 2) : 0
-          const credit = landed.win ? creditForWin(spinStake, mult as 1 | 2) : 0
+          const credit = landed.win ? creditForWin(roundStake, mult as 1 | 2) : 0
           const res = await fetch("/api/stake/result", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: uid, spinId: spinIdRef.current, stake: spinStake, multiplier: mult, winAmount: credit }),
+            body: JSON.stringify({ userId: uid, spinId: spinIdRef.current, stake: roundStake, multiplier: mult, winAmount: credit }),
           })
           const j = await res.json().catch(() => ({}))
           if (!res.ok || !j?.success) {
@@ -387,14 +397,14 @@ export default function StakeWinPage() {
           // response (it enforces the payout formula + session rule).
           const outcome = j.outcome === "win" ? "win" : "loss"
           const srvMult = outcome === "win" ? (Number(j.multiplier) === 2 ? 2 : 1) : 0
-          const credited = outcome === "win" ? creditForWin(spinStake, srvMult as 1 | 2) : 0
+          const credited = outcome === "win" ? creditForWin(roundStake, srvMult as 1 | 2) : 0
           try { recordStakeSession(Array.isArray(j.today) ? j.today : null, outcome === "win") } catch {}
           // Local receipt for History → All (server backfill merges by stake+time).
           try {
             const sh = safeParse<any>(localStorage.getItem("stake_history"), [])
             const arr = Array.isArray(sh) ? sh : []
             arr.unshift({
-              spinId: spinIdRef.current, stake: spinStake,
+              spinId: spinIdRef.current, stake: roundStake,
               credited: outcome === "win" ? credited : 0,
               multiplier: srvMult, outcome, at: Date.now(),
             })
@@ -402,9 +412,9 @@ export default function StakeWinPage() {
           } catch {}
           setSettleInfo({ credited, multiplier: srvMult, corrected: j.corrected === true, outcome })
           if (outcome === "win") {
-            toast({ title: `You won ₦${credited.toLocaleString()}! 🎉`, description: `WIN ×${srvMult} on ₦${spinStake.toLocaleString()} stake — tier ${tierPct}%${j.corrected ? " (server-settled)" : ""}` })
+            toast({ title: `You won ₦${credited.toLocaleString()}! 🎉`, description: `WIN ×${srvMult} on ₦${roundStake.toLocaleString()} stake — tier ${roundTier}%${j.corrected ? " (server-settled)" : ""}` })
           } else {
-            toast({ title: `Better luck next time!`, description: `Lost ₦${spinStake.toLocaleString()} stake — tier ${tierPct}%.${j.corrected ? " (server-settled)" : ""} Try again in 24 hours!` })
+            toast({ title: `Better luck next time!`, description: `Lost ₦${roundStake.toLocaleString()} stake — tier ${roundTier}%.${j.corrected ? " (server-settled)" : ""} Try again in 24 hours!` })
           }
         } catch (e: any) {
           toast({ title: "Spin could not be recorded", description: e?.message || "Balance unchanged — try again.", variant: "destructive" })
@@ -653,13 +663,18 @@ export default function StakeWinPage() {
               </div>
             </div>
           </div>
-          <div className="mt-2 text-[11px] font-bold text-white/50">Stake ₦{spinStake.toLocaleString()} • Spins {spins} • Max 3/day (one per tier)</div>
-          {showSpinResult && spinResult && (
+          <div className="mt-2 text-[11px] font-bold text-white/50">Stake ₦{(lockedStake ?? spinStake).toLocaleString()}{lockedTier ? ` • Tier ${lockedTier}%` : ""} • Spins {spins} • Max 3/day (one per tier)</div>
+          {showSpinResult && spinResult && (() => {
+            const shownStake = lockedStake ?? spinStake
+            const shownCredit = settleInfo ? settleInfo.credited : creditForWin(shownStake, (spinResult.amount || 2) as 1 | 2)
+            const shownTier = lockedTier ?? spinTierPct
+            return (
             <div className={`mt-4 w-full rounded-2xl border p-3 text-center ${spinResult.win ? "bg-emerald-500/15 border-emerald-500/30" : "bg-white/5 border-white/10"}`}>
-              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{(settleInfo ? settleInfo.credited : creditForWin(spinStake, (spinResult.amount || 2) as 1 | 2)).toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, winning tier varies each spin</div>}
-              <div className="text-[11px] text-white/50 mt-1">Stake ₦{spinStake.toLocaleString()} • {spinResult.win ? `profit +₦${((settleInfo ? settleInfo.credited : creditForWin(spinStake, (spinResult.amount || 2) as 1 | 2)) - spinStake).toLocaleString()}` : `lost ₦${spinStake.toLocaleString()}`}</div>
+              {spinResult.win ? <div className="font-black text-emerald-300 flex items-center justify-center gap-2"><Trophy className="h-5 w-5" /> WON {spinResult.label} — +₦{shownCredit.toLocaleString()} 🎉</div> : <div className="font-bold text-white/70">LOSE — try again, winning tier varies each spin (tier {shownTier}% • ₦{shownStake.toLocaleString()})</div>}
+              <div className="text-[11px] text-white/50 mt-1">Stake ₦{shownStake.toLocaleString()} • Tier {shownTier}% • {spinResult.win ? `profit +₦${(shownCredit - shownStake).toLocaleString()}` : `lost ₦${shownStake.toLocaleString()}`}</div>
             </div>
-          )}
+            )
+          })()}
         </div>
 
         {/* Social proof — live stakers (now below wheel, not between stake selector and wheel) */}

@@ -142,7 +142,7 @@ export default function VerifyMePage() {
             </button>
 
             <p className="text-xs text-emerald-300 text-center">
-              The ₦5,500 verification payment will be added back to your dashboard balance after verification.
+              The ₦6,100 verification payment will be added back to your dashboard balance after verification.
             </p>
           </div>
         </div>
