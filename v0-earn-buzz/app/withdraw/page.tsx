@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, UserX, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock, Trophy } from "lucide-react"
+import { ArrowLeft, Share2, AlertTriangle, Home, Gamepad2, User, Users, Wallet, Gift, TrendingUp, Award, Clock, Lock, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WithdrawalInfoModal } from "@/components/withdrawal-info-modal"
 import { getBankDetails, type BankDetails } from "@/lib/bank-details"
@@ -528,18 +528,18 @@ export default function WithdrawPage() {
               <div className="row-top">
                 <div className="chip"></div>
                 <div className="row-top-right">
-                  {/* Glassmorph entry point for the existing withdraw-without-referral
-                      flow — same toggleActive state as the (hidden) toggle section,
-                      so referral gate / Instant Withdraw button behave identically. */}
+                  {/* Compact label + toggle for the existing withdraw-without-referral
+                      flow — same toggleActive state as before, so referral gate /
+                      Instant Withdraw button behave identically. */}
+                  <span className="noref-label">Withdraw Without Referral</span>
                   <button
                     onClick={() => setToggleActive(!toggleActive)}
                     aria-pressed={toggleActive}
+                    aria-label="Withdraw Without Referral"
                     title="Withdraw Without Referral"
-                    className={`glass-noref-btn ${toggleActive ? 'glass-noref-on' : ''}`}
+                    className={`hh-toggle noref-toggle ${toggleActive ? 'hh-toggle-active' : ''}`}
                   >
-                    <span className="glass-noref-dot" aria-hidden="true"></span>
-                    <UserX className="h-3.5 w-3.5 shrink-0" />
-                    <span>Withdraw Without Referral</span>
+                    <span className={`hh-toggle-dot noref-toggle-dot ${toggleActive ? 'hh-toggle-dot-active noref-toggle-dot-active' : ''}`} />
                   </button>
                 </div>
               </div>
@@ -614,8 +614,9 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* Progress Section */}
-        {!toggleActive && (
+        {/* Progress Section — always visible; only the Referral row hides when
+            the Withdraw-Without-Referral toggle is ON (2 remain). */}
+        {(
           <div className="hh-card hh-entry-4">
             <div className="space-y-4">
               {/* Daily Tasks Progress - Show only when toggle is off */}
@@ -640,7 +641,9 @@ export default function WithdrawPage() {
                 </div>
               </div>
 
-              {/* Referral Progress */}
+              {/* Referral Progress — hidden when the toggle is ON (withdraw
+                  without referral needs no referrals). */}
+              {!toggleActive && (
               <div
                 className="cursor-pointer"
                 onClick={() => router.push('/refer')}
@@ -661,6 +664,7 @@ export default function WithdrawPage() {
                   />
                 </div>
               </div>
+              )}
 
               {/* Spin & Win — 4th requirement: 0/1 → 1/1 daily */}
               <div
@@ -754,7 +758,9 @@ export default function WithdrawPage() {
                   </div>
                 </div>
 
-                {/* Referral requirement (always visible) */}
+                {/* Referral requirement — hidden when the toggle is ON (no
+                    referral needed for withdraw-without-referral). */}
+                {!toggleActive && (
                 <div
                   className={`hh-req-detail-item ${referralCount >= REQUIRED_REFERRALS ? 'hh-req-detail-met' : 'hh-req-detail-missing'} cursor-pointer`}
                   onClick={() => router.push('/refer')}
@@ -775,6 +781,7 @@ export default function WithdrawPage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Spin & Win daily play requirement */}
                 <div
@@ -1873,61 +1880,33 @@ export default function WithdrawPage() {
           z-index: 2;
         }
 
-        /* ── Glassmorph "Withdraw Without Referral" pill (top-right of card) ── */
-        .glass-noref-btn {
-          position: relative;
-          z-index: 3;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 7px 11px;
-          border-radius: 9999px;
+        /* ── Compact "Withdraw Without Referral" label + toggle (top-right of card) ── */
+        .noref-label {
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 0.03em;
-          line-height: 1;
-          white-space: nowrap;
-          color: rgba(255,255,255,0.92);
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.28);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          box-shadow:
-            0 4px 16px rgba(0,0,0,0.25),
-            inset 0 1px 0 rgba(255,255,255,0.28);
-          cursor: pointer;
-          transition: all 0.2s ease;
+          line-height: 1.2;
+          text-align: right;
+          color: rgba(255,255,255,0.85);
+          text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+          max-width: 110px;
         }
 
-        .glass-noref-btn:hover {
-          background: rgba(255,255,255,0.2);
-          transform: translateY(-1px);
-        }
-
-        .glass-noref-btn:active {
-          transform: scale(0.96);
-        }
-
-        .glass-noref-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.5);
+        .noref-toggle {
+          width: 40px;
+          height: 22px;
           flex-shrink: 0;
-          transition: all 0.2s ease;
         }
 
-        .glass-noref-on {
-          background: rgba(16,185,129,0.28);
-          border-color: rgba(52,211,153,0.65);
-          box-shadow:
-            0 0 16px rgba(16,185,129,0.45),
-            inset 0 1px 0 rgba(255,255,255,0.28);
+        .noref-toggle-dot {
+          top: 2px;
+          left: 2px;
+          width: 16px;
+          height: 16px;
         }
 
-        .glass-noref-on .glass-noref-dot {
-          background: #34d399;
-          box-shadow: 0 0 6px #34d399;
+        .noref-toggle-dot-active {
+          transform: translateX(18px);
         }
 
         .label-row {
