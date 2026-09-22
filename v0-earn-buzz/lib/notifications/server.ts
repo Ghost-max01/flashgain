@@ -143,7 +143,11 @@ export async function sendNotificationToUser(payload: NotificationSendPayload) {
   // Push ↔ inbox sync: mirror to the mail-icon inbox FIRST (best-effort, never
   // fails the push). Users with no push subscription still see it in-app;
   // dedupeKey makes retried crons upsert-noop instead of duplicating.
-  if (payload.kind) {
+  // MAIL-ICON RULE: only channel/admin messages belong in the mail inbox.
+  // System kinds (claim-ready, auto-tap finish, energy refill) are push-only
+  // and must NEVER appear under the mail icon.
+  const MAIL_INBOX_KINDS = new Set(["admin", "channel", "support", "broadcast", "announcement"]);
+  if (payload.kind && MAIL_INBOX_KINDS.has(String(payload.kind))) {
     try {
       const row: Record<string, unknown> = {
         user_id: payload.uid,

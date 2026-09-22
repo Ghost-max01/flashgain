@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { safeParse } from "@/lib/safe-storage";
 import { loadMeta, saveMeta, computeScore, getEarnPerTap } from "@/lib/trust-score";
+import { applyNigerianDailyRefill } from "@/lib/tap-day";
 import {
   ArrowLeft,
   Zap,
@@ -66,6 +67,10 @@ const loadState = () => {
     };
   }
 
+  // New Nigerian day (Africa/Lagos) → 100/100 refill before reading.
+  try {
+    applyNigerianDailyRefill(MAX_ENERGY);
+  } catch {}
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const storedUser = localStorage.getItem("tivexx-user");
@@ -267,6 +272,15 @@ export default function TapAndEarnPage() {
   const tapHydratedRef = useRef(false);
   const resyncExhaustFromStorage = useCallback(() => {
     try {
+      // New Nigerian day (Africa/Lagos) → 100/100 refill, exhaust cleared.
+      try {
+        if (applyNigerianDailyRefill(MAX_ENERGY)) {
+          setTapExhaustUntil(null);
+          setTapExhaustLeft(0);
+          setState((prev) => ({ ...prev, energy: MAX_ENERGY }));
+          return false;
+        }
+      } catch {}
       const ex = localStorage.getItem(TAP_EXHAUST_KEY);
       if (!ex) return false;
       const until = Number(ex);

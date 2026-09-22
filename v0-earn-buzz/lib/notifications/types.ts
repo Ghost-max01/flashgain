@@ -28,7 +28,7 @@ export type NotificationSendPayload = {
   icon?: string
   badge?: string
   clickUrl?: string
-  /** Inbox category: claim | auto | tap_refill | admin. Set → also mirrored to the mail-icon inbox. */
+  /** Inbox category: admin/channel/support/broadcast/announcement → also mirrored to the mail-icon inbox. System kinds (claim | auto | tap_refill) are push-only and never enter the mail inbox. */
   kind?: string
   /** Idempotency for the inbox mirror (e.g. timer:<rowId>). Retries upsert-noop. */
   dedupeKey?: string

@@ -38,7 +38,7 @@ import { LiveChat } from "@/components/live-chat";
 import dynamic from "next/dynamic";
 const GuidedOnboarding = dynamic(() => import("@/components/guided-onboarding").then(m => m.GuidedOnboarding), { ssr: false }) as any;
 import { getBankDetails } from "@/lib/bank-details";
-import { readyUnseenCount, refreshPendingStatuses, listActivePendings } from "@/lib/pending-withdrawals";
+import { applyNigerianDailyRefill } from "@/lib/tap-day";
 import { BottomNav } from "@/components/bottom-nav";
 import { loadMeta, saveMeta, computeScore, getLevel, getNextLabel, getProgress, getEarnPerTap, hydrateTrustFromServer, TRUST_TIME_KEY } from "@/lib/trust-score";
 import { useToast } from "@/hooks/use-toast";
@@ -138,7 +138,6 @@ export default function DashboardPage() {
   // "Inbox is empty" and does NOT navigate to chats/history.
   const [mailCount, setMailCount] = useState(0);
   const [showInbox, setShowInbox] = useState(false);
-  const [inboxReady, setInboxReady] = useState<any[]>([]);
   const [inboxUnread, setInboxUnread] = useState(0);
   // Server inbox feed (push ↔ inbox sync): pushes land here too, cross-device.
   const [inboxFeed, setInboxFeed] = useState<any[]>([]);
@@ -151,8 +150,13 @@ export default function DashboardPage() {
       const r = await fetch(`/api/notify/inbox?userId=${encodeURIComponent(uid)}&t=${Date.now()}`);
       const d = await r.json().catch(() => ({} as any));
       if (d && (d as any).success && Array.isArray((d as any).items)) {
-        setInboxFeed((d as any).items.slice(0, 50));
-        setInboxFeedUnread(Number((d as any).unread || 0));
+        // MAIL-ICON RULE: only channel posts + admin messages. System kinds
+        // (claim-ready, auto-tap finish, energy refill) never show here —
+        // this also hides rows stored before the server-side cutoff.
+        const allowed = new Set(["admin", "channel", "support", "broadcast", "announcement"]);
+        const items = ((d as any).items as any[]).filter((f: any) => allowed.has(String(f?.kind || "admin")));
+        setInboxFeed(items.slice(0, 50));
+        setInboxFeedUnread(items.filter((f: any) => !f?.read).length);
         try { setBoochatJoined(Boolean((d as any).boochatJoined)); } catch {}
         try { setBoochatPartnerName(String((d as any).partnerName || "")); } catch {}
       }
@@ -177,13 +181,14 @@ export default function DashboardPage() {
     }
   }, []);
   useEffect(() => {
+    // MAIL-ICON RULE: badge = admin/support replies (incl. failed-page chat)
+    // + channel posts only. Claim-ready / auto-tap / energy-refill and
+    // withdrawal-ready never count here.
     const update = () => {
       try {
-        refreshPendingStatuses();
-        const pend = readyUnseenCount();
         let unread = 0;
         try { unread = Number(localStorage.getItem("tivexx-support-unread") || 0) || 0; } catch {}
-        setMailCount(pend + unread);
+        setMailCount(unread);
       } catch {}
     };
     update();
@@ -191,13 +196,11 @@ export default function DashboardPage() {
     window.addEventListener("focus", update);
     document.addEventListener("visibilitychange", update);
     window.addEventListener("tivexx:support-unread", update as EventListener);
-    window.addEventListener("tivexx:update", update as EventListener);
     return () => {
       clearInterval(id);
       window.removeEventListener("focus", update);
       document.removeEventListener("visibilitychange", update);
       window.removeEventListener("tivexx:support-unread", update as EventListener);
-      window.removeEventListener("tivexx:update", update as EventListener);
     };
   }, []);
   // Foreground expedite: while a session is open, flush THIS user's due
@@ -222,9 +225,6 @@ export default function DashboardPage() {
   }, [userData]);
   const openInbox = () => {
     try {
-      refreshPendingStatuses();
-      const all = listActivePendings();
-      setInboxReady(all.filter((p: any) => p.status === "ready"));
       let unread = 0;
       try { unread = Number(localStorage.getItem("tivexx-support-unread") || 0) || 0; } catch {}
       setInboxUnread(unread);
@@ -235,7 +235,6 @@ export default function DashboardPage() {
         if (uid) void refreshInboxFeed(uid);
       } catch {}
     } catch {
-      setInboxReady([]);
       setInboxUnread(0);
     }
     setShowInbox(true);
@@ -338,6 +337,8 @@ export default function DashboardPage() {
   const [tapEnergy, setTapEnergy] = useState(() => {
     try {
       if (typeof window === "undefined") return TAP_MAX_ENERGY;
+      // New Nigerian day (Africa/Lagos) → 100/100 refill, exhaust cleared.
+      try { applyNigerianDailyRefill(TAP_MAX_ENERGY); } catch {}
       const ex = Number(localStorage.getItem(TAP_EXHAUST_KEY) || 0);
       if (ex > Date.now()) return 0;
       const raw = localStorage.getItem(TAP_STORAGE_KEY);
@@ -659,6 +660,15 @@ export default function DashboardPage() {
   const tapHydratedRef = useRef(true);
   const resyncExhaustFromStorage = useCallback(() => {
     try {
+      // New Nigerian day (Africa/Lagos) → 100/100 refill, exhaust cleared.
+      try {
+        if (applyNigerianDailyRefill(TAP_MAX_ENERGY)) {
+          setTapExhaustUntil(null);
+          setTapExhaustLeft(0);
+          setTapEnergy(TAP_MAX_ENERGY);
+          return false;
+        }
+      } catch {}
       const ex = localStorage.getItem(TAP_EXHAUST_KEY);
       if (!ex) return false;
       const until = Number(ex);
@@ -3107,7 +3117,7 @@ export default function DashboardPage() {
               </div>
               <h2 className="text-xl font-black text-white tracking-tight">Messages</h2>
             </div>
-            {inboxReady.length === 0 && inboxUnread === 0 && inboxFeed.length === 0 ? (
+            {inboxUnread === 0 && inboxFeed.length === 0 ? (
               <div className="text-center py-6 space-y-3">
                 <div>
                   <p className="text-sm font-bold text-white/70">Inbox is empty</p>
@@ -3233,16 +3243,6 @@ export default function DashboardPage() {
                     <div className="text-xs text-white/55">You have {inboxUnread} unread chat message{inboxUnread > 1 ? "s" : ""} — tap to view</div>
                   </button>
                 )}
-                {inboxReady.map((p: any) => (
-                  <button
-                    key={p.id || p.reference}
-                    onClick={() => { setShowInbox(false); router.push("/history?tab=withdrawals"); }}
-                    className="w-full text-left rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3"
-                  >
-                    <div className="text-sm font-black text-white">Withdrawal ready — ₦{Number(p.amount || 0).toLocaleString()}</div>
-                    <div className="text-xs text-white/55">Approved — tap to complete in History → Withdrawals</div>
-                  </button>
-                ))}
               </div>
             )}
             <button onClick={() => setShowInbox(false)} className="hh-popup-btn hh-popup-btn-confirm w-full mt-4">Close</button>
