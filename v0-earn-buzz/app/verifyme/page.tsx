@@ -69,7 +69,7 @@ export default function VerifyMePage() {
 
       {!allowed ? (
         <div className="min-h-screen flex items-center justify-center relative z-10">
-          <div className="animate-pulse text-sm text-orange-400">Loading verification…</div>
+          <div className="animate-pulse text-sm text-emerald-400">Loading verification…</div>
         </div>
       ) : (
       <>

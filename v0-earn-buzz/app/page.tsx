@@ -76,7 +76,7 @@ export default function HomePage() {
   if (checking && !showLanding) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#050d14]">
-        <div className="animate-pulse text-sm text-orange-400">Loading...</div>
+        <div className="animate-pulse text-sm text-emerald-400">Loading...</div>
       </div>
     );
   }

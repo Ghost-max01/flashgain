@@ -272,7 +272,7 @@ export default function PendingPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center" style={{ background: "#050d14" }}>
-          <div className="animate-pulse text-sm text-orange-400">Loading verification…</div>
+          <div className="animate-pulse text-sm text-emerald-400">Loading verification…</div>
         </div>
       }
     >

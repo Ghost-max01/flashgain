@@ -2355,16 +2355,14 @@ export default function DashboardPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#050d14]">
         <div className="text-center">
           <div className="relative w-16 h-16 mx-auto mb-4">
-            {/* NEW brand spinner (orange). OLD OLD emerald/ping green commented out below. */}
-            {/* OLD: <div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div> */}
-            <div className="absolute inset-0 rounded-full border-2 border-orange-500/30 animate-ping"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-emerald-500/30 animate-ping"></div>
             <div
-              className="absolute inset-2 rounded-full border-2 border-orange-400/50 animate-ping"
+              className="absolute inset-2 rounded-full border-2 border-emerald-400/50 animate-ping"
               style={{ animationDelay: "0.3s" }}
             ></div>
-            <div className="absolute inset-4 rounded-full bg-orange-500/20 animate-pulse"></div>
+            <div className="absolute inset-4 rounded-full bg-emerald-500/20 animate-pulse"></div>
           </div>
-          <p className="text-orange-400 text-sm font-medium tracking-widest uppercase">
+          <p className="text-emerald-400 text-sm font-medium tracking-widest uppercase">
             Loading
           </p>
         </div>
@@ -3323,11 +3321,9 @@ export default function DashboardPage() {
           width: 14px;
           height: 14px;
           left: 25%;
-          /* OLD OLD blue commented out. */
-          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.5), transparent); */
           background: radial-gradient(
             circle,
-            rgba(249, 115, 22, 0.45),
+            rgba(16, 185, 129, 0.5),
             transparent
           );
           animation-duration: 11s;
@@ -3349,11 +3345,9 @@ export default function DashboardPage() {
           width: 18px;
           height: 18px;
           left: 55%;
-          /* OLD OLD purple commented out. */
-          /* OLD: background: radial-gradient(circle, rgba(139, 92, 246, 0.4), transparent); */
           background: radial-gradient(
             circle,
-            rgba(245, 158, 11, 0.35),
+            rgba(52, 211, 153, 0.4),
             transparent
           );
           animation-duration: 13s;
@@ -3387,11 +3381,9 @@ export default function DashboardPage() {
           width: 12px;
           height: 12px;
           left: 15%;
-          /* OLD OLD blue commented out. */
-          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent); */
           background: radial-gradient(
             circle,
-            rgba(249, 115, 22, 0.35),
+            rgba(16, 185, 129, 0.4),
             transparent
           );
           animation-duration: 12s;
@@ -3425,11 +3417,9 @@ export default function DashboardPage() {
           width: 9px;
           height: 9px;
           left: 88%;
-          /* OLD OLD purple commented out. */
-          /* OLD: background: radial-gradient(circle, rgba(139, 92, 246, 0.5), transparent); */
           background: radial-gradient(
             circle,
-            rgba(245, 158, 11, 0.4),
+            rgba(52, 211, 153, 0.45),
             transparent
           );
           animation-duration: 10.5s;
@@ -3451,11 +3441,9 @@ export default function DashboardPage() {
           width: 16px;
           height: 16px;
           left: 48%;
-          /* OLD OLD blue commented out. */
-          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent); */
           background: radial-gradient(
             circle,
-            rgba(249, 115, 22, 0.28),
+            rgba(16, 185, 129, 0.3),
             transparent
           );
           animation-duration: 14s;
@@ -3483,26 +3471,21 @@ export default function DashboardPage() {
         .hh-mesh-overlay {
           position: fixed;
           inset: 0;
-          /* NEW: dark + orange glows. OLD OLD green/blue/purple commented out. */
-          /* OLD:
-            radial-gradient(ellipse 60% 40% at 20% 80%, rgba(16, 185, 129, 0.07) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 50% at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
-            radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 60%);
-          */
+          /* Soft green glows only — no orange, no purple. */
           background:
             radial-gradient(
               ellipse 60% 40% at 20% 80%,
-              rgba(249, 115, 22, 0.06) 0%,
+              rgba(16, 185, 129, 0.07) 0%,
               transparent 60%
             ),
             radial-gradient(
               ellipse 50% 50% at 80% 20%,
-              rgba(245, 158, 11, 0.05) 0%,
+              rgba(52, 211, 153, 0.05) 0%,
               transparent 60%
             ),
             radial-gradient(
               ellipse 40% 30% at 50% 50%,
-              rgba(234, 88, 12, 0.04) 0%,
+              rgba(5, 150, 105, 0.05) 0%,
               transparent 60%
             );
           pointer-events: none;
@@ -3582,11 +3565,10 @@ export default function DashboardPage() {
         .hh-orb-1 {
           width: 150px;
           height: 150px;
-          /* NEW: faint orange glow. OLD OLD green commented out below. */
-          /* OLD: background: radial-gradient(circle, rgba(16, 185, 129, 0.2), transparent); */
+          /* Signup-green glow. */
           background: radial-gradient(
             circle,
-            rgba(249, 115, 22, 0.16),
+            rgba(16, 185, 129, 0.2),
             transparent
           );
           top: -40px;
@@ -3597,11 +3579,10 @@ export default function DashboardPage() {
         .hh-orb-2 {
           width: 100px;
           height: 100px;
-          /* NEW: faint amber glow. OLD OLD blue commented out below. */
-          /* OLD: background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent); */
+          /* Soft green glow (no blue/purple). */
           background: radial-gradient(
             circle,
-            rgba(245, 158, 11, 0.12),
+            rgba(52, 211, 153, 0.14),
             transparent
           );
           bottom: 20px;
@@ -3629,28 +3610,23 @@ export default function DashboardPage() {
           height: 52px;
           border-radius: 50%;
           padding: 2px;
-          /* NEW brand ring (orange/amber). OLD OLD green→blue→purple commented out. */
-          /* OLD: background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); */
-          background: linear-gradient(135deg, #f97316, #f59e0b, #ea580c);
+          /* Signup-green ring (all-green gradient — no orange, no purple). */
+          background: linear-gradient(135deg, #10b981, #059669, #34d399);
           animation: hh-ring-spin 4s linear infinite;
         }
 
         @keyframes hh-ring-spin {
           0% {
-            /* OLD: background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); */
-            background: linear-gradient(135deg, #f97316, #f59e0b, #ea580c);
+            background: linear-gradient(135deg, #10b981, #059669, #34d399);
           }
           33% {
-            /* OLD: background: linear-gradient(135deg, #3b82f6, #8b5cf6, #10b981); */
-            background: linear-gradient(135deg, #f59e0b, #ea580c, #f97316);
+            background: linear-gradient(135deg, #059669, #34d399, #10b981);
           }
           66% {
-            /* OLD: background: linear-gradient(135deg, #8b5cf6, #10b981, #3b82f6); */
-            background: linear-gradient(135deg, #ea580c, #f97316, #f59e0b);
+            background: linear-gradient(135deg, #34d399, #10b981, #059669);
           }
           100% {
-            /* OLD: background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); */
-            background: linear-gradient(135deg, #f97316, #f59e0b, #ea580c);
+            background: linear-gradient(135deg, #10b981, #059669, #34d399);
           }
         }
 
