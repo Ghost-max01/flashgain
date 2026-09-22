@@ -46,7 +46,7 @@ export default function WithdrawPage() {
   const [pendingResume, setPendingResume] = useState<any>(null)
   const [spinPlayedToday, setSpinPlayedToday] = useState(false)
   const [balanceInitialized, setBalanceInitialized] = useState(false)
-  const TOTAL_DAILY_TASKS = 12
+  const TOTAL_DAILY_TASKS = 15
   const TIERED_TOTAL_TASKS = 50
   const REQUIRED_REFERRALS = 5
   // REVIEW DAY: requirements show as met all day today, no link needed.

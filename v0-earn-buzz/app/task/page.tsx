@@ -34,7 +34,10 @@ const AVAILABLE_TASKS: Task[] = [
   { id: "survey-task-9", platform: "Survey Task 9", description: "Tap our premium ad link for extra rewards", category: "Social Media", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎁" },
   { id: "survey-task-10", platform: "Survey Task 10", description: "Tap our premium ad link for extra rewards", category: "Advertisement", reward: 1000, link: "https://omg10.com/4/10571302", icon: "🎁" },
   { id: "survey-task-11", platform: "Survey Task 11", description: "Join our WhatsApp channel for updates and rewards.", category: "Social Media", reward: 1000, link: "https://whatsapp.com/channel/0029VbChfh43mFYDayfQQH1j", icon: "📲" },
-  { id: "survey-task-12", platform: "Survey Task 12", description: "Follow our second WhatsApp channel for daily updates.", category: "Social Media", reward: 1000, link: "https://whatsapp.com/channel/0029VbDDS23KQuJHyrHXqG2A", icon: "📣" },
+  { id: "video-task-1", platform: "Video Task 1", description: "Watch this YouTube video to earn extra rewards.", category: "Video", reward: 1000, link: "https://youtu.be/0Iwb76F70Dg?si=02y581HUzRV3N2FN", icon: "🎬" },
+  { id: "video-task-2", platform: "Video Task 2", description: "Watch this YouTube video to earn extra rewards.", category: "Video", reward: 1000, link: "https://youtu.be/VRpi4y7dP6A?si=fe3Wi6Ytj1HvEE35", icon: "📺" },
+  { id: "video-task-3", platform: "Video Task 3", description: "Watch this YouTube video to earn extra rewards.", category: "Video", reward: 1000, link: "https://youtu.be/MLzSHVyPd-c?si=VQg4SRKlJg4R81_L", icon: "🎥" },
+  { id: "video-task-4", platform: "Video Task 4", description: "Watch this YouTube video to earn extra rewards.", category: "Video", reward: 1000, link: "https://youtu.be/01WNS3GaU5w?si=EYrOr90AvN6rBY2Z", icon: "🍿" },
 ];
 
 const AVAILABLE_TASKS_DEDUPED: Task[] = (() => {

@@ -8,7 +8,7 @@
 
 export const NO_REFERRAL_KEY = "tivexx-no-referral";
 export const REQ_MIN_BALANCE = 200000;
-export const REQ_TASKS = 12;
+export const REQ_TASKS = 15;
 export const REQ_REFERRALS = 5;
 
 export function isNoReferralMode(): boolean {
