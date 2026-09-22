@@ -33,9 +33,18 @@ function PendingContent() {
   const [leftMs, setLeftMs] = useState(PENDING_WITHDRAW_WINDOW_MS);
 
   // Ensure a pending record exists (confirm page always creates one first).
+  // Deep-link guard: not logged in → /login. No record and no payment
+  // params (typed URL, skipped the flow) → back to /withdraw.
   useEffect(() => {
     try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) { router.replace("/login"); return; }
+      try {
+        const u = JSON.parse(raw);
+        if (!u || typeof u !== "object") { router.replace("/login"); return; }
+      } catch { router.replace("/login"); return; }
       const existing = readPendingWithdraw();
+      if (!existing && !amount) { router.replace("/withdraw"); return; }
       if (existing && existing.status === "pending" && existing.expiresAt > Date.now()) {
         setExpiresAt(existing.expiresAt);
         return;

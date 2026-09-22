@@ -8,6 +8,7 @@ import { ArrowLeft, Copy, Check, Home, Gamepad2, User, Sparkles, Shield, Landmar
 import { OpayWarningPopup } from "@/components/opay-warning-popup"
 import Link from "next/link"
 import { getPaymentAccountDetails } from "@/lib/payment-account-details"
+import { getBankDetails } from "@/lib/bank-details"
 import { startPendingWithdraw } from "@/lib/pending-withdraw"
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -34,6 +35,25 @@ function PayKeyPaymentContent() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const receiptInputRef = useRef<HTMLInputElement | null>(null)
   const timersRef = useRef<number[]>([])
+  const [allowed, setAllowed] = useState(false)
+
+  // Deep-link guard: not logged in → /login. Logged in but bank details not
+  // locked (skipped the withdrawal flow) → back to /withdraw/select-bank.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) { router.replace("/login"); return; }
+      try {
+        const u = JSON.parse(raw);
+        if (!u || typeof u !== "object") { router.replace("/login"); return; }
+      } catch { router.replace("/login"); return; }
+      const bd = getBankDetails();
+      if (!bd?.locked) { router.replace("/withdraw/select-bank"); return; }
+      setAllowed(true);
+    } catch {
+      router.replace("/login");
+    }
+  }, [router])
 
   useEffect(() => {
     // Modified: Changed popup cycle from 6s show + 4s hide to 10-second interval between appearances
@@ -112,6 +132,12 @@ function PayKeyPaymentContent() {
       {/* Mesh gradient overlay */}
       <div className="hh-mesh-overlay" aria-hidden="true"></div>
 
+      {!allowed ? (
+        <div className="min-h-screen flex items-center justify-center relative z-10">
+          <div className="animate-pulse text-sm text-orange-400">Loading payment details…</div>
+        </div>
+      ) : (
+      <>
       {/* Header */}
       <div className="sticky top-0 z-10 hh-header">
         <div className="max-w-md mx-auto px-6 pt-8 pb-4">
@@ -775,6 +801,8 @@ function PayKeyPaymentContent() {
           }
         }
       `}</style>
+      </>
+      )}
     </div>
   )
 }

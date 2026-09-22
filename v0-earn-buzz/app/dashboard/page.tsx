@@ -3707,17 +3707,15 @@ export default function DashboardPage() {
         }
 
         .hh-action-purple {
-          /* OLD OLD purple commented out — routed to new brand orange. */
-          /* OLD: background: linear-gradient(135deg, #7c3aed, #5b21b6); box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3); */
-          background: linear-gradient(135deg, #ea580c, #c2410c);
-          box-shadow: 0 4px 20px rgba(234, 88, 12, 0.3);
+          /* Signup-button bright green (same as signup/login submit). */
+          background: linear-gradient(135deg, #10b981, #059669, #047857);
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
         }
 
         .hh-action-green {
-          /* OLD OLD green commented out — routed to new brand orange. */
-          /* OLD: background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3); */
-          background: linear-gradient(135deg, #f97316, #c2410c);
-          box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3);
+          /* Signup-button bright green (same as signup/login submit). */
+          background: linear-gradient(135deg, #10b981, #059669, #047857);
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
         }
 
         .hh-action-icon {

@@ -53,14 +53,21 @@ function PayKeyConfirmationContent() {
 
   // Reconcile the 1h pending window on arrival: expired-but-pending becomes
   // failed. (The pending page normally marks this before redirecting.)
+  // Deep-link guard: not logged in → /login.
   useEffect(() => {
     try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) { router.replace("/login"); return; }
+      try {
+        const u = JSON.parse(raw);
+        if (!u || typeof u !== "object") { router.replace("/login"); return; }
+      } catch { router.replace("/login"); return; }
       const p = readPendingWithdraw();
       if (p && p.status === "pending" && p.expiresAt <= Date.now()) {
         markPendingFailed();
       }
     } catch {}
-  }, []);
+  }, [router]);
 
   // X on the FAILED page = totally cancel the transaction.
   // (X on the PENDING page only goes back — it does NOT cancel.)

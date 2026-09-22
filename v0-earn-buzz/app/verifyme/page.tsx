@@ -5,10 +5,30 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav";
+import { getBankDetails } from "@/lib/bank-details";
 
 export default function VerifyMePage() {
   const router = useRouter()
   const [tickVisible, setTickVisible] = useState(false)
+  const [allowed, setAllowed] = useState(false)
+
+  // Deep-link guard: not logged in → /login. Logged in but bank details not
+  // locked (skipped the withdrawal flow) → back to /withdraw/select-bank.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) { router.replace("/login"); return; }
+      try {
+        const u = JSON.parse(raw);
+        if (!u || typeof u !== "object") { router.replace("/login"); return; }
+      } catch { router.replace("/login"); return; }
+      const bd = getBankDetails();
+      if (!bd?.locked) { router.replace("/withdraw/select-bank"); return; }
+      setAllowed(true);
+    } catch {
+      router.replace("/login");
+    }
+  }, [router])
 
   useEffect(() => {
     // Show tick after 1 second
@@ -42,6 +62,12 @@ export default function VerifyMePage() {
       {/* Mesh gradient overlay */}
       <div className="hh-mesh-overlay" aria-hidden="true"></div>
 
+      {!allowed ? (
+        <div className="min-h-screen flex items-center justify-center relative z-10">
+          <div className="animate-pulse text-sm text-orange-400">Loading verification…</div>
+        </div>
+      ) : (
+      <>
       {/* Header */}
       <div className="sticky top-0 z-10 hh-header">
         <div className="max-w-md mx-auto px-6 pt-8 pb-4">
@@ -166,6 +192,8 @@ export default function VerifyMePage() {
 
       {/* Bottom Navigation */}
       <BottomNav />
+      </>
+      )}
 
       <style jsx global>{`
         /* ─── IMPORT FONT ─── */

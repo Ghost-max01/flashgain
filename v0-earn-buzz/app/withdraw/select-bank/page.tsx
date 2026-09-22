@@ -58,6 +58,18 @@ export default function SetupWithdrawalAccountPage() {
     }
   }, [dropdownOpen])
 
+  // Deep-link guard: must be logged in to set up a payout account.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("tivexx-user");
+      if (!raw) { router.replace("/login"); return; }
+      const u = JSON.parse(raw);
+      if (!u || typeof u !== "object") router.replace("/login");
+    } catch {
+      router.replace("/login");
+    }
+  }, [router])
+
   // If bank already locked from post-signup setup, prefill and lock
   useEffect(() => {
     try {
